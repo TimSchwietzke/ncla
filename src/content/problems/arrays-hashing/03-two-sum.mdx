@@ -1,0 +1,126 @@
+---
+id: "1.3"
+slug: two-sum
+title: Two Sum
+leetcode: 1
+url: https://leetcode.com/problems/two-sum/
+difficulty: Easy
+premium: false
+category: arrays-hashing
+patterns: [hashing-complement]
+prerequisites: ["Hash map from value to index", "Amortised O(1) lookup"]
+targetComplexity: { time: "O(n)", space: "O(n)" }
+visualizer: { name: hashing-complement, preset: two-sum }
+status: complete
+---
+
+<Statement>
+
+Given an array of integers `nums` and an integer `target`, return the **indices** of the two
+numbers that add up to `target`.
+
+Exactly one valid answer exists, and the same element may not be used twice.
+
+```text
+nums = [2, 7, 11, 15], target = 9   ->  [0, 1]     because nums[0] + nums[1] == 9
+nums = [3, 2, 4],      target = 6   ->  [1, 2]
+nums = [3, 3],         target = 6   ->  [0, 1]
+```
+
+Constraints: `2 <= n <= 10^4`, values and target fit in a 32-bit integer, the array is **not** sorted.
+
+</Statement>
+
+<Signals>
+
+- The question is *"does a matching value exist?"* — membership, not ordering. That is the hashing family.
+- The answer is a pair of **indices**, so anything that reorders the array costs you the answer.
+- `n` up to `10^4` means the nested loop at `10^8` operations is exactly the solution you are expected to beat.
+
+</Signals>
+
+<BruteForce>
+
+Try every pair: for each `i`, walk every `j > i` and test `nums[i] + nums[j] == target`.
+
+Correct, and **O(n²) time, O(1) space**. The bottleneck is the inner loop: it answers the question
+*"is `target - nums[i]` somewhere in the array?"* by scanning. That question is a lookup, and lookups
+belong in a hash map.
+
+</BruteForce>
+
+<Insight>
+
+Stop looking for pairs — for each value `x`, ask a hash map whether its complement `target - x` has already been seen.
+
+</Insight>
+
+<Approach>
+
+1. Keep a dictionary `seen` mapping **value → index**.
+2. Walk the array once with both index and value.
+3. For the current `x`, compute `complement = target - x` and look it up in `seen`.
+   If it is there, you have both indices — return them.
+4. Otherwise store `seen[x] = i` and continue.
+
+The order in step 3 and 4 matters: checking *before* inserting is what stops the current element
+from pairing with itself. That single detail is worth saying out loud in an interview.
+
+<Viz name="hashing-complement" preset="two-sum" />
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def twoSum(self, nums: list[int], target: int) -> list[int]:
+        # O(n^2) time, O(1) space
+        for i in range(len(nums)):
+            for j in range(i + 1, len(nums)):
+                if nums[i] + nums[j] == target:
+                    return [i, j]
+        return []
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def twoSum(self, nums: list[int], target: int) -> list[int]:
+        # O(n) time, O(n) space
+        seen: dict[int, int] = {}           # value -> index
+
+        for i, x in enumerate(nums):
+            complement = target - x
+            if complement in seen:          # check BEFORE inserting x
+                return [seen[complement], i]
+            seen[x] = i
+
+        return []
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **The array is not sorted.** Two pointers would need a sort first, and sorting destroys the
+  indices you are asked to return. This is the difference to *Two Sum II*, where the sorted input
+  buys you an O(1) space solution.
+- Inserting before checking lets an element match itself when `target == 2 * x`.
+- Duplicates need no special handling: `[3, 3]` works because the first `3` is already in the map
+  when the second one is examined.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"What if the array were sorted?"* — Two pointers from both ends, O(n) time and **O(1) space**.
+- *"Return all pairs, not just one."* — Do not return early; collect results and skip duplicate
+  values, otherwise the same pair comes back several times.
+- *"What if no answer exists?"* — The loop simply ends; return an empty list. Say what your function
+  does in that case instead of relying on the guarantee in the statement.
+
+</FollowUps>

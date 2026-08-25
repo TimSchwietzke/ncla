@@ -246,6 +246,9 @@ Zusätzlich gespeichert pro Aufgabe: Status, freigegebene Reveal-Stufe, letzte Z
   Skript im Scratchpad laufen lassen. Falscher Lösungscode ist der schlimmste mögliche Fehler in
   dieser App — er wird auswendig gelernt.
 - Keine Platzhalter-Sektionen („TODO: erklären“) in Dateien mit `status: complete`.
+- **Explizite `.ts`-Endungen** in allen Imports unter `scripts/` und in `src/data/*` — diese Module
+  werden direkt von Node/tsx geladen und sind Teil des Vite-Config-Graphen, der extensionslose
+  Imports künftig nicht mehr auflöst. Der restliche App-Code in `src/` bleibt endungslos.
 - Kein Deployment, keine Analytics, keine externen Fonts/CDNs.
 
 ### Befehle

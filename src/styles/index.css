@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+/*
+ * Palette lives in plain CSS variables so light/dark can swap them, and `@theme inline`
+ * exposes them to Tailwind as utilities (bg-surface, text-muted, border-line …).
+ */
+:root {
+  --ncla-bg: #f6f7f9;
+  --ncla-surface: #ffffff;
+  --ncla-surface-2: #eef1f5;
+  --ncla-line: #dde2ea;
+  --ncla-text: #14171c;
+  --ncla-muted: #59626f;
+  --ncla-accent: #3b5bdb;
+  --ncla-accent-soft: #e6eafc;
+  --ncla-easy: #146c43;
+  --ncla-medium: #92610a;
+  --ncla-hard: #ad2b23;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ncla-bg: #0d1117;
+    --ncla-surface: #151b24;
+    --ncla-surface-2: #1c2430;
+    --ncla-line: #2a3441;
+    --ncla-text: #e7ecf3;
+    --ncla-muted: #97a3b6;
+    --ncla-accent: #91a8ff;
+    --ncla-accent-soft: #1b2440;
+    --ncla-easy: #46c98b;
+    --ncla-medium: #e0b341;
+    --ncla-hard: #f28b82;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--ncla-bg);
+  --color-surface: var(--ncla-surface);
+  --color-surface-2: var(--ncla-surface-2);
+  --color-line: var(--ncla-line);
+  --color-ink: var(--ncla-text);
+  --color-muted: var(--ncla-muted);
+  --color-accent: var(--ncla-accent);
+  --color-accent-soft: var(--ncla-accent-soft);
+  --color-easy: var(--ncla-easy);
+  --color-medium: var(--ncla-medium);
+  --color-hard: var(--ncla-hard);
+
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+/* Body copy inside MDX sections — plain elements, no typography plugin. */
+.prose-ncla :is(ul, ol) {
+  padding-left: 1.25rem;
+  list-style: revert;
+}
+
+.prose-ncla li {
+  margin-block: 0.25rem;
+}
+
+.prose-ncla a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose-ncla :not(pre) > code {
+  background-color: var(--color-surface-2);
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.prose-ncla pre {
+  overflow-x: auto;
+  border: 1px solid var(--color-line);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.prose-ncla strong {
+  font-weight: 600;
+}
+
+/*
+ * Shiki is configured with a light and a dark theme; it emits the dark colours as
+ * `--shiki-dark` custom properties on every token, which this swaps in.
+ */
+@media (prefers-color-scheme: dark) {
+  .shiki,
+  .shiki span {
+    color: var(--shiki-dark) !important;
+    background-color: var(--shiki-dark-bg) !important;
+  }
+}
