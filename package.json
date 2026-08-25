@@ -1,0 +1,44 @@
+{
+  "name": "ncla",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "NeetCodeLearnApp - personal preparation for technical interviews with the NeetCode 150",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run content:index && tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "content:index": "tsx scripts/build-index.ts",
+    "content:validate": "tsx scripts/validate-content.ts",
+    "typecheck": "npm run content:index && tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "validate": "npm run typecheck && npm run content:validate && npm run test"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router": "^7.18.2"
+  },
+  "devDependencies": {
+    "@mdx-js/react": "^3.1.1",
+    "@mdx-js/rollup": "^3.1.1",
+    "@shikijs/rehype": "^4.4.3",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.3.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@vitejs/plugin-react": "^6.1.0",
+    "fast-glob": "^3.3.3",
+    "gray-matter": "^4.0.3",
+    "remark-frontmatter": "^5.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-mdx-frontmatter": "^5.2.0",
+    "shiki": "^4.4.3",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
+  }
+}

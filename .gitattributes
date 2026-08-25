@@ -1,0 +1,7 @@
+# Normalise line endings: LF in the repository, native in the working copy.
+* text=auto eol=lf
+
+# Binary-ish assets are never converted.
+*.png binary
+*.jpg binary
+*.woff2 binary
