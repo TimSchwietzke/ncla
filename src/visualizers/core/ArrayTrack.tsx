@@ -63,6 +63,45 @@ const TONES: Record<CellTone, ToneStyle> = {
 };
 
 export function ArrayTrack({ step, animated = true }: { step: ArrayStep; animated?: boolean }) {
+  if (!step.panel) return <Track step={step} animated={animated} />;
+
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+      <div className="min-w-0 flex-1">
+        <Track step={step} animated={animated} />
+      </div>
+      <Panel panel={step.panel} />
+    </div>
+  );
+}
+
+/** The remembered structure — a hash map, a stack — beside the row it belongs to. */
+function Panel({ panel }: { panel: NonNullable<ArrayStep["panel"]> }) {
+  return (
+    <div className="w-full shrink-0 rounded-md border border-line bg-surface px-2.5 py-2 sm:w-[8.5rem]">
+      <p className="font-mono text-2xs uppercase tracking-wide text-ink-faint">{panel.label}</p>
+      {panel.entries.length === 0 ? (
+        <p className="mt-1 font-mono text-2xs text-ink-faint">{panel.emptyHint ?? "empty"}</p>
+      ) : (
+        <ul className="mt-1 space-y-0.5">
+          {panel.entries.map((entry) => (
+            <li
+              key={entry.key}
+              className={`font-mono text-2xs ${
+                entry.tone === "active" || entry.tone === "found" ? "text-accent" : "text-ink-muted"
+              }`}
+            >
+              {entry.key}
+              {entry.value === undefined ? null : ` → ${entry.value}`}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function Track({ step, animated }: { step: ArrayStep; animated: boolean }) {
   const width = PAD * 2 + step.values.length * STRIDE - GAP;
   const transition = animated ? "fill 320ms, stroke 320ms, opacity 320ms" : undefined;
 
@@ -96,7 +135,7 @@ export function ArrayTrack({ step, animated = true }: { step: ArrayStep; animate
               y={CELL / 2 + 5}
               textAnchor="middle"
               fontFamily="var(--font-mono, monospace)"
-              fontSize="14"
+              fontSize={typeof value === "string" && value.length > 1 ? 12 : 14}
               fill={tone.text}
               style={{ transition }}
             >

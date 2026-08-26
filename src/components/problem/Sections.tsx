@@ -4,6 +4,9 @@ import { CodeBlock, SolutionContext } from "./CodeBlock";
 import { Example, Examples } from "./Example";
 import { Constraints } from "./Constraints";
 import { Gate, useReveal } from "./RevealGate";
+import { StepPlayer } from "../../visualizers/core/StepPlayer";
+import { ArrayTrack } from "../../visualizers/core/ArrayTrack";
+import { getVisualizer } from "../../visualizers/registry";
 
 /**
  * The fixed section components every problem MDX file is built from (CLAUDE.md §6).
@@ -129,18 +132,36 @@ export function FollowUps({ children }: { children: ReactNode }) {
   );
 }
 
-/** A pattern visualizer, seeded with this problem's own example. Placeholder until M3. */
+/**
+ * A pattern visualizer, seeded with this problem's own example. Starts paused: something
+ * that runs by itself while you read the approach pulls attention away from it.
+ *
+ * Patterns without a visualizer keep saying so rather than pretending — thirteen of the
+ * eighteen are still to come.
+ */
 export function Viz({ name, preset }: { name: string; preset?: string }) {
   const pattern = getPattern(name);
+  const entry = getVisualizer(name);
+  const chosen = entry?.presets[preset ?? entry.defaultPreset];
+
+  if (!chosen) {
+    return (
+      <div className="my-5 rounded-lg border border-line bg-surface-2 px-4 py-3">
+        <p className="font-mono text-2xs uppercase text-ink-faint">
+          visualizer · {preset ? `${name} / ${preset}` : name}
+        </p>
+        <p className="mt-1 text-sm text-ink-muted">
+          {pattern?.title ?? name} — the step-by-step player for this pattern is still to come.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="my-5 rounded-lg border border-line bg-surface-2 px-4 py-3">
-      <p className="font-mono text-2xs uppercase text-ink-faint">
-        visualizer · {preset ? `${name} / ${preset}` : name}
-      </p>
-      <p className="mt-1 text-sm text-ink-muted">
-        {pattern?.title ?? name} — step-by-step player arrives in milestone M3.
-      </p>
-    </div>
+    <StepPlayer
+      steps={chosen.build()}
+      render={(step, animated) => <ArrayTrack step={step} animated={animated} />}
+    />
   );
 }
 

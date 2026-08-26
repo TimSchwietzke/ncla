@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrayTrack } from "../../visualizers/core/ArrayTrack";
-import { buildSteps as slidingWindow } from "../../visualizers/sliding-window/steps";
+import { buildFixedWindow } from "../../visualizers/sliding-window/steps";
 import { buildSteps as twoPointer } from "../../visualizers/two-pointer/steps";
 import { buildSteps as binarySearch } from "../../visualizers/binary-search/steps";
 
@@ -14,7 +14,7 @@ const SORTED = [2, 3, 5, 8, 11, 15, 17, 20, 24, 29];
 const SHOWS = [
   {
     label: "sliding window",
-    steps: slidingWindow({ values: [3, 1, 4, 1, 5, 9, 2, 6, 5, 3], k: 4 }),
+    steps: buildFixedWindow({ values: [3, 1, 4, 1, 5, 9, 2, 6, 5, 3], k: 4 }),
   },
   {
     label: "two pointers",
