@@ -1,7 +1,11 @@
-import { useState, type ReactNode } from "react";
-import { Eye } from "lucide-react";
+import type { ReactNode } from "react";
 import type { ProblemMeta } from "../../data/types";
+import { StepSpine } from "../method/StepSpine";
 import { PatternChip } from "../ui/PatternChip";
+import { LadderStatus } from "./LadderStatus";
+import { ModeToggle } from "./ModeToggle";
+import { Timer } from "./Timer";
+import { isUnlocked, useReveal } from "./RevealGate";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -13,16 +17,26 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /**
- * Everything about a problem that is not the prose. Sticky on wide screens so the
- * target complexity stays in view while reading. The timer and the reveal controls
- * from M2 belong here too.
+ * Everything about a problem that is not the prose: how you are working, how long you
+ * have been at it, the checklist, and what the interview would have told you anyway.
+ * Sticky on wide screens so the target complexity stays in view while reading.
  */
 export function MetaRail({ meta }: { meta: ProblemMeta }) {
-  // The pattern name is half the solution, and no interview hands it to you.
-  const [patternShown, setPatternShown] = useState(false);
+  const { revealed, gated } = useReveal();
+  const patternsVisible = isUnlocked("signals", revealed, gated);
 
   return (
     <div className="rounded-lg border border-line bg-surface">
+      <div className="px-4 py-3">
+        <ModeToggle />
+      </div>
+
+      {gated ? (
+        <Field label="Attempt">
+          <Timer problemId={meta.slug} />
+        </Field>
+      ) : null}
+
       <Field label="Target">
         <span className="font-mono text-ink">
           {meta.targetComplexity.time} time
@@ -32,23 +46,15 @@ export function MetaRail({ meta }: { meta: ProblemMeta }) {
       </Field>
 
       <Field label="Patterns">
-        {patternShown ? (
+        {patternsVisible ? (
           <div className="flex flex-wrap gap-1.5">
             {meta.patterns.map((slug) => (
               <PatternChip key={slug} slug={slug} />
             ))}
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => {
-              setPatternShown(true);
-            }}
-            className="flex items-center gap-1.5 rounded-md border border-dashed border-line-strong px-2.5 py-1 font-mono text-2xs text-ink-faint transition-colors hover:border-accent hover:text-accent"
-          >
-            <Eye size={12} strokeWidth={1.75} />
-            reveal
-          </button>
+          // The pattern name is half the solution, and it arrives with the signals.
+          <p className="font-mono text-2xs text-ink-faint">revealed with the signals</p>
         )}
       </Field>
 
@@ -60,6 +66,17 @@ export function MetaRail({ meta }: { meta: ProblemMeta }) {
             ))}
           </ul>
         </Field>
+      ) : null}
+
+      {gated ? (
+        <>
+          <Field label="Checklist">
+            <StepSpine variant="compact" problemId={meta.slug} />
+          </Field>
+          <Field label="Ladder">
+            <LadderStatus />
+          </Field>
+        </>
       ) : null}
 
       <Field label="Source">

@@ -1,0 +1,147 @@
+---
+id: "3.2"
+slug: longest-substring-without-repeating-characters
+title: Longest Substring Without Repeating Characters
+leetcode: 3
+url: https://leetcode.com/problems/longest-substring-without-repeating-characters/
+difficulty: Medium
+premium: false
+category: sliding-window
+patterns: [sliding-window]
+prerequisites: ["Hash set and hash map", "A window with two moving edges"]
+targetComplexity: { time: "O(n)", space: "O(min(n, alphabet))" }
+visualizer: { name: sliding-window, preset: longest-substring }
+status: complete
+---
+
+<Statement>
+
+Given a string `s`, return the length of the longest **substring** without repeating
+characters. A substring is contiguous — `"ace"` is a subsequence of `"abcde"`, not a substring.
+
+<Examples>
+  <Example input={`s = "abcabcbb"`} output="3">
+    `"abc"`, then the second `a` forces the window to move.
+  </Example>
+  <Example input={`s = "bbbbb"`} output="1">
+    Every character repeats immediately, so the window never grows past one.
+  </Example>
+  <Example input={`s = "pwwkew"`} output="3">
+    `"wke"`. `"pwke"` is longer but not contiguous, so it does not count.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `0 <= s.length <= 5 * 10^4`
+- `s` consists of English letters, digits, symbols and spaces
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **"Longest substring such that …"** is the sliding window sentence. Contiguous plus a
+  condition that can be broken and repaired means two moving edges.
+- The condition — no repeats — is **cheap to maintain incrementally**: adding one character can
+  only break it, removing one can only help.
+- `n` up to `5 · 10^4` puts `O(n²)` at 2.5 billion character comparisons. Aim for `O(n)`.
+
+</Signals>
+
+<BruteForce>
+
+Take every start index, walk right while collecting characters in a set, and stop at the first
+repeat. Track the longest run.
+
+**O(n²) time, O(min(n, alphabet)) space.** The bottleneck is that every restart throws away
+everything already known: after failing at index `j`, the next attempt begins at `i + 1` and
+re-reads almost the same characters. Nothing about the string changed — only the window should.
+
+</BruteForce>
+
+<Insight>
+
+Grow the window on the right, and the moment a character repeats, pull the left edge past that character's previous position.
+
+</Insight>
+
+<Approach>
+
+1. Keep two indices, `left` and `right`, marking a window that always contains distinct characters.
+2. Move `right` one step at a time, taking the character `ch`.
+3. If `ch` is already inside the window, move `left` far enough right to drop the earlier copy.
+4. Record `right - left + 1` as a candidate answer.
+
+Step 3 is where the two versions differ. The straightforward one keeps a **set** and slides `left`
+one character at a time until the duplicate is gone. The sharper one keeps a **map from character
+to its last index** and jumps `left` there in one move — no inner loop at all.
+
+<Viz name="sliding-window" preset="longest-substring" />
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def lengthOfLongestSubstring(self, s: str) -> int:
+        # O(n^2) time, O(min(n, alphabet)) space
+        best = 0
+        for i in range(len(s)):
+            seen = set()
+            for j in range(i, len(s)):
+                if s[j] in seen:
+                    break
+                seen.add(s[j])
+                best = max(best, j - i + 1)
+        return best
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def lengthOfLongestSubstring(self, s: str) -> int:
+        # O(n) time, O(min(n, alphabet)) space
+        last: dict[str, int] = {}      # character -> index where it was last seen
+        left = 0
+        best = 0
+
+        for right, ch in enumerate(s):
+            if ch in last:
+                left = max(left, last[ch] + 1)   # max() is not optional, see pitfalls
+            last[ch] = right
+            best = max(best, right - left + 1)
+
+        return best
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`max(left, last[ch] + 1)` is mandatory.** The map remembers every character ever seen, including
+  ones already behind `left`. On `"abba"` the second `a` reports index 0, and without the `max` the
+  window jumps *backwards* to include the `b`s again — the answer comes out 3 instead of 2.
+- The set version must remove `s[left]` *before* incrementing `left`, or the window and the set drift
+  apart.
+- The empty string is a valid input and must return 0, not crash.
+- `best` has to be updated on every step, not only when the window shrinks — the longest window is
+  often the last one.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"What if you are unsure under pressure?"* — Write the set version. It is also `O(n)` amortised,
+  since each character enters and leaves the window exactly once, and it has no `max` trap.
+- *"Return the substring, not its length."* — Store the start index alongside `best` and slice once at
+  the end. Never build the string as you go; that turns it into `O(n²)`.
+- *"At most k distinct characters instead of none repeating."* — Same window, different condition:
+  keep a counter map and shrink while it holds more than `k` keys.
+
+</FollowUps>
