@@ -1,9 +1,9 @@
-# NCLA — NeetCodeLearnApp
+# ncla — NeetCodeLearnApp
 
 Persönliche Lern-App zur Vorbereitung auf technische Interviews mit den **NeetCode 150**.
 
 Das Ziel ist ausdrücklich **nicht**, 150 Lösungen auswendig zu können. Interviews prüfen ~17 Muster.
-NCLA soll drei Dinge trainieren:
+ncla soll drei Dinge trainieren:
 
 1. **Ein unbekanntes Problem angehen** — ein wiederholbarer Ablauf, der auch bei einer Aufgabe
    funktioniert, die man noch nie gesehen hat.
@@ -60,6 +60,12 @@ Jede der 150 Aufgaben hat eine Seite mit fester Struktur:
 | Solution | Lauffähiger Python-Code: erst Brute Force, dann optimal |
 | Pitfalls | Die typischen Fehler |
 | Follow-ups | Was der Interviewer als Nächstes fragt |
+
+`/` ist eine echte Startseite, die erklärt, wozu das Ganze gut ist — die Arbeitsfläche liegt unter
+`/dashboard`. Links steht dort eine einklappbare Sidebar (Ctrl+B) mit dem Kategorie-Baum als
+aufklappbarer Ordnerstruktur, Fortschritt und einem Filter; auf der
+Aufgabenseite hält eine mitscrollende Spalte rechts Zielkomplexität, Muster und den LeetCode-Link
+im Blick. Hell und dunkel sind beide vollwertig und per Schalter umstellbar.
 
 **Zwei Modi**, global umschaltbar:
 
@@ -124,7 +130,10 @@ Danach frei. Advanced Graphs und 2-D DP zuletzt.
 | M3 | Visualizer, beginnend mit den Mustern der Basis-Kategorien 1–5 |
 | M4 | Spaced Repetition, Review-Queue, Fortschrittsseite, Export/Import |
 | M5 | Content-Befüllung Kategorie für Kategorie, in der Reihenfolge der Quelle |
-| M6 | Feinschliff: Tastaturnavigation, Suche, Dark Mode |
+| M6 | Feinschliff: Tastaturnavigation, Volltextsuche, Command-Palette |
+
+Quer dazu laufen Design-Durchgänge auf eigenen `design/<n>-…`-Branches. Das visuelle System —
+Palette, Typografie, Sidebar, Themes — steht seit `design/1-visual-system`.
 
 ---
 
@@ -144,7 +153,7 @@ Danach frei. Advanced Graphs und 2-D DP zuletzt.
 ## Mitarbeit / Git
 
 Default-Branch ist `main`, direkt darauf wird nicht committet. Jeder Slice läuft über einen eigenen
-Branch `slice/<kurzname>` und endet mit einem Pull Request. Details in [CLAUDE.md](CLAUDE.md#11-git-workflow--ein-branch-pro-slice-verbindlich).
+Branch `slice/<kurzname>` und endet mit einem Pull Request. Details in [CLAUDE.md](CLAUDE.md#12-git-workflow--ein-branch-pro-slice-verbindlich).
 
 Teile dieses Projekts — Code, Inhalte und Dokumentation — sind mit
 [Claude Code](https://claude.com/claude-code) entstanden.

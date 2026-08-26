@@ -1,45 +1,43 @@
 import { Link } from "react-router";
 import { CATEGORIES } from "../data/categories";
 import { PROBLEMS } from "../lib/content";
-import { PageHeader } from "../components/ui";
+import { PageHeader, Rows } from "../components/ui";
 
 export default function Categories() {
   return (
-    <>
+    <div className="max-w-[76ch]">
       <PageHeader
         title="Problems"
         lead="All 150 in the order of the NeetCode list. The five foundational categories come first."
       />
 
-      <ul className="grid gap-3 sm:grid-cols-2">
+      <Rows>
         {CATEGORIES.map((category) => {
           const written = PROBLEMS.filter((p) => p.category === category.slug).length;
           return (
             <li key={category.slug}>
               <Link
                 to={`/categories/${category.slug}`}
-                className="flex h-full flex-col rounded-lg border border-line bg-surface p-4 transition-colors hover:border-accent"
+                className="flex flex-col gap-0.5 px-4 py-3 transition-colors hover:bg-surface-2"
               >
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-medium">
-                    <span className="mr-2 text-muted">{category.number}</span>
-                    {category.title}
+                <span className="flex items-baseline gap-3">
+                  <span className="w-8 shrink-0 font-mono text-2xs text-ink-faint">
+                    {category.number}
                   </span>
-                  <span className="shrink-0 text-sm text-muted">
+                  <span className="flex-1 font-medium">{category.title}</span>
+                  {category.foundational ? (
+                    <span className="font-mono text-2xs text-accent">foundation</span>
+                  ) : null}
+                  <span className="w-12 text-right font-mono text-2xs text-ink-faint">
                     {written}/{category.count}
                   </span>
-                </div>
-                <p className="mt-1 text-sm text-muted">{category.blurb}</p>
-                {category.foundational ? (
-                  <span className="mt-2 text-xs font-semibold uppercase tracking-wide text-accent">
-                    Foundation
-                  </span>
-                ) : null}
+                </span>
+                <span className="pl-11 text-sm text-ink-muted">{category.blurb}</span>
               </Link>
             </li>
           );
         })}
-      </ul>
-    </>
+      </Rows>
+    </div>
   );
 }

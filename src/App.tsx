@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router";
 import { AppShell } from "./components/AppShell";
-import Home from "./routes/Home";
+import Landing from "./routes/Landing";
+import Dashboard from "./routes/Dashboard";
 import Categories from "./routes/Categories";
 import Category from "./routes/Category";
 import Patterns from "./routes/Patterns";
@@ -12,8 +13,11 @@ import { CheatSheet, Method, Progress, Review } from "./routes/Placeholders";
 export default function App() {
   return (
     <Routes>
+      {/* The landing page stands on its own — a sidebar beside it would undo the point. */}
+      <Route index element={<Landing />} />
+
       <Route element={<AppShell />}>
-        <Route index element={<Home />} />
+        <Route path="dashboard" element={<Dashboard />} />
         <Route path="method" element={<Method />} />
         <Route path="patterns" element={<Patterns />} />
         <Route path="patterns/:patternSlug" element={<PatternDetail />} />

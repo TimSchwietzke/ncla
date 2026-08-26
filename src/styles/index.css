@@ -1,54 +1,37 @@
 @import "tailwindcss";
-
-/*
- * Palette lives in plain CSS variables so light/dark can swap them, and `@theme inline`
- * exposes them to Tailwind as utilities (bg-surface, text-muted, border-line …).
- */
-:root {
-  --ncla-bg: #f6f7f9;
-  --ncla-surface: #ffffff;
-  --ncla-surface-2: #eef1f5;
-  --ncla-line: #dde2ea;
-  --ncla-text: #14171c;
-  --ncla-muted: #59626f;
-  --ncla-accent: #3b5bdb;
-  --ncla-accent-soft: #e6eafc;
-  --ncla-easy: #146c43;
-  --ncla-medium: #92610a;
-  --ncla-hard: #ad2b23;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ncla-bg: #0d1117;
-    --ncla-surface: #151b24;
-    --ncla-surface-2: #1c2430;
-    --ncla-line: #2a3441;
-    --ncla-text: #e7ecf3;
-    --ncla-muted: #97a3b6;
-    --ncla-accent: #91a8ff;
-    --ncla-accent-soft: #1b2440;
-    --ncla-easy: #46c98b;
-    --ncla-medium: #e0b341;
-    --ncla-hard: #f28b82;
-  }
-}
+@import "./tokens.css";
 
 @theme inline {
   --color-bg: var(--ncla-bg);
   --color-surface: var(--ncla-surface);
   --color-surface-2: var(--ncla-surface-2);
   --color-line: var(--ncla-line);
-  --color-ink: var(--ncla-text);
-  --color-muted: var(--ncla-muted);
+  --color-line-strong: var(--ncla-line-strong);
+  --color-ink: var(--ncla-ink);
+  --color-ink-muted: var(--ncla-ink-muted);
+  --color-ink-faint: var(--ncla-ink-faint);
   --color-accent: var(--ncla-accent);
   --color-accent-soft: var(--ncla-accent-soft);
-  --color-easy: var(--ncla-easy);
-  --color-medium: var(--ncla-medium);
-  --color-hard: var(--ncla-hard);
+  --color-danger: var(--ncla-danger);
 
-  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
+  --font-sans: "IBM Plex Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+  --font-serif: "IBM Plex Serif", ui-serif, Georgia, serif;
+
+  /* Deliberately smaller than the Tailwind defaults — this is a dense tool, not a landing page. */
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-prose: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+
+  /* Nothing rounder than 6px. Larger radii read as toy UI. */
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 6px;
 }
 
 @layer base {
@@ -56,60 +39,98 @@
     background-color: var(--color-bg);
     color: var(--color-ink);
     font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
   :focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-soft);
+    color: var(--color-ink);
+  }
+
+  /* Motion is feedback, never decoration. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
-/* Body copy inside MDX sections — plain elements, no typography plugin. */
+/* Body copy inside MDX sections. Plain elements, no typography plugin. */
+.prose-ncla {
+  font-size: var(--text-prose);
+  line-height: 1.7;
+}
+
+.prose-ncla > * + * {
+  margin-top: 0.85em;
+}
+
 .prose-ncla :is(ul, ol) {
-  padding-left: 1.25rem;
+  padding-left: 1.35rem;
   list-style: revert;
 }
 
-.prose-ncla li {
-  margin-block: 0.25rem;
+.prose-ncla li + li {
+  margin-top: 0.35rem;
+}
+
+.prose-ncla li::marker {
+  color: var(--color-ink-faint);
 }
 
 .prose-ncla a {
   color: var(--color-accent);
   text-decoration: underline;
+  text-decoration-thickness: 1px;
   text-underline-offset: 2px;
-}
-
-.prose-ncla :not(pre) > code {
-  background-color: var(--color-surface-2);
-  border-radius: 0.25rem;
-  padding: 0.1rem 0.35rem;
-  font-family: var(--font-mono);
-  font-size: 0.9em;
-}
-
-.prose-ncla pre {
-  overflow-x: auto;
-  border: 1px solid var(--color-line);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  font-size: 0.875rem;
-  line-height: 1.6;
 }
 
 .prose-ncla strong {
   font-weight: 600;
+  color: var(--color-ink);
+}
+
+.prose-ncla :not(pre) > code {
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  padding: 0.05rem 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
 }
 
 /*
- * Shiki is configured with a light and a dark theme; it emits the dark colours as
- * `--shiki-dark` custom properties on every token, which this swaps in.
+ * Shiki is configured with vitesse-light and vitesse-dark. Only the token colours are
+ * taken from it — the background comes from our own surface, so a code block sits in
+ * the page instead of floating on a foreign rectangle.
  */
-@media (prefers-color-scheme: dark) {
-  .shiki,
-  .shiki span {
-    color: var(--shiki-dark) !important;
-    background-color: var(--shiki-dark-bg) !important;
-  }
+.shiki,
+.shiki span {
+  background-color: transparent !important;
+}
+
+:root[data-theme="dark"] .shiki span {
+  color: var(--shiki-dark) !important;
+}
+
+.shiki {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  overflow-x: auto;
+  padding: 0.85rem 1rem;
+  margin: 0;
 }

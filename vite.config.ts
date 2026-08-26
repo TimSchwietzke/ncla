@@ -17,7 +17,13 @@ export default defineConfig({
       remarkPlugins: [remarkGfm, remarkFrontmatter, [remarkMdxFrontmatter, { name: "frontmatter" }]],
       rehypePlugins: [
         // Highlighting happens at build time; no highlighter ships to the browser.
-        [rehypeShiki, { themes: { light: "github-light", dark: "github-dark" } }],
+        [
+          rehypeShiki,
+          {
+            themes: { light: "vitesse-light", dark: "vitesse-dark" },
+            addLanguageClass: true,
+          },
+        ],
       ],
     }) },
     react({ include: /\.(jsx|js|mdx|md|tsx|ts)$/ }),

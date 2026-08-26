@@ -1,11 +1,11 @@
 import { Suspense, lazy, useMemo } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import { MDXProvider } from "@mdx-js/react";
-import { getCategory } from "../data/categories";
-import { getPattern } from "../data/patterns";
 import { findProblem, loadProblemContent } from "../lib/content";
 import { MDX_COMPONENTS } from "../components/mdx/Sections";
-import { DifficultyBadge, MilestoneNote } from "../components/ui";
+import { DifficultyLabel } from "../components/DifficultyLabel";
+import { MetaRail } from "../components/MetaRail";
+import { MilestoneNote } from "../components/ui";
 import NotFound from "./NotFound";
 
 export default function Problem() {
@@ -19,81 +19,45 @@ export default function Problem() {
   }, [meta]);
 
   if (!meta) return <NotFound />;
-  const category = getCategory(meta.category);
 
   return (
-    <>
-      <nav className="mb-4 text-sm text-muted">
-        <Link to={`/categories/${meta.category}`} className="text-accent">
-          {category?.title ?? meta.category}
-        </Link>
-        <span className="mx-2">/</span>
-        <span>{meta.id}</span>
-      </nav>
-
-      <header className="mb-6">
-        <div className="flex flex-wrap items-baseline gap-3">
+    <article>
+      <header className="mb-8">
+        <p className="font-mono text-2xs text-ink-faint">{meta.id}</p>
+        <div className="mt-1 flex flex-wrap items-baseline gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">{meta.title}</h1>
-          <DifficultyBadge difficulty={meta.difficulty} />
-          {meta.premium ? (
-            <span className="text-xs uppercase tracking-wide text-muted">premium</span>
+          <DifficultyLabel difficulty={meta.difficulty} />
+          {meta.status === "draft" ? (
+            <span className="font-mono text-2xs uppercase text-ink-faint">draft</span>
           ) : null}
         </div>
-
-        <dl className="mt-4 grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
-          <div className="flex gap-2">
-            <dt className="text-muted">Target</dt>
-            <dd className="font-mono">
-              {meta.targetComplexity.time} time, {meta.targetComplexity.space} space
-            </dd>
-          </div>
-          <div className="flex gap-2">
-            <dt className="text-muted">Patterns</dt>
-            <dd>
-              {meta.patterns.map((slug, index) => (
-                <span key={slug}>
-                  {index > 0 ? ", " : ""}
-                  <Link to={`/patterns/${slug}`} className="text-accent">
-                    {getPattern(slug)?.title ?? slug}
-                  </Link>
-                </span>
-              ))}
-            </dd>
-          </div>
-          {meta.prerequisites.length > 0 ? (
-            <div className="flex gap-2 sm:col-span-2">
-              <dt className="text-muted">Assumes</dt>
-              <dd>{meta.prerequisites.join(" · ")}</dd>
-            </div>
-          ) : null}
-          <div className="flex gap-2 sm:col-span-2">
-            <dt className="text-muted">On LeetCode</dt>
-            <dd>
-              <a href={meta.url} target="_blank" rel="noreferrer" className="text-accent">
-                LC {meta.leetcode} ↗
-              </a>
-            </dd>
-          </div>
-        </dl>
       </header>
 
-      <div className="mb-6">
-        <MilestoneNote milestone="M2">
-          Everything is shown at once for now. The staged reveal — target complexity, then pattern
-          hint, then insight, then approach, then code — plus the 20 minute timer arrive with the
-          learn mode slice.
-        </MilestoneNote>
-      </div>
+      <div className="flex flex-col gap-8 xl:grid xl:grid-cols-[minmax(0,1fr)_264px] xl:items-start xl:gap-10">
+        <div className="order-2 min-w-0 max-w-[72ch] xl:order-1">
+          <div className="mb-8">
+            <MilestoneNote milestone="M2">
+              Everything is shown at once for now. The staged reveal — target complexity, then
+              pattern hint, then insight, then approach, then code — plus the 20 minute timer take
+              their place in the rail beside this text.
+            </MilestoneNote>
+          </div>
 
-      {Content ? (
-        <MDXProvider components={MDX_COMPONENTS}>
-          <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
-            <Content />
-          </Suspense>
-        </MDXProvider>
-      ) : (
-        <p className="text-sm text-muted">Content file missing: {meta.file}</p>
-      )}
-    </>
+          {Content ? (
+            <MDXProvider components={MDX_COMPONENTS}>
+              <Suspense fallback={<p className="text-sm text-ink-faint">Loading…</p>}>
+                <Content />
+              </Suspense>
+            </MDXProvider>
+          ) : (
+            <p className="text-sm text-ink-muted">Content file missing: {meta.file}</p>
+          )}
+        </div>
+
+        <aside className="order-1 xl:order-2 xl:sticky xl:top-16">
+          <MetaRail meta={meta} />
+        </aside>
+      </div>
+    </article>
   );
 }
