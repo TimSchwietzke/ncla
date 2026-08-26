@@ -1,3 +1,4 @@
+import { layoutMarkers } from "./layout";
 import type { ArrayStep, CellTone } from "./types";
 
 /**
@@ -126,10 +127,10 @@ export function ArrayTrack({ step, animated = true }: { step: ArrayStep; animate
         </g>
       ) : null}
 
-      {step.markers.map((marker) => (
+      {layoutMarkers(step.markers).map((marker) => (
         <g
           key={marker.label}
-          transform={`translate(${PAD + marker.index * STRIDE + CELL / 2}, ${MARKERS_Y})`}
+          transform={`translate(${PAD + marker.index * STRIDE + CELL / 2 + marker.offset}, ${MARKERS_Y})`}
           style={{
             transition: animated ? "transform 420ms cubic-bezier(0.4, 0, 0.2, 1)" : undefined,
           }}
