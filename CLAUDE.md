@@ -363,12 +363,33 @@ Nach jedem Versuch bewertet der Nutzer 1–5:
 | 4 | allein gelöst, langsam | 7 Tage |
 | 5 | allein, sauber, schnell | 14 Tage |
 
-Ab dem zweiten Erfolg in Folge (Rating ≥ 3): `interval = round(interval * 2.2)`, gedeckelt bei 90 Tagen.
-Fällige Aufgaben landen in `Review`, sortiert nach Überfälligkeit, dann nach Schwierigkeit.
+**Abweichung von der Lerngrundlage, bewusst:** ab dem zweiten Erfolg in Folge wächst das Intervall
+mit einem Faktor, der an der Bewertung hängt — `× 1,6` bei 3, `× 2,2` bei 4, `× 2,8` bei 5,
+gedeckelt bei 90 Tagen. Die Quelle nennt pauschal 2,2. Das Prinzip hinter Anki und SuperMemo ist
+aber, dass die Sicherheit bestimmt, wie weit etwas wegdarf: eine mühsam mit Hinweisen gelöste
+Aufgabe soll sich nicht so schnell entfernen wie eine souveräne. Die 2,2 bleibt der mittlere Fall.
+Die drei Faktoren stehen als `GROWTH_FACTOR` in `lib/srs.ts` und sind mit echten Daten justierbar —
+das ist kein Implementierungsfehler, sondern eine getroffene Entscheidung.
+
+Ab `intervalDays >= 21` gilt eine Aufgabe als **gefestigt** (`MATURE_AFTER_DAYS`); das ist die
+übliche Grenze und färbt das Mosaik auf der Fortschrittsseite.
+
+Fällige Aufgaben landen in `Review`, sortiert nach Überfälligkeit, **bei Gleichstand die schwierigere
+zuerst** — die Quelle legt keine Richtung fest, hier ist sie festgelegt: mit frischem Kopf gehört das
+Harte nach vorn. Darunter „neu" in Quellreihenfolge, darunter „shaky" (zuletzt 1 oder 2, noch nicht
+fällig) eingeklappt, bis oben nichts mehr steht.
 
 Persistenz: `localStorage`, Key `ncla.progress.v1`, Schema mit `version`-Feld und Migrationspfad.
 Zusätzlich gespeichert pro Aufgabe: Status, freigegebene Reveal-Stufe, letzte Zeit, freie Notiz
-(„was habe ich übersehen?“). Export/Import als JSON-Datei muss möglich sein — es gibt kein Backend.
+(„was habe ich übersehen?“). Export/Import als JSON-Datei muss möglich sein — es gibt kein Backend. `lib/backup.ts` verzweigt an
+`"__TAURI_INTERNALS__" in window`: im Fenster echter Speichern-Dialog über `plugin-dialog` und
+`plugin-fs`, im Browser Blob-Download und `<input type="file">`. Ein Knopf, der still nichts tut,
+wäre schlimmer als keiner.
+
+Dateiformat mit Hülle, damit fremdes JSON nicht als Fortschritt durchgeht:
+`{ "app": "ncla", "exportedAt": …, "progress": { version, problems } }`.
+**Der Import ersetzt und fragt vorher** — er zeigt, was in der Datei steht und was gerade da ist.
+Wochen an Historie stillschweigend zu überschreiben wäre der schlimmste Fehler dieser Seite.
 
 ---
 

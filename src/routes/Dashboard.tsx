@@ -1,9 +1,12 @@
 import { Link } from "react-router";
+import { ArrowRight } from "lucide-react";
 import { CATEGORIES, TOTAL_PROBLEMS } from "../data/categories";
 import { PATTERNS } from "../data/patterns";
 import { PROBLEMS, problemsByPattern } from "../lib/content";
 import { DifficultyLabel } from "../components/ui/DifficultyLabel";
 import { ProgressMosaic } from "../components/ui/ProgressMosaic";
+import { useProgress } from "../lib/progress";
+import { dueList, newList } from "../lib/queue";
 import { Rows } from "../components/ui/primitives";
 
 function SectionHead({
@@ -30,6 +33,9 @@ function SectionHead({
 export default function Dashboard() {
   const written = PROBLEMS.length;
   const recent = PROBLEMS.slice(0, 3);
+  const file = useProgress();
+  const due = dueList(file).length;
+  const fresh = newList(file).length;
 
   return (
     <div className="max-w-[900px]">
@@ -39,6 +45,25 @@ export default function Dashboard() {
           Where you stand, what to pick up next, and the whole list at a glance.
         </p>
       </header>
+
+      {/* The one thing worth deciding on arrival: is there anything to do today? */}
+      <section className="mb-12">
+        <Link
+          to="/review"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface px-4 py-3.5 transition-colors hover:border-accent"
+        >
+          <span>
+            <span className="font-mono text-xl text-ink">{due}</span>
+            <span className="ml-2 text-sm text-ink-muted">
+              due today{fresh > 0 ? `, ${fresh} never attempted` : ""}
+            </span>
+          </span>
+          <span className="flex items-center gap-1.5 font-mono text-2xs text-accent">
+            open review
+            <ArrowRight size={12} strokeWidth={2} />
+          </span>
+        </Link>
+      </section>
 
       <section className="mb-12">
         <SectionHead label="The whole list" to="/categories" linkLabel="all categories" />
