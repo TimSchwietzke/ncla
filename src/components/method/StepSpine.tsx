@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { METHOD_STEPS } from "../../data/method";
+import { setChecklist, useProblemProgress } from "../../lib/progress";
 
 /**
  * The six method steps as a numbered spine: a continuous rule down the number column
@@ -9,45 +10,28 @@ import { METHOD_STEPS } from "../../data/method";
  * The steps are the checklist — there is no second list to tick off. `full` explains
  * each step, `compact` is the version M2 puts in the problem rail.
  *
- * Without a storageKey the ticks are throwaway (the method page); with one they are
- * remembered per problem.
+ * Without a problemId the ticks are throwaway (the method page). With one they live in
+ * the progress file, which already declares a `checklist` field — a second storage key
+ * would be the same data in two places, drifting apart.
  */
 export function StepSpine({
   variant = "full",
-  storageKey,
+  problemId,
 }: {
   variant?: "full" | "compact";
-  storageKey?: string;
+  problemId?: string;
 }) {
-  const [done, setDone] = useState<string[]>([]);
+  const persisted = useProblemProgress(problemId ?? "");
+  const [ephemeral, setEphemeral] = useState<string[]>([]);
+  const done = problemId ? persisted.checklist : ephemeral;
 
-  useEffect(() => {
-    if (!storageKey) return;
-    try {
-      const raw = localStorage.getItem(storageKey);
-      const parsed: unknown = raw ? JSON.parse(raw) : [];
-      if (Array.isArray(parsed)) {
-        setDone(parsed.filter((value): value is string => typeof value === "string"));
-      }
-    } catch {
-      // A forgotten checklist is not worth an error.
-    }
-  }, [storageKey]);
+  function apply(next: string[]): void {
+    if (problemId) setChecklist(problemId, next);
+    else setEphemeral(next);
+  }
 
   function toggle(id: string): void {
-    setDone((current) => {
-      const next = current.includes(id)
-        ? current.filter((value) => value !== id)
-        : [...current, id];
-      if (storageKey) {
-        try {
-          localStorage.setItem(storageKey, JSON.stringify(next));
-        } catch {
-          // Ticking still works even when it cannot be remembered.
-        }
-      }
-      return next;
-    });
+    apply(done.includes(id) ? done.filter((value) => value !== id) : [...done, id]);
   }
 
   const compact = variant === "compact";
@@ -124,14 +108,7 @@ export function StepSpine({
         <button
           type="button"
           onClick={() => {
-            setDone([]);
-            if (storageKey) {
-              try {
-                localStorage.removeItem(storageKey);
-              } catch {
-                // Nothing to recover from.
-              }
-            }
+            apply([]);
           }}
           className="mt-4 ml-5 flex items-center gap-1.5 font-mono text-2xs text-ink-faint transition-colors hover:text-ink"
         >

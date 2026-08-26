@@ -140,10 +140,14 @@ Danach frei. Advanced Graphs und 2-D DP zuletzt.
 | M0 | Projekt-Setup: Vite, React, TypeScript, Tailwind, MDX, Routing, Validierungs-Skripte |
 | M1 | Method, Patterns, Cheat Sheet — die generellen Inhalte, unabhängig von einzelnen Aufgaben |
 | M2 | Aufgabenseite mit beiden Modi + 3 Gold-Standard-Aufgaben als Referenz für alles Weitere |
-| M3 | Visualizer, beginnend mit den Mustern der Basis-Kategorien 1–5 |
 | M4 | Spaced Repetition, Review-Queue, Fortschrittsseite, Export/Import |
 | M5 | Content-Befüllung Kategorie für Kategorie, in der Reihenfolge der Quelle |
+| M3 | Visualizer — pro Muster nachgezogen, während der Content entsteht |
 | M6 | Feinschliff: Tastaturnavigation, Volltextsuche, Command-Palette |
+
+M4 kommt bewusst vor M3: sobald M2 steht, wird gelernt, und jede Sitzung ohne Bewertung ist
+verlorene Historie. Der Visualizer-Kern steht seit dem Design-Slice, der Rest lässt sich pro Muster
+nachziehen.
 
 Quer dazu laufen Design-Durchgänge auf eigenen `design/<n>-…`-Branches. Das visuelle System —
 Palette, Typografie, Sidebar, Themes — steht seit `design/1-visual-system`.

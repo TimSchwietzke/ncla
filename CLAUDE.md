@@ -217,15 +217,31 @@ Umgekehrt gilt: der **Muster-Name ist die halbe Lösung** und steht in keinem In
 in der Rail sind hinter einem `reveal` verborgen (seit M1 umgesetzt).
 
 - **Learn Mode** (Default): sichtbar sind `<Statement>` mit Beispielen und Constraints sowie die
-  Zielkomplexität. Danach gibt der Nutzer stufenweise frei:
-  `1 Pattern hint (<Signals>) → 2 Insight → 3 Approach → 4 Solution → 5 Pitfalls + Follow-ups`.
+  Zielkomplexität. Danach gibt der Nutzer stufenweise frei — **in Dateireihenfolge**, sechs Stufen:
+  `1 <Signals> → 2 <BruteForce> → 3 <Insight> → 4 <Approach> → 5 <Solution> → 6 <Pitfalls> + <FollowUps>`.
+  `<BruteForce>` gehört ausdrücklich dazu: den naiven Ansatz selbst zu benennen ist Schritt 4 der
+  Methode, ihn gratis zu zeigen überspringt einen Lernschritt.
   Jede Stufe ist ein eigener Klick, die freigegebene Stufe wird pro Aufgabe gespeichert.
   Auf der Seite läuft optional der 20-Minuten-Timer und daneben steht die abhakbare Checkliste aus
   `Method` (Beispiele durchgehen → Constraints → Zielkomplexität → Brute Force → Engpass → Muster).
 - **Reference Mode**: alles offen, `<Solution>` eingeklappt. Zum schnellen Wiederholen.
 
 Der Modus darf niemals versehentlich Inhalte spoilern — beim Rendern gilt: was nicht freigegeben ist,
-wird gar nicht erst ins DOM gerendert (nicht nur per CSS versteckt).
+wird gar nicht erst ins DOM gerendert (nicht nur per CSS versteckt). Umgesetzt über `Gate` in
+`components/problem/RevealGate.tsx`; die Stufenzuordnung steht ausschließlich in `Sections.tsx`.
+
+**Der Freigabe-Knopf steht inline** unter dem zuletzt freigegebenen Abschnitt und nennt immer, was
+als Nächstes käme — dort ist der Blick, wenn man feststeckt, und die Entscheidung fällt bewusst.
+Einen „alles zeigen"-Knopf gibt es im Learn Mode **nicht**: der Notausgang ist der Reference Mode.
+
+**Timer** (`lib/timer.ts`): zählt aufwärts, Ziel 20 Minuten, danach wechselt die Anzeige auf
+`danger` — kein Ton, kein Dialog. Er liegt in einem Modul-Store und **überlebt Navigation**, weil
+Schritt 3 der Methode einen aufs Cheat Sheet schickt. Einen Reload überlebt er nicht; ein so hart
+unterbrochener Versuch ist ohnehin vorbei.
+
+**Aller Fortschritt liegt in genau einer Datei**, `ncla.progress.v1` (`lib/progress.ts`) — auch die
+abgehakte Checkliste. Niemals einen zweiten `localStorage`-Schlüssel für Aufgabendaten anlegen; das
+Schema deklariert bereits die Felder, die M4 füllt.
 
 ---
 

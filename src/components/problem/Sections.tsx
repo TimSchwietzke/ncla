@@ -3,10 +3,13 @@ import { getPattern } from "../../data/patterns";
 import { CodeBlock, SolutionContext } from "./CodeBlock";
 import { Example, Examples } from "./Example";
 import { Constraints } from "./Constraints";
+import { Gate, useReveal } from "./RevealGate";
 
 /**
  * The fixed section components every problem MDX file is built from (CLAUDE.md §6).
- * They render and label content; the staged reveal that hides them one by one is M2.
+ *
+ * Everything past <Statement> sits behind its rung of the ladder. The stage mapping
+ * lives here and nowhere else, so adding a section means touching one file.
  */
 
 function Section({
@@ -35,17 +38,21 @@ export function Statement({ children }: { children: ReactNode }) {
 
 export function Signals({ children }: { children: ReactNode }) {
   return (
-    <Section label="Signals" hint="what gives the pattern away">
-      {children}
-    </Section>
+    <Gate stage="signals">
+      <Section label="Signals" hint="what gives the pattern away">
+        {children}
+      </Section>
+    </Gate>
   );
 }
 
 export function BruteForce({ children }: { children: ReactNode }) {
   return (
-    <Section label="Brute force" hint="say this out loud first, then beat it">
-      {children}
-    </Section>
+    <Gate stage="bruteForce">
+      <Section label="Brute force" hint="say this out loud first, then beat it">
+        {children}
+      </Section>
+    </Gate>
   );
 }
 
@@ -55,18 +62,29 @@ export function BruteForce({ children }: { children: ReactNode }) {
  */
 export function Insight({ children }: { children: ReactNode }) {
   return (
-    <section className="mb-9 border-l-2 border-accent py-1 pl-5">
-      <h2 className="mb-2 font-mono text-2xs uppercase text-accent">Insight</h2>
-      {/* A div, not a p — MDX already wraps the sentence in its own paragraph. */}
-      <div className="max-w-[62ch] font-serif text-lg leading-snug text-ink">{children}</div>
-    </section>
+    <Gate stage="insight">
+      <section className="mb-9 border-l-2 border-accent py-1 pl-5">
+        <h2 className="mb-2 font-mono text-2xs uppercase text-accent">Insight</h2>
+        {/* A div, not a p — MDX already wraps the sentence in its own paragraph. */}
+        <div className="max-w-[62ch] font-serif text-lg leading-snug text-ink">{children}</div>
+      </section>
+    </Gate>
   );
 }
 
 export function Approach({ children }: { children: ReactNode }) {
-  return <Section label="Approach">{children}</Section>;
+  return (
+    <Gate stage="approach">
+      <Section label="Approach">{children}</Section>
+    </Gate>
+  );
 }
 
+/**
+ * In learn mode the code is already behind the ladder, so revealing it shows it open —
+ * you asked for it. In reference mode everything is open by default, and the solution
+ * is the one thing that still needs a deliberate click (CLAUDE.md §7).
+ */
 export function Solution({
   children,
   variant = "optimal",
@@ -74,21 +92,41 @@ export function Solution({
   children: ReactNode;
   variant?: "brute" | "optimal";
 }) {
+  const { gated } = useReveal();
+  const label = variant === "brute" ? "Solution · brute force" : "Solution · optimal";
+
   return (
-    <SolutionContext.Provider value={variant}>
-      <Section label={variant === "brute" ? "Solution · brute force" : "Solution · optimal"}>
-        {children}
-      </Section>
-    </SolutionContext.Provider>
+    <Gate stage="solution">
+      <SolutionContext.Provider value={variant}>
+        {gated ? (
+          <Section label={label}>{children}</Section>
+        ) : (
+          <details className="mb-9 overflow-hidden rounded-lg border border-line bg-surface">
+            <summary className="cursor-pointer list-none px-4 py-2.5 font-mono text-2xs uppercase text-ink-faint transition-colors hover:text-ink">
+              {label} — click to open
+            </summary>
+            <div className="prose-ncla border-t border-line px-4 py-3">{children}</div>
+          </details>
+        )}
+      </SolutionContext.Provider>
+    </Gate>
   );
 }
 
 export function Pitfalls({ children }: { children: ReactNode }) {
-  return <Section label="Pitfalls">{children}</Section>;
+  return (
+    <Gate stage="wrapUp">
+      <Section label="Pitfalls">{children}</Section>
+    </Gate>
+  );
 }
 
 export function FollowUps({ children }: { children: ReactNode }) {
-  return <Section label="Follow-ups">{children}</Section>;
+  return (
+    <Gate stage="wrapUp">
+      <Section label="Follow-ups">{children}</Section>
+    </Gate>
+  );
 }
 
 /** A pattern visualizer, seeded with this problem's own example. Placeholder until M3. */

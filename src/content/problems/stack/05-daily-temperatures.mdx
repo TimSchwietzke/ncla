@@ -1,0 +1,147 @@
+---
+id: "4.5"
+slug: daily-temperatures
+title: Daily Temperatures
+leetcode: 739
+url: https://leetcode.com/problems/daily-temperatures/
+difficulty: Medium
+premium: false
+category: stack
+patterns: [monotonic-stack]
+prerequisites: ["Stack operations", "The phrase \"next greater element\""]
+targetComplexity: { time: "O(n)", space: "O(n)" }
+visualizer: { name: monotonic-stack, preset: daily-temperatures }
+status: complete
+---
+
+<Statement>
+
+Given a list of daily `temperatures`, return an array `answer` where `answer[i]` is the number of
+days you have to wait after day `i` for a warmer temperature. If no warmer day ever comes, put `0`.
+
+<Examples>
+  <Example input={`temperatures = [73, 74, 75, 71, 69, 72, 76, 73]`} output="[1, 1, 4, 2, 1, 1, 0, 0]">
+    Day 2 (75°) waits until day 6 (76°) — four days. The last two never get warmer.
+  </Example>
+  <Example input={`temperatures = [30, 40, 50, 60]`} output="[1, 1, 1, 0]">
+    Every day is warmer than the one before, so everyone waits exactly one day.
+  </Example>
+  <Example input={`temperatures = [90, 80, 70]`} output="[0, 0, 0]">
+    Temperatures only fall, so nobody is ever answered.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= temperatures.length <= 10^5`
+- `30 <= temperatures[i] <= 100`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **"How long until something greater"** is next-greater-element in disguise, and that is the
+  monotonic stack's whole job.
+- The answer for a day is decided by a **later** day, so days pile up unanswered — something has to
+  hold them, in order.
+- `n` up to `10^5` makes `O(n²)` ten billion comparisons in the falling case. `O(n)` is required,
+  not merely nicer.
+
+</Signals>
+
+<BruteForce>
+
+For each day, scan forward until a warmer temperature appears and record the distance.
+
+**O(n²) time, O(1) space.** On a strictly decreasing list every day scans to the end, which is the
+worst case rather than a rare one. The bottleneck is that each scan is thrown away: when day `i`
+walks past days `i+1 … j` without finding anything, day `i+1` starts the very same walk again.
+Those days are all waiting for the same thing, and they could wait together.
+
+</BruteForce>
+
+<Insight>
+
+A day waits for its first warmer day, and when that day finally arrives it settles every day still waiting at once.
+
+</Insight>
+
+<Approach>
+
+1. Keep a stack of **indices** whose answer is still unknown. Their temperatures are decreasing from
+   bottom to top — a warmer day would already have resolved the one below it.
+2. Walk the days left to right. For the current day `i` with temperature `t`:
+3. While the stack is not empty and `t` is warmer than the temperature at the top index, pop that
+   index and write `answer[popped] = i - popped`. One warm day can settle several waiting days.
+4. Push `i` — it is now waiting too.
+5. Whatever remains on the stack at the end never got a warmer day, and those entries keep their `0`.
+
+Each index is pushed once and popped at most once, so the inner loop is amortised constant: `O(n)`
+overall, despite being a loop inside a loop.
+
+<Viz name="monotonic-stack" preset="daily-temperatures" />
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def dailyTemperatures(self, temperatures: list[int]) -> list[int]:
+        # O(n^2) time, O(1) space beyond the output
+        n = len(temperatures)
+        res = [0] * n
+        for i in range(n):
+            for j in range(i + 1, n):
+                if temperatures[j] > temperatures[i]:
+                    res[i] = j - i
+                    break
+        return res
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def dailyTemperatures(self, temperatures: list[int]) -> list[int]:
+        # O(n) time, O(n) space
+        res = [0] * len(temperatures)
+        stack: list[int] = []          # indices, temperatures decreasing towards the top
+
+        for i, t in enumerate(temperatures):
+            while stack and t > temperatures[stack[-1]]:
+                waiting = stack.pop()
+                res[waiting] = i - waiting
+            stack.append(i)
+
+        return res                     # anything left on the stack keeps its 0
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Store indices, not temperatures.** The answer is a *distance*, and a temperature alone cannot
+  tell you where it came from. This is the single most common way to get this problem wrong.
+- Use a strict `>` comparison. With `>=` an equal temperature would wrongly count as warmer.
+- Do not initialise the result with anything but `0`. The days left on the stack are exactly the
+  unanswered ones, and they are already correct — no cleanup pass is needed.
+- The loop inside a loop looks like `O(n²)`. Say the amortisation argument out loud: every index
+  enters the stack once and leaves at most once.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Next greater element in a circular array."* — Walk the indices twice using `i % n` and only push
+  during the first pass.
+- *"The next **cooler** day instead."* — Flip the comparison. The stack then holds increasing
+  temperatures; nothing else changes.
+- *"Why not scan from the right?"* — You can: walk backwards and pop everything not warmer than the
+  current day. Same complexity, same stack, and worth mentioning as the alternative.
+
+</FollowUps>
