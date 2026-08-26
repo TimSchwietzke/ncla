@@ -13,9 +13,19 @@ const GAP = 5;
 const STRIDE = CELL + GAP;
 const PAD = 12;
 const CELLS_Y = 26;
-const MARKERS_Y = CELLS_Y + CELL + 15;
-/** The caret ends at y = -4; the label baseline sits far enough below it to breathe. */
-const MARKER_LABEL_Y = 15;
+
+/** Slack the span bracket leaves around the cells on every side. */
+const SPAN_INSET = 6;
+const SPAN_BOTTOM = CELLS_Y + CELL + SPAN_INSET;
+
+/** How far the caret tip reaches above the marker origin, matching its path. */
+const CARET_TIP = 10;
+/** Clear air between the bottom of the bracket and the tip of the caret. */
+const CARET_CLEARANCE = 8;
+const MARKERS_Y = SPAN_BOTTOM + CARET_CLEARANCE + CARET_TIP;
+
+/** Label baseline below the caret, which ends at y = -4. */
+const MARKER_LABEL_Y = 13;
 const HEIGHT = MARKERS_Y + MARKER_LABEL_Y + 4;
 
 interface ToneStyle {
@@ -105,9 +115,9 @@ export function ArrayTrack({ step, animated = true }: { step: ArrayStep; animate
         >
           <rect
             x="-4"
-            y={CELLS_Y - 6}
+            y={CELLS_Y - SPAN_INSET}
             width={(step.span.end - step.span.start + 1) * STRIDE - GAP + 8}
-            height={CELL + 12}
+            height={CELL + SPAN_INSET * 2}
             rx="8"
             fill="none"
             stroke="var(--ncla-accent)"
@@ -137,7 +147,7 @@ export function ArrayTrack({ step, animated = true }: { step: ArrayStep; animate
             transition: animated ? "transform 420ms cubic-bezier(0.4, 0, 0.2, 1)" : undefined,
           }}
         >
-          <path d="M 0 -10 L 4 -4 L -4 -4 Z" fill="var(--ncla-accent)" />
+          <path d={`M 0 ${-CARET_TIP} L 4 -4 L -4 -4 Z`} fill="var(--ncla-accent)" />
           <text
             textAnchor="middle"
             y={MARKER_LABEL_Y}
