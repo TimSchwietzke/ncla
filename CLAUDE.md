@@ -261,6 +261,13 @@ Verbindliches Muster für jeden Visualizer:
 6. `steps.test.ts` prüft mindestens: erster Frame = Ausgangszustand, letzter Frame = korrektes
    Ergebnis, Frame-Anzahl plausibel.
 
+**Stand:** Der Design-Slice hat den gemeinsamen Baustein schon gebaut und benutzt ihn im Hero der
+Startseite: `visualizers/core/types.ts` (`ArrayStep`, `CellTone`, `Marker`, `Span`),
+`visualizers/core/ArrayTrack.tsx` (rendert **einen** Step als SVG, zustandslos) und drei pure
+`buildSteps` mit Tests — `sliding-window`, `two-pointer`, `binary-search`. M3 baut darauf auf:
+`StepPlayer`, `presets.ts` pro Muster, die restlichen fünfzehn Visualizer und die Einbindung in
+`PatternDetail`. **Nicht neu erfinden, was in `core/` schon steht.**
+
 Darstellung: SVG, keine Canvas. Farben aus den Tailwind-Tokens, funktioniert in Light und Dark,
 farbenblind-tauglich (nicht nur Rot/Grün unterscheiden — zusätzlich Form/Label).
 `prefers-reduced-motion` respektieren: dann keine Auto-Animation, nur Einzelschritte.

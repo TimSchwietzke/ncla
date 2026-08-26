@@ -6,7 +6,7 @@ import { PATTERNS } from "../data/patterns";
 import { PROBLEMS } from "../lib/content";
 import { ProgressMosaic } from "../components/ProgressMosaic";
 import { ThemeToggle } from "../components/ThemeToggle";
-import { HeroWindow } from "../components/landing/HeroWindow";
+import { HeroVisualizer } from "../components/landing/HeroVisualizer";
 import { Reveal } from "../components/landing/Reveal";
 import {
   CodeMock,
@@ -109,7 +109,7 @@ export default function Landing() {
           </div>
 
           <div className="mx-auto mt-16 max-w-[720px]">
-            <HeroWindow />
+            <HeroVisualizer />
           </div>
         </section>
 
