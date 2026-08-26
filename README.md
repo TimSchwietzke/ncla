@@ -36,11 +36,24 @@ npm run dev
 ```
 
 ```bash
+npm run tauri:dev
+```
+
+```bash
 npm run validate
 ```
 
-`validate` prüft Typen, Content-Struktur und Tests. Die App läuft rein lokal, ohne Backend und ohne
-Netzwerkzugriff.
+`dev` öffnet die App im Browser, `tauri:dev` im eigenen Fenster — dieselbe App, kein zweiter
+Code-Pfad. `validate` prüft Typen, Content-Struktur und Tests. Die App läuft rein lokal, ohne
+Backend und ohne Netzwerkzugriff.
+
+**Als Programm installieren:** `npm run tauri:build` erzeugt unter
+`src-tauri/target/release/bundle/` eine `.msi` und einen NSIS-Installer. Dafür wird einmalig die
+Rust-Toolchain gebraucht (`rustup`) sowie ein C++-Linker — auf Windows aus den Visual Studio Build
+Tools. Die Installer sind **nicht signiert**: Windows SmartScreen warnt beim ersten Start.
+
+Achtung beim Wechsel zwischen Browser und Fenster: der Fortschritt liegt in `localStorage` und ist
+an die Herkunft gebunden, beide teilen ihn sich **nicht**. Zum Übertragen den JSON-Export nutzen.
 
 ---
 
