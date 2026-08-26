@@ -1,34 +1,35 @@
 import { Link } from "react-router";
 import { PATTERNS } from "../data/patterns";
 import { problemsByPattern } from "../lib/content";
-import { PageHeader } from "../components/ui";
+import { PageHeader, Rows } from "../components/ui";
 
 export default function Patterns() {
   return (
-    <>
+    <div className="max-w-[76ch]">
       <PageHeader
         title="Patterns"
-        lead="The actual learning target. When you open an unfamiliar problem, the first question is not 'what is the solution' but 'which of these is it'."
+        lead="The actual learning target. When you open an unfamiliar problem the first question is not 'what is the solution' but 'which of these is it'."
       />
 
-      <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
+      <Rows>
         {PATTERNS.map((pattern) => (
           <li key={pattern.slug}>
             <Link
               to={`/patterns/${pattern.slug}`}
-              className="block px-4 py-3 transition-colors hover:bg-surface-2"
+              className="flex flex-col gap-1 px-4 py-3 transition-colors hover:bg-surface-2"
             >
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="font-medium">{pattern.title}</span>
-                <span className="shrink-0 text-sm text-muted">
+              <span className="flex items-baseline gap-3">
+                <span className="flex-1 font-medium">{pattern.title}</span>
+                <span className="font-mono text-2xs text-ink-faint">
                   {problemsByPattern(pattern.slug).length} problems
                 </span>
-              </div>
-              <p className="mt-1 text-sm text-muted">{pattern.signal}</p>
+              </span>
+              <span className="text-sm text-ink-muted">{pattern.signal}</span>
+              <span className="font-mono text-2xs text-ink-faint">{pattern.slug}</span>
             </Link>
           </li>
         ))}
-      </ul>
-    </>
+      </Rows>
+    </div>
   );
 }

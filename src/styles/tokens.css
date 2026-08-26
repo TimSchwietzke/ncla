@@ -1,0 +1,58 @@
+/*
+ * Design tokens. Two complete themes, resolved to a `data-theme` attribute on <html>
+ * by the bootstrap script in index.html before the first paint.
+ *
+ * Palette follows the Vitesse editor themes so that Shiki's code output and the
+ * surrounding UI share one lineage instead of clashing.
+ */
+
+:root {
+  color-scheme: light;
+
+  --ncla-bg: #fdfcf9;
+  --ncla-surface: #ffffff;
+  --ncla-surface-2: #f4f1ea;
+  --ncla-line: #e5e0d5;
+  --ncla-line-strong: #d5cdbd;
+  --ncla-ink: #262521;
+  --ncla-ink-muted: #6b6555;
+  --ncla-ink-faint: #736c5c;
+  --ncla-accent: #8f6520;
+  --ncla-accent-soft: #f8f0e0;
+  --ncla-danger: #a33a2b;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ncla-bg: #121212;
+  --ncla-surface: #1a1a1a;
+  --ncla-surface-2: #222220;
+  --ncla-line: #2c2c29;
+  --ncla-line-strong: #3a3a36;
+  --ncla-ink: #dbd7ca;
+  --ncla-ink-muted: #a29c8b;
+  --ncla-ink-faint: #979083;
+  --ncla-accent: #d4a25f;
+  --ncla-accent-soft: #251f14;
+  --ncla-danger: #cb7676;
+}
+
+/* Fallback for the moment before the bootstrap script runs, and for no-JS. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --ncla-bg: #121212;
+    --ncla-surface: #1a1a1a;
+    --ncla-surface-2: #222220;
+    --ncla-line: #2c2c29;
+    --ncla-line-strong: #3a3a36;
+    --ncla-ink: #dbd7ca;
+    --ncla-ink-muted: #a29c8b;
+    --ncla-ink-faint: #979083;
+    --ncla-accent: #d4a25f;
+    --ncla-accent-soft: #251f14;
+    --ncla-danger: #cb7676;
+  }
+}

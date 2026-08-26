@@ -1,49 +1,148 @@
-import { NavLink, Outlet } from "react-router";
+import { useEffect, useState } from "react";
+import { Link, Outlet, useLocation } from "react-router";
+import { getCategory } from "../data/categories";
+import { getPattern } from "../data/patterns";
+import { findProblem } from "../lib/content";
+import { Sidebar } from "./Sidebar";
 
-const NAV = [
-  { to: "/", label: "Home", end: true },
-  { to: "/method", label: "Method", end: false },
-  { to: "/patterns", label: "Patterns", end: false },
-  { to: "/categories", label: "Problems", end: false },
-  { to: "/review", label: "Review", end: false },
-  { to: "/progress", label: "Progress", end: false },
-  { to: "/cheat-sheet", label: "Cheat sheet", end: false },
-];
+interface Crumb {
+  label: string;
+  to?: string;
+}
+
+function useBreadcrumb(): Crumb[] {
+  const { pathname } = useLocation();
+  const [head, ...rest] = pathname.split("/").filter(Boolean);
+
+  switch (head) {
+    case undefined:
+      return [];
+    case "method":
+      return [{ label: "Method" }];
+    case "review":
+      return [{ label: "Review" }];
+    case "progress":
+      return [{ label: "Progress" }];
+    case "cheat-sheet":
+      return [{ label: "Cheat sheet" }];
+    case "patterns": {
+      const slug = rest[0];
+      if (!slug) return [{ label: "Patterns" }];
+      return [
+        { label: "Patterns", to: "/patterns" },
+        { label: getPattern(slug)?.title ?? slug },
+      ];
+    }
+    case "categories": {
+      const slug = rest[0];
+      if (!slug) return [{ label: "Problems" }];
+      return [
+        { label: "Problems", to: "/categories" },
+        { label: getCategory(slug)?.title ?? slug },
+      ];
+    }
+    case "problems": {
+      const [categorySlug, problemSlug] = rest;
+      if (!categorySlug || !problemSlug) return [{ label: "Problems", to: "/categories" }];
+      const category = getCategory(categorySlug);
+      const problem = findProblem(categorySlug, problemSlug);
+      return [
+        { label: "Problems", to: "/categories" },
+        { label: category?.title ?? categorySlug, to: `/categories/${categorySlug}` },
+        { label: problem?.title ?? problemSlug },
+      ];
+    }
+    default:
+      return [];
+  }
+}
 
 export function AppShell() {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const crumbs = useBreadcrumb();
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDrawerOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [drawerOpen]);
+
   return (
-    <div className="min-h-dvh">
-      <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3">
-          <NavLink to="/" className="text-lg font-semibold tracking-tight">
-            NCLA
-          </NavLink>
-          <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-            {NAV.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  isActive
-                    ? "font-medium text-accent"
-                    : "text-muted transition-colors hover:text-ink"
-                }
-              >
-                {item.label}
-              </NavLink>
+    <div className="min-h-dvh lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
+      <aside className="hidden lg:sticky lg:top-0 lg:block lg:h-dvh">
+        <Sidebar />
+      </aside>
+
+      {drawerOpen ? (
+        <>
+          <button
+            type="button"
+            aria-label="Close navigation"
+            onClick={() => {
+              setDrawerOpen(false);
+            }}
+            className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          />
+          <aside className="fixed inset-y-0 left-0 z-50 w-[280px] lg:hidden">
+            <Sidebar
+              onNavigate={() => {
+                setDrawerOpen(false);
+              }}
+            />
+          </aside>
+        </>
+      ) : null}
+
+      <div className="flex min-h-dvh flex-col">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-bg/90 px-5 py-2.5 backdrop-blur">
+          <button
+            type="button"
+            onClick={() => {
+              setDrawerOpen(true);
+            }}
+            aria-label="Open navigation"
+            className="rounded-md border border-line px-2 py-1 font-mono text-2xs text-ink-muted lg:hidden"
+          >
+            menu
+          </button>
+
+          <nav aria-label="Breadcrumb" className="min-w-0 truncate font-mono text-2xs text-ink-faint">
+            <Link to="/" className="hover:text-ink">
+              ncla
+            </Link>
+            {crumbs.map((crumb) => (
+              <span key={crumb.label}>
+                <span className="mx-1.5">/</span>
+                {crumb.to ? (
+                  <Link to={crumb.to} className="hover:text-ink">
+                    {crumb.label}
+                  </Link>
+                ) : (
+                  <span className="text-ink-muted">{crumb.label}</span>
+                )}
+              </span>
             ))}
           </nav>
-        </div>
-      </header>
+        </header>
 
-      <main className="mx-auto max-w-5xl px-5 py-8">
-        <Outlet />
-      </main>
+        <main className="flex-1 px-5 py-8 lg:px-10">
+          <Outlet />
+        </main>
 
-      <footer className="mx-auto max-w-5xl px-5 pb-10 text-xs text-muted">
-        NeetCode 150 · personal preparation · everything is stored locally
-      </footer>
+        <footer className="px-5 pb-8 font-mono text-2xs text-ink-faint lg:px-10">
+          everything is stored locally · no backend
+        </footer>
+      </div>
     </div>
   );
 }

@@ -5,6 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <title>NCLA — NeetCode Learn App</title>
+    <script>
+      // Runs before the first paint so the correct theme is already on <html>.
+      // Without this the page flashes the wrong theme on every reload.
+      // The key is duplicated from src/lib/theme.ts on purpose — this cannot import.
+      (function () {
+        var theme = "light";
+        try {
+          var stored = localStorage.getItem("ncla.theme");
+          theme =
+            stored === "light" || stored === "dark"
+              ? stored
+              : window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+        } catch (error) {
+          theme = "light";
+        }
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

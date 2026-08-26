@@ -61,6 +61,10 @@ Jede der 150 Aufgaben hat eine Seite mit fester Struktur:
 | Pitfalls | Die typischen Fehler |
 | Follow-ups | Was der Interviewer als Nächstes fragt |
 
+Links steht eine feste Sidebar mit dem Kategorie-Baum, Fortschritt und einem Filter; auf der
+Aufgabenseite hält eine mitscrollende Spalte rechts Zielkomplexität, Muster und den LeetCode-Link
+im Blick. Hell und dunkel sind beide vollwertig und per Schalter umstellbar.
+
 **Zwei Modi**, global umschaltbar:
 
 - **Learn Mode** — sichtbar ist zunächst nur das Statement. Danach gibst du stufenweise frei:
@@ -124,7 +128,10 @@ Danach frei. Advanced Graphs und 2-D DP zuletzt.
 | M3 | Visualizer, beginnend mit den Mustern der Basis-Kategorien 1–5 |
 | M4 | Spaced Repetition, Review-Queue, Fortschrittsseite, Export/Import |
 | M5 | Content-Befüllung Kategorie für Kategorie, in der Reihenfolge der Quelle |
-| M6 | Feinschliff: Tastaturnavigation, Suche, Dark Mode |
+| M6 | Feinschliff: Tastaturnavigation, Volltextsuche, Command-Palette |
+
+Quer dazu laufen Design-Durchgänge auf eigenen `design/<n>-…`-Branches. Das visuelle System —
+Palette, Typografie, Sidebar, Themes — steht seit `design/1-visual-system`.
 
 ---
 
@@ -144,7 +151,7 @@ Danach frei. Advanced Graphs und 2-D DP zuletzt.
 ## Mitarbeit / Git
 
 Default-Branch ist `main`, direkt darauf wird nicht committet. Jeder Slice läuft über einen eigenen
-Branch `slice/<kurzname>` und endet mit einem Pull Request. Details in [CLAUDE.md](CLAUDE.md#11-git-workflow--ein-branch-pro-slice-verbindlich).
+Branch `slice/<kurzname>` und endet mit einem Pull Request. Details in [CLAUDE.md](CLAUDE.md#12-git-workflow--ein-branch-pro-slice-verbindlich).
 
 Teile dieses Projekts — Code, Inhalte und Dokumentation — sind mit
 [Claude Code](https://claude.com/claude-code) entstanden.

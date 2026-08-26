@@ -61,6 +61,9 @@ Daraus folgt für allen Content:
 - State: kein Redux/Zustand. Ein kleiner Store in `src/lib/store.ts` (Modul + `useSyncExternalStore`),
   Persistenz in `localStorage`.
 - Keine Backend-Komponente, keine Netzwerkaufrufe zur Laufzeit. Die App muss offline funktionieren.
+- **Schriften:** IBM Plex Sans / Mono / Serif, über `@fontsource` aus `node_modules` gebündelt.
+  „Keine externen Fonts/CDNs" heißt *kein Netzwerkzugriff zur Laufzeit* — mitgelieferte
+  npm-Schriften erfüllen das und sind erwünscht.
 
 Abhängigkeiten sparsam halten. Vor dem Hinzufügen eines Pakets kurz begründen, warum es sich lohnt.
 
@@ -173,7 +176,48 @@ wird gar nicht erst ins DOM gerendert (nicht nur per CSS versteckt).
 
 ---
 
-## 8. Visualizer-Architektur
+## 8. Design-System (verbindlich)
+
+Richtung: warmes Papier hell, warmes Schwarz dunkel — Abstammung der Vitesse-Editor-Themes, damit
+Shikis Code-Ausgabe und die UI dieselbe Palette teilen. Zwei vollständige Themes, umschaltbar
+(`light | dark | system`), aufgelöst zu `data-theme` auf `<html>` durch das Inline-Skript in
+`index.html` **vor** dem ersten Paint.
+
+Alle Farben kommen aus `src/styles/tokens.css` und werden in `index.css` via `@theme inline` auf
+Tailwind gemappt. **Nie eine Farbe direkt in eine Komponente schreiben** — nur Tokens:
+`bg` · `surface` · `surface-2` · `line` · `line-strong` · `ink` · `ink-muted` · `ink-faint` ·
+`accent` · `accent-soft` · `danger`.
+
+Regeln, an die sich jede neue Komponente hält:
+
+- **Ränder statt Schatten.** 1px-Hairlines trennen Bereiche; Schatten nur für echte Overlays.
+- **Radius maximal 6px** (`rounded-lg` ist hier 6px). Nichts runder.
+- **Eine Akzentfarbe, sparsam:** aktiver Navigationseintrag, Links, Fokusring, Insight-Kante.
+  Sonst nichts. `danger` ausschließlich für Hard.
+- **Schwierigkeit über Betonung, nicht über Farbe:** Easy = `ink-faint`, Medium = `ink`,
+  Hard = `danger`. Ein bernsteinfarbenes „Medium" wäre vom Ocker-Akzent nicht zu unterscheiden.
+- **Keine Farbe pro Muster.** Muster-Chips sind Mono-Text in einer `surface-2`-Pille.
+- **Monospace bedeutet etwas:** Komplexität, IDs, LC-Nummern, Zähler, Sektionslabels, Kürzel.
+  Fließtext niemals in Mono.
+- **Serif genau einmal:** der Insight-Satz. Das ist die Signatur der App und bleibt einmalig.
+- **Listen sind Zeilen mit Rand** (`<Rows>`), keine Karten-Grids.
+- **Kein `uppercase tracking-widest`** als Sektionslabel — kleines Mono-Label in `ink-faint`.
+- **Kontrast:** jede Text-auf-Fläche-Kombination ≥ 4.5:1 in **beiden** Themes. Bei neuen Tokens
+  nachrechnen, nicht schätzen.
+- **Bewegung nur als Feedback**, 120–160 ms auf Hover/Aktiv; `prefers-reduced-motion` wird global
+  in `index.css` respektiert.
+
+Typo-Skala (Tokens in `index.css`): `text-2xs` 11px · `text-xs` 12px · `text-sm` 13px ·
+`text-base` 14px (UI-Standard) · `text-prose` 16px (Fließtext) · `text-lg` 18px · `text-xl` 22px ·
+`text-2xl` 28px. Prosa-Spalten auf ~70 Zeichen begrenzen (`max-w-[72ch]`).
+
+Layout: Sidebar 260px (Kategorie-Baum, Filter, Fortschritt, Theme-Umschalter) + Inhalt; auf der
+Aufgabenseite zusätzlich eine klebrige Meta-Rail (264px) ab `xl`. Unter `lg` wird die Sidebar zur
+Schublade. Timer und Reveal-Steuerung aus M2 gehören in die Meta-Rail.
+
+---
+
+## 9. Visualizer-Architektur
 
 Ein Visualizer pro Muster, **18 insgesamt** (Slugs aus `data/patterns.ts`). Das sind die 17 Zeilen des
 Muster-Index der Quelle, wobei „DP bottom-up“ in `dp-1d` und `dp-2d` aufgeteilt ist — die
@@ -206,7 +250,7 @@ farbenblind-tauglich (nicht nur Rot/Grün unterscheiden — zusätzlich Form/Lab
 
 ---
 
-## 9. Spaced Repetition
+## 10. Spaced Repetition
 
 Implementierung in `src/lib/srs.ts`, rein funktional und getestet. Basisrhythmus ist der aus der
 Lerngrundlage (3 Tage, 2 Wochen):
@@ -230,7 +274,7 @@ Zusätzlich gespeichert pro Aufgabe: Status, freigegebene Reveal-Stufe, letzte Z
 
 ---
 
-## 10. Arbeitsweise in diesem Repo
+## 11. Arbeitsweise in diesem Repo
 
 - **Reihenfolge der Quelle beibehalten.** Kategorien 1–18 und die Nummerierung innerhalb der
   Kategorien sind stabile Identifikatoren.
@@ -265,7 +309,7 @@ npm run validate
 
 ---
 
-## 11. Git-Workflow — ein Branch pro Slice (verbindlich)
+## 12. Git-Workflow — ein Branch pro Slice (verbindlich)
 
 Repo: `https://github.com/TimSchwietzke/ncla.git`, Default-Branch `main`.
 
@@ -314,7 +358,7 @@ PR-Inhalt hat diese vier Abschnitte:
 
 ---
 
-## 12. ToDo / Post-MVP (nicht ohne Absprache anfangen)
+## 13. ToDo / Post-MVP (nicht ohne Absprache anfangen)
 
 - **Python im Browser (Pyodide):** Editor pro Aufgabe, Testfälle laufen lokal, sofortiges Feedback.
   Ausdrücklich gewünscht — aber erst nach dem MVP und nur, wenn die Integration schlank bleibt
