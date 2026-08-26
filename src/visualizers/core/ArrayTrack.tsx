@@ -14,7 +14,9 @@ const STRIDE = CELL + GAP;
 const PAD = 12;
 const CELLS_Y = 26;
 const MARKERS_Y = CELLS_Y + CELL + 15;
-const HEIGHT = MARKERS_Y + 6;
+/** The caret ends at y = -4; the label baseline sits far enough below it to breathe. */
+const MARKER_LABEL_Y = 15;
+const HEIGHT = MARKERS_Y + MARKER_LABEL_Y + 4;
 
 interface ToneStyle {
   fill: string;
@@ -138,7 +140,7 @@ export function ArrayTrack({ step, animated = true }: { step: ArrayStep; animate
           <path d="M 0 -10 L 4 -4 L -4 -4 Z" fill="var(--ncla-accent)" />
           <text
             textAnchor="middle"
-            y="4"
+            y={MARKER_LABEL_Y}
             fontFamily="var(--font-mono, monospace)"
             fontSize="11"
             fill="var(--ncla-accent)"
