@@ -29,15 +29,28 @@ export interface Span {
   label?: string;
 }
 
+/**
+ * A map or a stack shown beside the track. Hashing and the monotonic stack cannot be
+ * explained by the row of values alone — you have to see what is being remembered.
+ */
+export interface SidePanel {
+  /** "seen", "stack" — what the structure is called in the code. */
+  label: string;
+  entries: { key: string; value?: string; tone?: CellTone }[];
+  /** Shown when the structure is empty, e.g. "empty". */
+  emptyHint?: string;
+}
+
 export interface ArrayStep {
   /** One English sentence: what happens in this step. */
   caption: string;
-  /** The full array as it is visible in this frame. */
-  values: number[];
+  /** The full array as it is visible in this frame. Characters are values too. */
+  values: (number | string)[];
   /** One tone per value — same length as `values`. */
   tones: CellTone[];
   markers: Marker[];
   span?: Span;
   /** Mono status line, e.g. "best 22 at index 4". */
   readout?: string;
+  panel?: SidePanel;
 }

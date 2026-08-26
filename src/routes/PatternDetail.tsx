@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { getCategory } from "../data/categories";
 import { getPattern } from "../data/patterns";
 import { problemsByPattern } from "../lib/content";
 import { DifficultyLabel } from "../components/ui/DifficultyLabel";
 import { EmptyState, Eyebrow, MilestoneNote, PageHeader, Rows } from "../components/ui/primitives";
+import { StepPlayer } from "../visualizers/core/StepPlayer";
+import { ArrayTrack } from "../visualizers/core/ArrayTrack";
+import { getVisualizer } from "../visualizers/registry";
 import NotFound from "./NotFound";
 
 export default function PatternDetail() {
@@ -12,16 +16,52 @@ export default function PatternDetail() {
   if (!pattern) return <NotFound />;
 
   const problems = problemsByPattern(pattern.slug);
+  const entry = getVisualizer(pattern.slug);
+  const presetNames = Object.keys(entry?.presets ?? {});
+  const [preset, setPreset] = useState(entry?.defaultPreset ?? "");
+  const chosen = entry?.presets[preset] ?? entry?.presets[entry.defaultPreset];
 
   return (
     <div className="max-w-[76ch]">
       <PageHeader title={pattern.title} lead={pattern.signal} />
 
-      {pattern.hasVisualizer ? null : (
+      {chosen ? (
+        <section className="mb-10">
+          {presetNames.length > 1 ? (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {presetNames.map((name) => {
+                const active = name === preset;
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => {
+                      setPreset(name);
+                    }}
+                    aria-pressed={active}
+                    className={`rounded-md border px-2.5 py-1 font-mono text-2xs transition-colors ${
+                      active
+                        ? "border-accent bg-accent-soft text-accent"
+                        : "border-line text-ink-faint hover:border-line-strong hover:text-ink"
+                    }`}
+                  >
+                    {entry?.presets[name]?.label ?? name}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          <StepPlayer
+            key={preset}
+            steps={chosen.build()}
+            render={(step, animated) => <ArrayTrack step={step} animated={animated} />}
+          />
+        </section>
+      ) : (
         <div className="mb-10">
           <MilestoneNote milestone="M3">
-            The step-by-step visualizer for this pattern — play, single step forward and back, your
-            own input — is built in the visualizer slice.
+            The step-by-step player for this pattern is still to come — it arrives with the first
+            problems that use it.
           </MilestoneNote>
         </div>
       )}

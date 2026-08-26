@@ -321,26 +321,43 @@ Tabellenfüllung sieht in beiden Fällen zu unterschiedlich aus für einen gemei
 
 Verbindliches Muster für jeden Visualizer:
 
-1. `steps.ts` exportiert eine **pure Funktion** `buildSteps(input): Step[]`. Sie simuliert den
-   Algorithmus komplett vorab und gibt alle Frames zurück. Keine Zufallszahlen, keine Seiteneffekte,
-   kein `setTimeout` darin.
+1. `steps.ts` exportiert **pure Funktionen**, die den Algorithmus vorab komplett simulieren und alle
+   Frames zurückgeben. Keine Zufallszahlen, keine Seiteneffekte, kein `setTimeout` darin.
+   **Ein Muster darf mehrere Algorithmen abdecken** — Sliding Window umfasst festes *und* variables
+   Fenster (`buildFixedWindow`, `buildLongestDistinct`). Dann benannte Varianten exportieren statt
+   ein `buildSteps` zu überladen.
 2. `Step` enthält immer: `caption` (ein englischer Satz, was in diesem Schritt passiert),
    den vollständigen sichtbaren Zustand und die Hervorhebungen (Indizes/Knoten/Zellen).
    Frames sind vollständig, nicht inkrementell — dadurch ist Zurückspringen trivial.
+   **Ein Frame zeigt den Zustand am *Ende* des Schritts.** Wer den aktuellen Index erst nach dem
+   Emittieren auf den Stack legt, zeigt eine Struktur, die immer einen Schritt hinterherhinkt.
+   `values` sind `(number | string)[]` — eine Zelle trägt ein Zeichen genauso wie eine Zahl.
+   `panel` zeigt optional die mitgeführte Struktur (Hash-Map, Stack) neben der Reihe; ohne sie sind
+   Hashing und monotoner Stack nicht erklärbar.
 3. `View.tsx` rendert **einen** Step als SVG. Zustandslos.
 4. Gespielt wird über `<StepPlayer>` aus `visualizers/core`: Play/Pause, Schritt vor/zurück,
    Reset, Geschwindigkeit, Fortschrittsleiste, Tastatur (`Space`, `←`, `→`, `r`).
+   **Auf Aufgabenseiten startet er pausiert** — etwas, das von selbst läuft, während man den Ansatz
+   liest, zieht die Aufmerksamkeit weg. **Die Tastatur greift nur bei Fokus** (`tabIndex={0}`,
+   Handler am Container): ein globaler `Space`-Handler würde das Scrollen der Seite kapern.
 5. `presets.ts` enthält benannte Eingaben — insbesondere je ein Preset pro Aufgabe, die diesen
    Visualizer nutzt. Das ist die „Skizze pro Aufgabe“: `<Viz name="two-pointer" preset="three-sum" />`.
+   `build` läuft **lazy**, Frames entstehen erst beim Rendern. Eingetragen wird das Muster in
+   `visualizers/registry.ts`; fehlt es dort, zeigt `<Viz>` weiterhin die ehrliche Notiz.
+   Preset-Eingaben stammen aus den Beispielen der Aufgabe — aber nimm das **lehrreichste**: bei Two
+   Sum füllt sich die Map erst bei Beispiel 2 sichtbar, Beispiel 1 ist nach zwei Frames vorbei.
 6. `steps.test.ts` prüft mindestens: erster Frame = Ausgangszustand, letzter Frame = korrektes
    Ergebnis, Frame-Anzahl plausibel.
 
-**Stand:** Der Design-Slice hat den gemeinsamen Baustein schon gebaut und benutzt ihn im Hero der
-Startseite: `visualizers/core/types.ts` (`ArrayStep`, `CellTone`, `Marker`, `Span`),
-`visualizers/core/ArrayTrack.tsx` (rendert **einen** Step als SVG, zustandslos) und drei pure
-`buildSteps` mit Tests — `sliding-window`, `two-pointer`, `binary-search`. M3 baut darauf auf:
-`StepPlayer`, `presets.ts` pro Muster, die restlichen fünfzehn Visualizer und die Einbindung in
-`PatternDetail`. **Nicht neu erfinden, was in `core/` schon steht.**
+**Stand:** Fünf der achtzehn Muster laufen — `hashing-complement`, `sliding-window`,
+`monotonic-stack`, `two-pointer`, `binary-search`. `core/` enthält `types.ts`, den zustandslosen
+`ArrayTrack.tsx`, `layout.ts` (kollidierende Marker) und `StepPlayer.tsx`. Eingebunden sind sie über
+`registry.ts` in `<Viz>` und auf `PatternDetail`.
+
+Die restlichen dreizehn kommen **mit ihrem Content**, nicht auf Vorrat. Baum, Graph, Gitter und Heap
+brauchen je einen eigenen Renderer neben `ArrayTrack`; der Player und das Preset-System sind schon
+darauf ausgelegt, weil `StepPlayer` nur `steps` und eine `render`-Funktion kennt.
+**Nicht neu erfinden, was in `core/` schon steht.**
 
 Darstellung: SVG, keine Canvas. Farben aus den Tailwind-Tokens, funktioniert in Light und Dark,
 farbenblind-tauglich (nicht nur Rot/Grün unterscheiden — zusätzlich Form/Label).
@@ -458,8 +475,14 @@ Repo: `https://github.com/TimSchwietzke/ncla.git`, Default-Branch `main`.
 
 ### Pflicht am Ende jedes Slices
 
-Bei jedem fertigen Slice liefere ich im Chat **immer** und **unaufgefordert** diese drei Dinge als
-fertig verwendbaren Text:
+**Vor** dem PR-Text läuft `npm run tauri:build` — und zwar bei **jedem** Slice, nicht nur bei
+solchen, die `src-tauri/` anfassen. `npm run validate` prüft die Rust-Seite nicht: eine kaputte
+CSP, eine fehlende Berechtigung oder ein Plugin, das im Release-Profil anders baut, fällt erst hier
+auf. Das Fenster ist die Umgebung, in der wirklich gelernt wird; ein grüner Vitest-Lauf sagt darüber
+nichts. Bricht der Build, wird er repariert, bevor der PR-Text kommt.
+
+Danach liefere ich im Chat **immer** und **unaufgefordert** diese drei Dinge als fertig
+verwendbaren Text:
 
 1. **Commit-Message** des Slice-Commits (Subject + Body)
 2. **PR-Titel**
@@ -488,9 +511,10 @@ PR-Inhalt hat diese vier Abschnitte:
 
 1. `git switch -c slice/<name>` (von aktuellem `main`)
 2. Arbeiten, `npm run validate` muss grün sein
-3. Committen, Branch pushen (`git push -u origin slice/<name>`)
-4. Commit-Message, PR-Titel und PR-Inhalt im Chat ausgeben
-5. Den PR erst öffnen, wenn Tim es sagt — `gh` ist derzeit nicht authentifiziert
+3. `npm run tauri:build` — muss durchlaufen, auch wenn der Slice nur Frontend anfasst
+4. Committen, Branch pushen (`git push -u origin slice/<name>`)
+5. Commit-Message, PR-Titel und PR-Inhalt im Chat ausgeben
+6. Den PR erst öffnen, wenn Tim es sagt — `gh` ist derzeit nicht authentifiziert
 
 ---
 
