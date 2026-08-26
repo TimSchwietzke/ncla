@@ -63,6 +63,8 @@ Daraus folgt für allen Content:
 - State: kein Redux/Zustand. Ein kleiner Store in `src/lib/store.ts` (Modul + `useSyncExternalStore`),
   Persistenz in `localStorage`.
 - Keine Backend-Komponente, keine Netzwerkaufrufe zur Laufzeit. Die App muss offline funktionieren.
+- **Tauri 2** als Desktop-Hülle (`src-tauri/`). Kein zweiter Code-Pfad: dieselbe Vite-App läuft im
+  Browser und im Fenster. `npm run dev` bleibt der schnelle Weg, `npm run tauri:dev` zeigt das Fenster.
 - **Schriften:** IBM Plex Sans / Mono / Serif, über `@fontsource` aus `node_modules` gebündelt.
   „Keine externen Fonts/CDNs" heißt *kein Netzwerkzugriff zur Laufzeit* — mitgelieferte
   npm-Schriften erfüllen das und sind erwünscht.
@@ -77,6 +79,10 @@ Abhängigkeiten sparsam halten. Vor dem Hinzufügen eines Pakets kurz begründen
 ncla/
 ├── CLAUDE.md · README.md · NeetCode_150_Lerngrundlage.md   # Quelle, read-only
 ├── index.html · package.json · tsconfig.json · vite.config.ts
+├── src-tauri/                         # Desktop-Hülle, nur Konfiguration und ein Rust-Einstieg
+│   ├── tauri.conf.json                # Fenster, Identifier, CSP, Bundle-Ziele
+│   ├── icon.svg                       # Icon-Quelle → `npx tauri icon src-tauri/icon.svg`
+│   ├── Cargo.toml · build.rs · src/   # nichts App-Logisches, nur der Start
 ├── scripts/
 │   ├── lib/                           # frontmatter.ts (+ Test), collect.ts
 │   ├── build-index.ts                 # erzeugt src/data/generated/index.ts
@@ -338,10 +344,27 @@ npm run dev
 ```
 
 ```bash
+npm run tauri:dev
+```
+
+```bash
 npm run validate
 ```
 
 `validate` = `tsc --noEmit` + `scripts/validate-content.ts` + `vitest run`.
+`tauri:build` erzeugt Installer unter `src-tauri/target/release/bundle/`.
+
+### Tauri-Regeln
+
+- **Keine App-Logik in Rust.** `src-tauri/src/` startet nur das Fenster. Alles Fachliche bleibt im
+  Frontend, damit die App im Browser vollständig benutzbar bleibt.
+- **Routing:** `src/main.tsx` wählt zur Laufzeit — `HashRouter` im Fenster, `BrowserRouter` im
+  Browser. Im Bundle gibt es kein Server-Routing, ein Reload auf `/dashboard` liefe sonst ins Leere.
+- **localStorage ist origin-gebunden.** Browser und Fenster teilen sich den Speicher **nicht**.
+  Das ist der Grund, warum die Hülle vor M4 kam: sonst wäre der Lernfortschritt beim Umstieg weg.
+  Wer zwischen beiden wechseln will, nutzt den JSON-Export.
+- **CSP** steht in `tauri.conf.json` und erlaubt ausschließlich lokale Quellen. Wer eine externe
+  Ressource einbauen will, hat die Offline-Regel schon gebrochen — nicht die CSP aufweichen.
 
 ---
 
