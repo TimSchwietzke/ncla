@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { getPattern } from "../../data/patterns";
 import { CodeBlock, SolutionContext } from "./CodeBlock";
+import { Example, Examples } from "./Example";
+import { Constraints } from "./Constraints";
 
 /**
  * The fixed section components every problem MDX file is built from (CLAUDE.md §6).
@@ -115,5 +117,8 @@ export const MDX_COMPONENTS = {
   Pitfalls,
   FollowUps,
   Viz,
+  Examples,
+  Example,
+  Constraints,
   pre: CodeBlock,
 };

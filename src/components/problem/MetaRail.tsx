@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { Eye } from "lucide-react";
 import type { ProblemMeta } from "../../data/types";
 import { PatternChip } from "../ui/PatternChip";
 
@@ -17,6 +18,9 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
  * from M2 belong here too.
  */
 export function MetaRail({ meta }: { meta: ProblemMeta }) {
+  // The pattern name is half the solution, and no interview hands it to you.
+  const [patternShown, setPatternShown] = useState(false);
+
   return (
     <div className="rounded-lg border border-line bg-surface">
       <Field label="Target">
@@ -28,11 +32,24 @@ export function MetaRail({ meta }: { meta: ProblemMeta }) {
       </Field>
 
       <Field label="Patterns">
-        <div className="flex flex-wrap gap-1.5">
-          {meta.patterns.map((slug) => (
-            <PatternChip key={slug} slug={slug} />
-          ))}
-        </div>
+        {patternShown ? (
+          <div className="flex flex-wrap gap-1.5">
+            {meta.patterns.map((slug) => (
+              <PatternChip key={slug} slug={slug} />
+            ))}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setPatternShown(true);
+            }}
+            className="flex items-center gap-1.5 rounded-md border border-dashed border-line-strong px-2.5 py-1 font-mono text-2xs text-ink-faint transition-colors hover:border-accent hover:text-accent"
+          >
+            <Eye size={12} strokeWidth={1.75} />
+            reveal
+          </button>
+        )}
       </Field>
 
       {meta.prerequisites.length > 0 ? (

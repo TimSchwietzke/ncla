@@ -160,7 +160,7 @@ status: complete                       # draft | complete
 ### Body — feste Sektionsfolge, jede Sektion eine Komponente
 
 ```mdx
-<Statement>       Aufgabe in eigenen Worten, 1 Beispiel, die relevanten Constraints.
+<Statement>       Aufgabe in eigenen Worten, dann <Examples> und <Constraints> (Pflicht).
 <Signals>         Welche Wörter/Constraints verraten das Muster. 2–4 Stichpunkte.
 <BruteForce>      Der naive Ansatz + seine Komplexität + warum er nicht reicht.
 <Insight>         Die Kernidee. Genau EIN Satz. Aus der Quelle übersetzt und geschärft.
@@ -169,6 +169,30 @@ status: complete                       # draft | complete
 <Pitfalls>        Die Fallstricke aus der Quelle, englisch, ergänzt.
 <FollowUps>       Typische Interview-Rückfragen mit kurzer Antwort.
 ```
+
+`<Statement>` hat eine feste innere Form — kein Fließtext für Beispiele, keine ```text-Fence:
+
+```mdx
+<Examples>
+  <Example input={`nums = [2, 7, 11, 15]
+target = 9`} output="[0, 1]">
+    nums[0] + nums[1] == 9
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `2 <= n <= 10^4`
+- The array is **not** sorted
+
+</Constraints>
+```
+
+Beispiele und Constraints sind das, was man zuerst und unter Zeitdruck liest — sie müssen Struktur
+haben, nicht Prosa sein. `<Examples>` nummeriert automatisch, die Beschriftungsspalte hat feste
+Breite, damit Werte über mehrere Beispiele hinweg fluchten. Der Output bekommt den Akzent, weil man
+beim Überfliegen die Antwort sucht. **`scripts/validate-content.ts` verlangt beide Bausteine bei
+`status: complete`** — sonst driften 150 Dateien einzeln auseinander.
 
 Regeln:
 - Sektionsreihenfolge ist fest — der Reveal-Mechanismus hängt daran.
@@ -184,9 +208,17 @@ Regeln:
 
 Global umschaltbar (persistiert), Zustand in `store.ts`:
 
-- **Learn Mode** (Default): sichtbar sind nur `<Statement>` und die Constraints. Danach gibt der Nutzer
-  stufenweise frei:
-  `1 Target complexity → 2 Pattern hint (<Signals>) → 3 Insight → 4 Approach → 5 Solution → 6 Pitfalls + Follow-ups`.
+**Was das Interview zeigt, zeigt die App.** Alles, was in der echten Situation vor dir liegt, ist
+ohne Klick sichtbar: Aufgabentext, Beispiele, Constraints, Schwierigkeit, LeetCode-Nummer **und die
+Zielkomplexität**. Versteckt ist nur, was du selbst finden musst. Deshalb ist *Target complexity*
+**keine** Reveal-Stufe, sondern steht dauerhaft in der Meta-Rail.
+
+Umgekehrt gilt: der **Muster-Name ist die halbe Lösung** und steht in keinem Interview — die Chips
+in der Rail sind hinter einem `reveal` verborgen (seit M1 umgesetzt).
+
+- **Learn Mode** (Default): sichtbar sind `<Statement>` mit Beispielen und Constraints sowie die
+  Zielkomplexität. Danach gibt der Nutzer stufenweise frei:
+  `1 Pattern hint (<Signals>) → 2 Insight → 3 Approach → 4 Solution → 5 Pitfalls + Follow-ups`.
   Jede Stufe ist ein eigener Klick, die freigegebene Stufe wird pro Aufgabe gespeichert.
   Auf der Seite läuft optional der 20-Minuten-Timer und daneben steht die abhakbare Checkliste aus
   `Method` (Beispiele durchgehen → Constraints → Zielkomplexität → Brute Force → Engpass → Muster).
@@ -228,6 +260,14 @@ Regeln, an die sich jede neue Komponente hält:
   nachrechnen, nicht schätzen.
 - **Bewegung nur als Feedback**, 120–160 ms auf Hover/Aktiv; `prefers-reduced-motion` wird global
   in `index.css` respektiert.
+- **Referenzseiten verstecken nie.** Auf `/method` und `/cheat-sheet` gibt es kein Akkordeon, keine
+  Tabs, kein „mehr anzeigen". Wer den Leitfaden aufschlägt, ist blockiert; wer das Cheat Sheet
+  öffnet, hat zehn Minuten bis zum Interview. Ein zusätzlicher Klick ist dort echter Schaden.
+- **MDX wo Prosa überwiegt, TSX wo Daten überwiegen.** Aufgaben sind Prosa → MDX. Method und Cheat
+  Sheet erwiesen sich als datengetrieben (Schritte, Tabellen, Schwellen) → TSX.
+- **Die sechs Method-Schritte leben ausschließlich in `src/data/method.ts`.** Die Method-Seite
+  rendert sie ausführlich, ab M2 rendert die Meta-Rail dieselben Daten über
+  `StepSpine variant="compact"`. Niemals eine zweite Liste anlegen.
 
 Typo-Skala (Tokens in `index.css`): `text-2xs` 11px · `text-xs` 12px · `text-sm` 13px ·
 `text-base` 14px (UI-Standard) · `text-prose` 16px (Fließtext) · `text-lg` 18px · `text-xl` 22px ·

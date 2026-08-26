@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { REQUIRED_SECTIONS, parseProblem, validateSections } from "./frontmatter.ts";
+import { REQUIRED_BLOCKS, REQUIRED_SECTIONS, parseProblem, validateSections } from "./frontmatter.ts";
 
 const VALID_FRONTMATTER = {
   id: "1.3",
@@ -16,7 +16,12 @@ const VALID_FRONTMATTER = {
   status: "complete",
 };
 
-const VALID_BODY = REQUIRED_SECTIONS.map((s) => `<${s}>\ntext\n</${s}>`).join("\n\n");
+const STRUCTURED_STATEMENT =
+  '<Examples><Example input="a" output="b" /></Examples>\n<Constraints>\n\n- n\n\n</Constraints>';
+
+const VALID_BODY = REQUIRED_SECTIONS.map((s) =>
+  s === "Statement" ? `<Statement>\n${STRUCTURED_STATEMENT}\n</Statement>` : `<${s}>\ntext\n</${s}>`,
+).join("\n\n");
 
 function parse(overrides: Record<string, unknown> = {}, body = VALID_BODY, file?: string) {
   return parseProblem({
@@ -64,6 +69,20 @@ describe("parseProblem", () => {
     const result = parse({ visualizer: { name: "hashing-complement", preset: "two-sum" } });
     expect(result.errors).toEqual([]);
     expect(result.meta?.visualizer).toEqual({ name: "hashing-complement", preset: "two-sum" });
+  });
+
+  it("rejects a completed file whose examples are prose", () => {
+    const body = VALID_BODY.replace(STRUCTURED_STATEMENT, "nums = [1, 2] -> [0, 1]");
+    const result = parse({}, body);
+    for (const block of REQUIRED_BLOCKS) {
+      expect(result.errors.join(" ")).toContain(`missing ${block}>`);
+    }
+  });
+
+  it("lets a draft get away without the structured blocks", () => {
+    const body = VALID_BODY.replace(STRUCTURED_STATEMENT, "nums = [1, 2] -> [0, 1]");
+    const result = parse({ status: "draft" }, body);
+    expect(result.errors.join(" ")).not.toContain("missing <Example");
   });
 
   it("flags a TODO left in a completed file", () => {

@@ -14,6 +14,13 @@ export const REQUIRED_SECTIONS = [
   "FollowUps",
 ] as const;
 
+/**
+ * Blocks a finished problem must use inside <Statement>. Examples and constraints are
+ * what you read first and under time pressure — they have to be structured data, not a
+ * paragraph. Enforced here so 150 files cannot drift apart one at a time.
+ */
+export const REQUIRED_BLOCKS = ["<Example", "<Constraints"] as const;
+
 const DIFFICULTIES: readonly string[] = ["Easy", "Medium", "Hard"];
 const STATUSES: readonly string[] = ["draft", "complete"];
 
@@ -125,6 +132,14 @@ export function parseProblem(source: ProblemSource): ParseResult {
 
   if (status === "complete" && /\bTODO\b/.test(body)) {
     errors.push('body contains "TODO" but status is "complete"');
+  }
+
+  if (status === "complete") {
+    for (const block of REQUIRED_BLOCKS) {
+      if (!body.includes(block)) {
+        errors.push(`missing ${block}> block — examples and constraints must be structured`);
+      }
+    }
   }
 
   if (
