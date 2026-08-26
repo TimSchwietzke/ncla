@@ -54,6 +54,8 @@ Daraus folgt für allen Content:
 - **Vite + React 19 + TypeScript** (strict), lokal via `npm run dev`.
 - **React Router** für Routing.
 - **Tailwind CSS v4** (`@tailwindcss/vite`) fürs Styling. Keine UI-Library.
+- **lucide-react** für Icons — tree-shakeable, nur benutzte Icons landen im Bundle, kein
+  Laufzeit-Download. Niemals Text oder Sonderzeichen als Icon-Ersatz verwenden.
 - **MDX** für Content: `@mdx-js/rollup`, Frontmatter über `remark-frontmatter` +
   `remark-mdx-frontmatter`, Syntax-Highlighting build-time über `@shikijs/rehype` (kein Highlighter
   zur Laufzeit).
@@ -84,7 +86,8 @@ ncla/
 └── src/
     ├── main.tsx, App.tsx
     ├── routes/
-    │   ├── Home.tsx                   # Dashboard: heute fällig, Fortschritt, Weiterlernen
+    │   ├── Landing.tsx                # "/" — die Homepage, bewusst OHNE Shell/Sidebar
+    │   ├── Dashboard.tsx              # "/dashboard" — heute fällig, Fortschritt, Weiterlernen
     │   ├── Method.tsx                 # "Unbekanntes Problem" — der Leitfaden
     │   ├── Patterns.tsx               # Muster-Index (17), Erkennungssignale
     │   ├── PatternDetail.tsx          # ein Muster + sein Visualizer + zugehörige Aufgaben
@@ -212,8 +215,20 @@ Typo-Skala (Tokens in `index.css`): `text-2xs` 11px · `text-xs` 12px · `text-s
 `text-base` 14px (UI-Standard) · `text-prose` 16px (Fließtext) · `text-lg` 18px · `text-xl` 22px ·
 `text-2xl` 28px. Prosa-Spalten auf ~70 Zeichen begrenzen (`max-w-[72ch]`).
 
+Routing: `/` ist die Homepage und rendert **außerhalb** der `AppShell` — eine Sidebar daneben würde
+den Zweck der Seite zerstören. Alles andere liegt in der Shell, die Arbeitsfläche ist `/dashboard`.
+
+Icons: ausschließlich `lucide-react`, `size={14}`–`{15}` in der Chrome, `strokeWidth={1.75}`.
+Kein Text und keine Sonderzeichen als Icon-Ersatz.
+
+Startseite: große Serif-Typografie, animierte SVG-Grafik im Hero, stilisierte App-Fenster pro
+Abschnitt (gezeichnet, keine Screenshots), sanfte Scroll-Reveals. Jedes Reveal ist **ausfallsicher** —
+wenn der IntersectionObserver nicht meldet, wird der Inhalt trotzdem sichtbar. Eine Dekoration darf
+niemals Inhalt verstecken können.
+
 Layout: Sidebar 260px, einklappbar (Ctrl/Cmd+B, Zustand in `ncla.sidebar.collapsed`) — Kategorie-Baum,
-Filter, Fortschritt, Theme-Umschalter — plus Inhalt; auf der
+Filter, Fortschritt, Theme-Umschalter, Kategorien als aufklappbarer Ordnerbaum (Zustand in
+`ncla.sidebar.open`, die aktive Kategorie öffnet sich von selbst) — plus Inhalt; auf der
 Aufgabenseite zusätzlich eine klebrige Meta-Rail (264px) ab `xl`. Unter `lg` wird die Sidebar zur
 Schublade. Timer und Reveal-Steuerung aus M2 gehören in die Meta-Rail.
 

@@ -4,7 +4,7 @@ import { getCategory } from "../data/categories";
 import { getPattern } from "../data/patterns";
 import { findProblem } from "../lib/content";
 import { Sidebar } from "./Sidebar";
-import { PanelIcon } from "./icons";
+import { Menu, PanelLeftOpen } from "lucide-react";
 
 const COLLAPSE_KEY = "ncla.sidebar.collapsed";
 
@@ -28,6 +28,8 @@ function useBreadcrumb(): Crumb[] {
   switch (head) {
     case undefined:
       return [];
+    case "dashboard":
+      return [{ label: "Dashboard" }];
     case "method":
       return [{ label: "Method" }];
     case "review":
@@ -149,9 +151,9 @@ export function AppShell() {
               setDrawerOpen(true);
             }}
             aria-label="Open navigation"
-            className="rounded-md border border-line px-2 py-1 font-mono text-2xs text-ink-muted lg:hidden"
+            className="rounded-md border border-line p-1.5 text-ink-muted transition-colors hover:text-ink lg:hidden"
           >
-            menu
+            <Menu size={15} strokeWidth={1.75} />
           </button>
 
           {collapsed ? (
@@ -162,9 +164,9 @@ export function AppShell() {
               }}
               aria-label="Expand sidebar"
               title="Expand sidebar (Ctrl+B)"
-              className="hidden shrink-0 rounded-md border border-line p-1 text-ink-faint transition-colors hover:text-ink lg:block"
+              className="hidden shrink-0 rounded-md border border-line p-1.5 text-ink-faint transition-colors hover:text-ink lg:block"
             >
-              <PanelIcon collapsed />
+              <PanelLeftOpen size={15} strokeWidth={1.75} />
             </button>
           ) : null}
 

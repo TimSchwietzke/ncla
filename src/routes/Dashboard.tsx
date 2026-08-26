@@ -27,23 +27,16 @@ function SectionHead({
   );
 }
 
-export default function Home() {
+export default function Dashboard() {
   const written = PROBLEMS.length;
   const recent = PROBLEMS.slice(0, 3);
 
   return (
     <div className="max-w-[900px]">
-      <header className="mb-12">
-        <p className="font-mono text-2xs uppercase tracking-wider text-ink-faint">
-          neetcode 150 · 18 patterns · 18 categories
-        </p>
-        <h1 className="mt-4 font-serif text-[2.5rem] leading-[1.1] tracking-tight text-balance sm:text-[3rem]">
-          Prepare for the pattern, not for the problem.
-        </h1>
-        <p className="mt-5 max-w-[64ch] text-prose leading-relaxed text-ink-muted">
-          Interviews do not test 150 solutions. They test about eighteen patterns, and the only
-          skill that matters is recognising which one a strange problem is wearing. Work a problem,
-          then reconstruct its one-sentence insight from memory three days later.
+      <header className="mb-10">
+        <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
+        <p className="mt-2 max-w-[64ch] text-ink-muted">
+          Where you stand, what to pick up next, and the whole list at a glance.
         </p>
       </header>
 

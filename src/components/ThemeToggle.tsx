@@ -1,9 +1,10 @@
+import { Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
 import { useTheme, type ThemePreference } from "../lib/theme";
 
-const OPTIONS: { value: ThemePreference; label: string }[] = [
-  { value: "light", label: "light" },
-  { value: "dark", label: "dark" },
-  { value: "system", label: "auto" },
+const OPTIONS: { value: ThemePreference; label: string; icon: LucideIcon }[] = [
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+  { value: "system", label: "Follow the system", icon: Monitor },
 ];
 
 export function ThemeToggle() {
@@ -25,13 +26,15 @@ export function ThemeToggle() {
               setPreference(option.value);
             }}
             aria-pressed={active}
-            className={`flex-1 px-2 py-1 font-mono text-2xs transition-colors ${
+            title={option.label}
+            className={`flex flex-1 items-center justify-center py-1.5 transition-colors ${
               active
                 ? "bg-accent-soft text-accent"
-                : "text-ink-faint hover:bg-surface-2 hover:text-ink"
+                : "text-ink-faint hover:bg-surface hover:text-ink"
             }`}
           >
-            {option.label}
+            <option.icon size={14} strokeWidth={1.75} />
+            <span className="sr-only">{option.label}</span>
           </button>
         );
       })}

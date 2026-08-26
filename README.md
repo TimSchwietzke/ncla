@@ -61,7 +61,9 @@ Jede der 150 Aufgaben hat eine Seite mit fester Struktur:
 | Pitfalls | Die typischen Fehler |
 | Follow-ups | Was der Interviewer als Nächstes fragt |
 
-Links steht eine feste Sidebar mit dem Kategorie-Baum, Fortschritt und einem Filter; auf der
+`/` ist eine echte Startseite, die erklärt, wozu das Ganze gut ist — die Arbeitsfläche liegt unter
+`/dashboard`. Links steht dort eine einklappbare Sidebar (Ctrl+B) mit dem Kategorie-Baum als
+aufklappbarer Ordnerstruktur, Fortschritt und einem Filter; auf der
 Aufgabenseite hält eine mitscrollende Spalte rechts Zielkomplexität, Muster und den LeetCode-Link
 im Blick. Hell und dunkel sind beide vollwertig und per Schalter umstellbar.
 
