@@ -113,6 +113,41 @@
 }
 
 /*
+ * Constraints render as an authored markdown list but must read as data, not prose.
+ * Declared after .prose-ncla because both selectors have the same specificity.
+ */
+.constraint-list :is(ul, ol) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.constraint-list li {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--color-ink-muted);
+}
+
+.constraint-list li + li {
+  margin-top: 0.4rem;
+}
+
+.constraint-list :not(pre) > code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--color-ink);
+}
+
+.constraint-list li::before {
+  content: "·";
+  margin-right: 0.55rem;
+  color: var(--color-ink-faint);
+}
+
+/*
  * Shiki is configured with vitesse-light and vitesse-dark. Only the token colours are
  * taken from it — the background comes from our own surface, so a code block sits in
  * the page instead of floating on a foreign rectangle.
