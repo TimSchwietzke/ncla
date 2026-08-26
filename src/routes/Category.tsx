@@ -1,9 +1,9 @@
 import { Link, useParams } from "react-router";
 import { getCategory } from "../data/categories";
 import { problemsByCategory } from "../lib/content";
-import { DifficultyLabel } from "../components/DifficultyLabel";
-import { PatternChip } from "../components/PatternChip";
-import { EmptyState, PageHeader, Rows } from "../components/ui";
+import { DifficultyLabel } from "../components/ui/DifficultyLabel";
+import { PatternChip } from "../components/ui/PatternChip";
+import { EmptyState, PageHeader, Rows } from "../components/ui/primitives";
 import NotFound from "./NotFound";
 
 export default function Category() {

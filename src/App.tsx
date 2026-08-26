@@ -1,5 +1,5 @@
 import { Route, Routes } from "react-router";
-import { AppShell } from "./components/AppShell";
+import { AppShell } from "./components/shell/AppShell";
 import Landing from "./routes/Landing";
 import Dashboard from "./routes/Dashboard";
 import Categories from "./routes/Categories";
@@ -8,7 +8,10 @@ import Patterns from "./routes/Patterns";
 import PatternDetail from "./routes/PatternDetail";
 import Problem from "./routes/Problem";
 import NotFound from "./routes/NotFound";
-import { CheatSheet, Method, Progress, Review } from "./routes/Placeholders";
+import Method from "./routes/Method";
+import Review from "./routes/Review";
+import Progress from "./routes/Progress";
+import CheatSheet from "./routes/CheatSheet";
 
 export default function App() {
   return (

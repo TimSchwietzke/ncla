@@ -1,4 +1,4 @@
-import type { Difficulty } from "../data/types";
+import type { Difficulty } from "../../data/types";
 
 /**
  * Difficulty is encoded by emphasis rather than by a green/amber/red trio: an amber

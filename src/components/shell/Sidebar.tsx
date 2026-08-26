@@ -12,10 +12,10 @@ import {
   Shapes,
   type LucideIcon,
 } from "lucide-react";
-import { CATEGORIES, TOTAL_PROBLEMS } from "../data/categories";
-import { PROBLEMS } from "../lib/content";
+import { CATEGORIES, TOTAL_PROBLEMS } from "../../data/categories";
+import { PROBLEMS } from "../../lib/content";
 import { ThemeToggle } from "./ThemeToggle";
-import { DifficultyLabel } from "./DifficultyLabel";
+import { DifficultyLabel } from "../ui/DifficultyLabel";
 
 const SECTIONS: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },

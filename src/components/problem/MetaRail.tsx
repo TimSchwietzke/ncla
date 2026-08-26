@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import type { ProblemMeta } from "../data/types";
-import { PatternChip } from "./PatternChip";
+import type { ProblemMeta } from "../../data/types";
+import { PatternChip } from "../ui/PatternChip";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (

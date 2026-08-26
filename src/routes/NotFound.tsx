@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { PageHeader } from "../components/ui";
+import { PageHeader } from "../components/ui/primitives";
 
 export default function NotFound() {
   return (

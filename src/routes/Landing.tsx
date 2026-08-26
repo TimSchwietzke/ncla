@@ -4,8 +4,8 @@ import { ArrowRight, Eye, Repeat, Shapes, Target, type LucideIcon } from "lucide
 import { TOTAL_PROBLEMS } from "../data/categories";
 import { PATTERNS } from "../data/patterns";
 import { PROBLEMS } from "../lib/content";
-import { ProgressMosaic } from "../components/ProgressMosaic";
-import { ThemeToggle } from "../components/ThemeToggle";
+import { ProgressMosaic } from "../components/ui/ProgressMosaic";
+import { ThemeToggle } from "../components/shell/ThemeToggle";
 import { HeroVisualizer } from "../components/landing/HeroVisualizer";
 import { Reveal } from "../components/landing/Reveal";
 import {

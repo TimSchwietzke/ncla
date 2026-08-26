@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { getPattern } from "../data/patterns";
+import { getPattern } from "../../data/patterns";
 
 /**
  * Patterns are recognised by their name and their fixed position, not by colour —

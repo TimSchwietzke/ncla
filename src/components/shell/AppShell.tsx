@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
-import { getCategory } from "../data/categories";
-import { getPattern } from "../data/patterns";
-import { findProblem } from "../lib/content";
+import { getCategory } from "../../data/categories";
+import { getPattern } from "../../data/patterns";
+import { findProblem } from "../../lib/content";
 import { Sidebar } from "./Sidebar";
 import { Menu, PanelLeftOpen } from "lucide-react";
 

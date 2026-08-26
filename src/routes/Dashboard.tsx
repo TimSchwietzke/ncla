@@ -2,9 +2,9 @@ import { Link } from "react-router";
 import { CATEGORIES, TOTAL_PROBLEMS } from "../data/categories";
 import { PATTERNS } from "../data/patterns";
 import { PROBLEMS, problemsByPattern } from "../lib/content";
-import { DifficultyLabel } from "../components/DifficultyLabel";
-import { ProgressMosaic } from "../components/ProgressMosaic";
-import { Rows } from "../components/ui";
+import { DifficultyLabel } from "../components/ui/DifficultyLabel";
+import { ProgressMosaic } from "../components/ui/ProgressMosaic";
+import { Rows } from "../components/ui/primitives";
 
 function SectionHead({
   label,
