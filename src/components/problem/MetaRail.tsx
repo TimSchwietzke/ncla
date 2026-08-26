@@ -5,6 +5,7 @@ import { PatternChip } from "../ui/PatternChip";
 import { LadderStatus } from "./LadderStatus";
 import { ModeToggle } from "./ModeToggle";
 import { Timer } from "./Timer";
+import { ScheduleStatus } from "./ScheduleStatus";
 import { isUnlocked, useReveal } from "./RevealGate";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -36,6 +37,10 @@ export function MetaRail({ meta }: { meta: ProblemMeta }) {
           <Timer problemId={meta.slug} />
         </Field>
       ) : null}
+
+      <Field label="Schedule">
+        <ScheduleStatus problemId={meta.slug} />
+      </Field>
 
       <Field label="Target">
         <span className="font-mono text-ink">

@@ -7,6 +7,7 @@ import { revealNext, useProblemProgress } from "../lib/progress";
 import { MDX_COMPONENTS } from "../components/problem/Sections";
 import { RevealProvider, STAGES } from "../components/problem/RevealGate";
 import { RevealControl } from "../components/problem/RevealControl";
+import { RatingBar } from "../components/problem/RatingBar";
 import { DifficultyLabel } from "../components/ui/DifficultyLabel";
 import { MetaRail } from "../components/problem/MetaRail";
 import NotFound from "./NotFound";
@@ -59,6 +60,8 @@ export default function Problem() {
                 revealNext(problemSlug, STAGES.length);
               }}
             />
+
+            <RatingBar problemId={problemSlug} />
           </div>
 
           <aside className="order-1 xl:order-2 xl:sticky xl:top-16">

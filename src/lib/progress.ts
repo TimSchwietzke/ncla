@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { readJSON, writeJSON } from "./storage";
+import { schedule, todayISO, type Rating } from "./srs";
 
 /**
  * Per-problem progress, persisted locally (CLAUDE.md §9).
@@ -20,13 +21,16 @@ export interface ProblemProgress {
   /** Seconds spent on the last timed attempt. */
   lastAttemptSeconds?: number;
 
-  // Filled from M4 onwards.
+  /** Free note — "what did I miss?". */
   note?: string;
-  rating?: 1 | 2 | 3 | 4 | 5;
+  /** The most recent self-assessment. */
+  rating?: Rating;
+  /** Consecutive passes, reset by a 1 or a 2. */
   streak?: number;
   intervalDays?: number;
   /** ISO date, YYYY-MM-DD. */
   dueOn?: string;
+  lastRatedOn?: string;
 }
 
 export interface ProgressFile {
@@ -97,6 +101,26 @@ export function setChecklist(id: string, checklist: string[]): void {
 
 export function setLastAttemptSeconds(id: string, seconds: number): void {
   update(id, { lastAttemptSeconds: seconds });
+}
+
+/** Records a self-assessment and books the next date (CLAUDE.md §10). */
+export function rateProblem(id: string, rating: Rating, today: Date = new Date()): void {
+  const current = state.problems[id] ?? EMPTY_PROBLEM;
+  const next = schedule({ streak: current.streak, intervalDays: current.intervalDays }, rating, today);
+  update(id, { rating, ...next, lastRatedOn: todayISO(today) });
+}
+
+export function setNote(id: string, note: string): void {
+  update(id, { note });
+}
+
+/** Used by the import: replaces everything at once rather than merging silently. */
+export function replaceAll(file: ProgressFile): void {
+  commit({ version: SCHEMA_VERSION, problems: parseProgressFile(file).problems });
+}
+
+export function snapshot(): ProgressFile {
+  return state;
 }
 
 export function resetProblem(id: string): void {
