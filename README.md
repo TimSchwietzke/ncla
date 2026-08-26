@@ -1,9 +1,9 @@
-# NCLA — NeetCodeLearnApp
+# ncla — NeetCodeLearnApp
 
 Persönliche Lern-App zur Vorbereitung auf technische Interviews mit den **NeetCode 150**.
 
 Das Ziel ist ausdrücklich **nicht**, 150 Lösungen auswendig zu können. Interviews prüfen ~17 Muster.
-NCLA soll drei Dinge trainieren:
+ncla soll drei Dinge trainieren:
 
 1. **Ein unbekanntes Problem angehen** — ein wiederholbarer Ablauf, der auch bei einer Aufgabe
    funktioniert, die man noch nie gesehen hat.

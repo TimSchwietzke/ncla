@@ -1,6 +1,6 @@
-# CLAUDE.md — Arbeitsanweisung für NCLA
+# CLAUDE.md — Arbeitsanweisung für ncla
 
-NCLA (NeetCodeLearnApp) ist die persönliche Lern-App von Tim zur Vorbereitung auf technische
+ncla (NeetCodeLearnApp) ist die persönliche Lern-App von Tim zur Vorbereitung auf technische
 Interviews mit den NeetCode-150-Aufgaben. Einziger Nutzer, kein Deployment, kein Team.
 Diese Datei ist verbindlich für jede Session in diesem Repo.
 
@@ -72,7 +72,7 @@ Abhängigkeiten sparsam halten. Vor dem Hinzufügen eines Pakets kurz begründen
 ## 5. Verzeichnisstruktur
 
 ```
-NCLA/
+ncla/
 ├── CLAUDE.md
 ├── README.md
 ├── NeetCode_150_Lerngrundlage.md      # Quelle, read-only
@@ -199,7 +199,8 @@ Regeln, an die sich jede neue Komponente hält:
 - **Keine Farbe pro Muster.** Muster-Chips sind Mono-Text in einer `surface-2`-Pille.
 - **Monospace bedeutet etwas:** Komplexität, IDs, LC-Nummern, Zähler, Sektionslabels, Kürzel.
   Fließtext niemals in Mono.
-- **Serif genau einmal:** der Insight-Satz. Das ist die Signatur der App und bleibt einmalig.
+- **Serif ist die Stimme, nicht Dekoration:** der Insight-Satz und die These auf der Startseite.
+  Sonst nirgends — sobald Serif in Fließtext oder Labels auftaucht, ist die Signatur weg.
 - **Listen sind Zeilen mit Rand** (`<Rows>`), keine Karten-Grids.
 - **Kein `uppercase tracking-widest`** als Sektionslabel — kleines Mono-Label in `ink-faint`.
 - **Kontrast:** jede Text-auf-Fläche-Kombination ≥ 4.5:1 in **beiden** Themes. Bei neuen Tokens
@@ -211,7 +212,8 @@ Typo-Skala (Tokens in `index.css`): `text-2xs` 11px · `text-xs` 12px · `text-s
 `text-base` 14px (UI-Standard) · `text-prose` 16px (Fließtext) · `text-lg` 18px · `text-xl` 22px ·
 `text-2xl` 28px. Prosa-Spalten auf ~70 Zeichen begrenzen (`max-w-[72ch]`).
 
-Layout: Sidebar 260px (Kategorie-Baum, Filter, Fortschritt, Theme-Umschalter) + Inhalt; auf der
+Layout: Sidebar 260px, einklappbar (Ctrl/Cmd+B, Zustand in `ncla.sidebar.collapsed`) — Kategorie-Baum,
+Filter, Fortschritt, Theme-Umschalter — plus Inhalt; auf der
 Aufgabenseite zusätzlich eine klebrige Meta-Rail (264px) ab `xl`. Unter `lg` wird die Sidebar zur
 Schublade. Timer und Reveal-Steuerung aus M2 gehören in die Meta-Rail.
 

@@ -4,6 +4,17 @@ import { getCategory } from "../data/categories";
 import { getPattern } from "../data/patterns";
 import { findProblem } from "../lib/content";
 import { Sidebar } from "./Sidebar";
+import { PanelIcon } from "./icons";
+
+const COLLAPSE_KEY = "ncla.sidebar.collapsed";
+
+function readCollapsed(): boolean {
+  try {
+    return localStorage.getItem(COLLAPSE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
 
 interface Crumb {
   label: string;
@@ -59,6 +70,7 @@ function useBreadcrumb(): Crumb[] {
 
 export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(readCollapsed);
   const crumbs = useBreadcrumb();
   const { pathname } = useLocation();
 
@@ -67,20 +79,46 @@ export function AppShell() {
   }, [pathname]);
 
   useEffect(() => {
-    if (!drawerOpen) return;
+    try {
+      localStorage.setItem(COLLAPSE_KEY, String(collapsed));
+    } catch {
+      // Not remembering the choice is not a reason to refuse it.
+    }
+  }, [collapsed]);
+
+  useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setDrawerOpen(false);
+      // Ctrl/Cmd + B — the shortcut every editor uses for this.
+      if (event.key.toLowerCase() === "b" && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        setCollapsed((value) => !value);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
     };
-  }, [drawerOpen]);
+  }, []);
 
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
-      <aside className="hidden lg:sticky lg:top-0 lg:block lg:h-dvh">
-        <Sidebar />
+    <div
+      // grid-template-columns is not interpolable, so a transition here just flips
+      // late and reads as lag. Toggling instantly is the snappier, honest choice.
+      className={`min-h-dvh lg:grid ${
+        collapsed ? "lg:grid-cols-[0px_minmax(0,1fr)]" : "lg:grid-cols-[260px_minmax(0,1fr)]"
+      }`}
+    >
+      <aside
+        className={`hidden overflow-hidden lg:sticky lg:top-0 lg:h-dvh ${
+          collapsed ? "lg:hidden" : "lg:block"
+        }`}
+      >
+        <Sidebar
+          onCollapse={() => {
+            setCollapsed(true);
+          }}
+        />
       </aside>
 
       {drawerOpen ? (
@@ -103,7 +141,7 @@ export function AppShell() {
         </>
       ) : null}
 
-      <div className="flex min-h-dvh flex-col">
+      <div className="flex min-h-dvh min-w-0 flex-col">
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-bg/90 px-5 py-2.5 backdrop-blur">
           <button
             type="button"
@@ -115,6 +153,20 @@ export function AppShell() {
           >
             menu
           </button>
+
+          {collapsed ? (
+            <button
+              type="button"
+              onClick={() => {
+                setCollapsed(false);
+              }}
+              aria-label="Expand sidebar"
+              title="Expand sidebar (Ctrl+B)"
+              className="hidden shrink-0 rounded-md border border-line p-1 text-ink-faint transition-colors hover:text-ink lg:block"
+            >
+              <PanelIcon collapsed />
+            </button>
+          ) : null}
 
           <nav aria-label="Breadcrumb" className="min-w-0 truncate font-mono text-2xs text-ink-faint">
             <Link to="/" className="hover:text-ink">

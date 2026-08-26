@@ -3,6 +3,7 @@ import { NavLink, useParams } from "react-router";
 import { CATEGORIES, TOTAL_PROBLEMS } from "../data/categories";
 import { PROBLEMS } from "../lib/content";
 import { ThemeToggle } from "./ThemeToggle";
+import { PanelIcon } from "./icons";
 import { DifficultyLabel } from "./DifficultyLabel";
 
 const SECTIONS = [
@@ -13,7 +14,13 @@ const SECTIONS = [
   { to: "/cheat-sheet", label: "Cheat sheet" },
 ];
 
-export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+export function Sidebar({
+  onNavigate,
+  onCollapse,
+}: {
+  onNavigate?: () => void;
+  onCollapse?: () => void;
+}) {
   const [filter, setFilter] = useState("");
   const { categorySlug } = useParams();
   const query = filter.trim().toLowerCase();
@@ -37,10 +44,23 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col border-r border-line bg-surface-2">
       <div className="border-b border-line px-4 py-4">
-        <NavLink to="/" onClick={onNavigate} className="block">
-          <span className="text-lg font-semibold tracking-tight">NCLA</span>
-          <span className="ml-2 font-mono text-2xs text-ink-faint">neetcode 150</span>
-        </NavLink>
+        <div className="flex items-center justify-between gap-2">
+          <NavLink to="/" onClick={onNavigate} className="min-w-0 truncate">
+            <span className="text-lg font-semibold tracking-tight">ncla</span>
+            <span className="ml-2 font-mono text-2xs text-ink-faint">neetcode 150</span>
+          </NavLink>
+          {onCollapse ? (
+            <button
+              type="button"
+              onClick={onCollapse}
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+              className="hidden shrink-0 rounded-md border border-line p-1 text-ink-faint transition-colors hover:text-ink lg:block"
+            >
+              <PanelIcon />
+            </button>
+          ) : null}
+        </div>
 
         <div className="mt-3">
           <div className="h-[3px] w-full overflow-hidden rounded-full bg-line">
