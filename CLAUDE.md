@@ -475,8 +475,14 @@ Repo: `https://github.com/TimSchwietzke/ncla.git`, Default-Branch `main`.
 
 ### Pflicht am Ende jedes Slices
 
-Bei jedem fertigen Slice liefere ich im Chat **immer** und **unaufgefordert** diese drei Dinge als
-fertig verwendbaren Text:
+**Vor** dem PR-Text läuft `npm run tauri:build` — und zwar bei **jedem** Slice, nicht nur bei
+solchen, die `src-tauri/` anfassen. `npm run validate` prüft die Rust-Seite nicht: eine kaputte
+CSP, eine fehlende Berechtigung oder ein Plugin, das im Release-Profil anders baut, fällt erst hier
+auf. Das Fenster ist die Umgebung, in der wirklich gelernt wird; ein grüner Vitest-Lauf sagt darüber
+nichts. Bricht der Build, wird er repariert, bevor der PR-Text kommt.
+
+Danach liefere ich im Chat **immer** und **unaufgefordert** diese drei Dinge als fertig
+verwendbaren Text:
 
 1. **Commit-Message** des Slice-Commits (Subject + Body)
 2. **PR-Titel**
@@ -505,9 +511,10 @@ PR-Inhalt hat diese vier Abschnitte:
 
 1. `git switch -c slice/<name>` (von aktuellem `main`)
 2. Arbeiten, `npm run validate` muss grün sein
-3. Committen, Branch pushen (`git push -u origin slice/<name>`)
-4. Commit-Message, PR-Titel und PR-Inhalt im Chat ausgeben
-5. Den PR erst öffnen, wenn Tim es sagt — `gh` ist derzeit nicht authentifiziert
+3. `npm run tauri:build` — muss durchlaufen, auch wenn der Slice nur Frontend anfasst
+4. Committen, Branch pushen (`git push -u origin slice/<name>`)
+5. Commit-Message, PR-Titel und PR-Inhalt im Chat ausgeben
+6. Den PR erst öffnen, wenn Tim es sagt — `gh` ist derzeit nicht authentifiziert
 
 ---
 
