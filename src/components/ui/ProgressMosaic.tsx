@@ -1,6 +1,6 @@
 import { Link } from "react-router";
-import { CATEGORIES } from "../data/categories";
-import { PROBLEMS } from "../lib/content";
+import { CATEGORIES } from "../../data/categories";
+import { PROBLEMS } from "../../lib/content";
 
 /**
  * All 150 problems as one strip: eighteen clusters, one cell per problem, filled

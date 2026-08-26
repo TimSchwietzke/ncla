@@ -2,8 +2,8 @@ import { Link, useParams } from "react-router";
 import { getCategory } from "../data/categories";
 import { getPattern } from "../data/patterns";
 import { problemsByPattern } from "../lib/content";
-import { DifficultyLabel } from "../components/DifficultyLabel";
-import { EmptyState, Eyebrow, MilestoneNote, PageHeader, Rows } from "../components/ui";
+import { DifficultyLabel } from "../components/ui/DifficultyLabel";
+import { EmptyState, Eyebrow, MilestoneNote, PageHeader, Rows } from "../components/ui/primitives";
 import NotFound from "./NotFound";
 
 export default function PatternDetail() {

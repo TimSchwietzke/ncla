@@ -2,10 +2,10 @@ import { Suspense, lazy, useMemo } from "react";
 import { useParams } from "react-router";
 import { MDXProvider } from "@mdx-js/react";
 import { findProblem, loadProblemContent } from "../lib/content";
-import { MDX_COMPONENTS } from "../components/mdx/Sections";
-import { DifficultyLabel } from "../components/DifficultyLabel";
-import { MetaRail } from "../components/MetaRail";
-import { MilestoneNote } from "../components/ui";
+import { MDX_COMPONENTS } from "../components/problem/Sections";
+import { DifficultyLabel } from "../components/ui/DifficultyLabel";
+import { MetaRail } from "../components/problem/MetaRail";
+import { MilestoneNote } from "../components/ui/primitives";
 import NotFound from "./NotFound";
 
 export default function Problem() {

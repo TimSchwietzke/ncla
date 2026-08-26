@@ -75,42 +75,54 @@ Abhängigkeiten sparsam halten. Vor dem Hinzufügen eines Pakets kurz begründen
 
 ```
 ncla/
-├── CLAUDE.md
-├── README.md
-├── NeetCode_150_Lerngrundlage.md      # Quelle, read-only
-├── index.html
-├── package.json / vite.config.ts / tsconfig.json
+├── CLAUDE.md · README.md · NeetCode_150_Lerngrundlage.md   # Quelle, read-only
+├── index.html · package.json · tsconfig.json · vite.config.ts
 ├── scripts/
-│   ├── validate-content.ts            # Frontmatter, Pflichtsektionen, Pattern-/Viz-Referenzen
-│   └── build-index.ts                 # erzeugt src/data/generated/index.ts
+│   ├── lib/                           # frontmatter.ts (+ Test), collect.ts
+│   ├── build-index.ts                 # erzeugt src/data/generated/index.ts
+│   ├── validate-content.ts            # Frontmatter, Pflichtsektionen, Referenzen
+│   └── vite-plugin-content-index.ts   # hält den Index im Dev-Server frisch
 └── src/
     ├── main.tsx, App.tsx
-    ├── routes/
-    │   ├── Landing.tsx                # "/" — die Homepage, bewusst OHNE Shell/Sidebar
-    │   ├── Dashboard.tsx              # "/dashboard" — heute fällig, Fortschritt, Weiterlernen
+    ├── routes/                        # eine Datei pro Route, kein Sammelmodul
+    │   ├── Landing.tsx                # "/" — Homepage, bewusst OHNE Shell/Sidebar
+    │   ├── Dashboard.tsx              # "/dashboard" — Fortschritt, Weiterlernen
     │   ├── Method.tsx                 # "Unbekanntes Problem" — der Leitfaden
-    │   ├── Patterns.tsx               # Muster-Index (17), Erkennungssignale
-    │   ├── PatternDetail.tsx          # ein Muster + sein Visualizer + zugehörige Aufgaben
-    │   ├── Category.tsx               # eine der 18 Kategorien
+    │   ├── Patterns.tsx · PatternDetail.tsx
+    │   ├── Categories.tsx · Category.tsx
     │   ├── Problem.tsx                # die Aufgabenseite (Kern der App)
-    │   ├── Review.tsx                 # SRS-Queue "heute fällig"
-    │   ├── Progress.tsx               # Statistik pro Kategorie/Muster
-    │   └── CheatSheet.tsx             # Komplexitätstabelle + 10-Minuten-Anhang
-    ├── components/                    # RevealStage, ModeToggle, CodeBlock, Timer, RatingBar …
+    │   ├── Review.tsx · Progress.tsx · CheatSheet.tsx · NotFound.tsx
+    ├── components/                    # nach Rolle gruppiert, nicht flach
+    │   ├── shell/                     # AppShell, Sidebar, ThemeToggle
+    │   ├── ui/                        # primitives.tsx, DifficultyLabel,
+    │   │                              # PatternChip, ProgressMosaic
+    │   ├── problem/                   # MetaRail, CodeBlock, Sections
+    │   │                              # später: RevealStage, Timer, RatingBar
+    │   └── landing/                   # HeroVisualizer, Mockups, Reveal
     ├── visualizers/
-    │   ├── core/                      # StepPlayer, useStepper, ArrayTrack, GraphCanvas, Grid, types.ts
-    │   └── <pattern>/                 # pro Muster: steps.ts (pure), View.tsx, presets.ts, steps.test.ts
+    │   ├── core/                      # types.ts, ArrayTrack.tsx, layout.ts (+ Tests)
+    │   └── <pattern>/                 # steps.ts (pure), steps.test.ts,
+    │                                  # später View.tsx, presets.ts
     ├── content/
     │   ├── problems/<category-slug>/<nn>-<slug>.mdx
     │   ├── patterns/<pattern-slug>.mdx
     │   └── method/*.mdx
     ├── data/
+    │   ├── types.ts                   # ProblemMeta, Category, Pattern
     │   ├── categories.ts              # 18 Kategorien, Reihenfolge wie in der Quelle
-    │   ├── patterns.ts                # 17 Muster + Erkennungssignal + Visualizer-Slug
-    │   └── generated/index.ts         # aus dem Frontmatter gebaut, nicht von Hand editieren
-    ├── lib/                           # srs.ts, storage.ts, store.ts, mdx.ts
-    └── styles/
+    │   ├── patterns.ts                # 18 Muster + Erkennungssignal
+    │   └── generated/index.ts         # aus dem Frontmatter gebaut, nie von Hand
+    ├── lib/                           # content.ts, theme.ts; später srs.ts, storage.ts
+    └── styles/                        # tokens.css (Palette), index.css
 ```
+
+Regeln für neue Dateien:
+- **Eine Route = eine Datei** in `routes/`. Kein Sammelmodul für mehrere Seiten.
+- **Komponenten nach Rolle**, nicht nach Typ: gehört sie zur App-Hülle → `shell/`, zur
+  Aufgabenseite → `problem/`, zur Startseite → `landing/`, ist sie seitenübergreifend und
+  präsentational → `ui/`.
+- Der Projekt-Root bleibt wie er ist. Die Dateien dort sind von npm, Git, Vite, GitHub und
+  Claude Code festgelegt — nichts davon verschieben.
 
 ---
 

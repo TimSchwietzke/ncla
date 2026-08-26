@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import { CATEGORIES } from "../data/categories";
 import { PROBLEMS } from "../lib/content";
-import { PageHeader, Rows } from "../components/ui";
+import { PageHeader, Rows } from "../components/ui/primitives";
 
 export default function Categories() {
   return (

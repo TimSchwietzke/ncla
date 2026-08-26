@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import { PATTERNS } from "../data/patterns";
 import { problemsByPattern } from "../lib/content";
-import { PageHeader, Rows } from "../components/ui";
+import { PageHeader, Rows } from "../components/ui/primitives";
 
 export default function Patterns() {
   return (
