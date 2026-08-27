@@ -1,0 +1,160 @@
+---
+id: "3.6"
+slug: sliding-window-maximum
+title: Sliding Window Maximum
+leetcode: 239
+url: https://leetcode.com/problems/sliding-window-maximum/
+difficulty: Hard
+premium: false
+category: sliding-window
+patterns: [sliding-window, monotonic-stack]
+prerequisites: ["Deques", "The word monotonic", "An amortisation argument"]
+targetComplexity: { time: "O(n)", space: "O(k)" }
+visualizer: { name: monotonic-stack, preset: sliding-window-maximum }
+status: complete
+---
+
+<Statement>
+
+A window of width `k` slides across `nums` from left to right, one position at a time. Return an array
+of the maximum inside the window at each position.
+
+<Examples>
+  <Example input={`nums = [1, 3, -1, -3, 5, 3, 6, 7]
+k = 3`} output={`[3, 3, 5, 5, 6, 7]`}>
+    Six windows. The 3 wins twice, then the 5 twice, then the 6 and the 7.
+  </Example>
+  <Example input={`nums = [1]
+k = 1`} output={`[1]`}>
+    A window of one, which is always its own maximum.
+  </Example>
+  <Example input={`nums = [7, 2, 4]
+k = 2`} output={`[7, 4]`}>
+    The 7 wins its window and then falls out — a maximum leaving is the second thing to handle.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= n <= 10^5`
+- `-10^4 <= nums[i] <= 10^4`
+- `1 <= k <= n`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **"A maximum over a moving window"** is the monotonic deque's own recognition sentence. The window
+  part is easy; keeping the maximum current as elements leave is the hard half.
+- Two different things remove a candidate: a **larger** value arriving after it, and the window
+  **moving past** it. Handling only the first gives a wrong answer on `[7, 2, 4]`.
+- `n` up to `10^5` with `k` up to `n` makes rescanning each window `10^10` comparisons. A heap gets it
+  to `O(n log n)`; the deque gets it to `O(n)`.
+
+</Signals>
+
+<BruteForce>
+
+For each of the `n - k + 1` window positions, scan its `k` values for the maximum.
+
+**O(n · k) time, O(1) space beyond the output.** The bottleneck is that neighbouring windows overlap
+in `k - 1` values, so almost every comparison is repeated. Worse, the work is thrown away in a
+particular way: when the window slides, the previous maximum is usually still inside it, and the scan
+rediscovers it from scratch.
+
+</BruteForce>
+
+<Insight>
+
+A value with a larger value somewhere to its right can never be a maximum again, so it may be thrown away the moment that larger value arrives.
+
+</Insight>
+
+<Approach>
+
+1. Keep a deque of **indices** whose values decrease from front to back. The front is always the
+   maximum of the current window.
+2. For each new index `right`:
+3. Pop from the **back** while the value there is smaller than the new one. Those indices are now
+   permanently dominated — a bigger value sits to their right and will outlive them.
+4. Push `right` onto the back.
+5. If the index at the **front** has fallen out of the window (`front < right - k + 1`), drop it.
+6. Once the window is full, `nums[deque[0]]` is the answer for this position.
+
+Every index is pushed once and popped at most once, so the inner loop is amortised constant and the
+whole sweep is `O(n)` — the same argument as Daily Temperatures, with the expiry rule added.
+
+<Viz name="monotonic-stack" preset="sliding-window-maximum" />
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def maxSlidingWindow(self, nums: list[int], k: int) -> list[int]:
+        # O(n * k) time, O(1) space beyond the output
+        return [max(nums[i:i + k]) for i in range(len(nums) - k + 1)]
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+from collections import deque
+
+
+class Solution:
+    def maxSlidingWindow(self, nums: list[int], k: int) -> list[int]:
+        # O(n) time, O(k) space
+        window: deque[int] = deque()      # indices, values decreasing front to back
+        result: list[int] = []
+
+        for right, value in enumerate(nums):
+            while window and nums[window[-1]] < value:
+                window.pop()              # dominated: a bigger value arrives later
+            window.append(right)
+
+            if window[0] < right - k + 1:
+                window.popleft()          # the front has slid out of the window
+
+            if right >= k - 1:
+                result.append(nums[window[0]])
+
+        return result
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Store indices, not values.** Without an index there is no way to tell whether the front has left
+  the window, and the expiry check becomes impossible. This is the same lesson as Daily Temperatures
+  and it is the most common way this problem goes wrong.
+- **Two removal rules, not one.** Popping the dominated values off the back is the clever half;
+  dropping the expired front is the half that is forgotten. `[7, 2, 4]` with `k = 2` catches it — the
+  expected answer is `[7, 4]`, and skipping the expiry gives `[7, 7]`.
+- Only start writing output once `right >= k - 1`. Before that the window is not yet full and the
+  front of the deque is the maximum of a partial window.
+- `<` and `<=` are both correct when popping the back. With `<`, equal values sit side by side and the
+  earlier one simply expires first; with `<=`, the deque stays strictly decreasing. Pick one and be
+  able to say why the other is fine too.
+- A max-heap of `(value, index)` with lazy deletion is a good intermediate answer at `O(n log n)`.
+  Say it, then say why the deque is better — it never stores a value it could not use.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"The minimum instead."* — Flip the comparison; the deque then increases from front to back.
+  Everything else is identical.
+- *"Both the minimum and the maximum, to test whether a window's spread stays under a limit."* —
+  LC 1438: run two deques side by side, one of each kind.
+- *"Why is this `O(n)` when there is a loop inside a loop?"* — Each index is appended exactly once and
+  removed at most once, so the total number of pops across the entire run is bounded by `n`. Practise
+  saying that sentence; it is the same argument this whole family of problems rests on.
+
+</FollowUps>

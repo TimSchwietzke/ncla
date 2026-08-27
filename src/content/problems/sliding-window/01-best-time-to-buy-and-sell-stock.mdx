@@ -1,0 +1,143 @@
+---
+id: "3.1"
+slug: best-time-to-buy-and-sell-stock
+title: Best Time to Buy and Sell Stock
+leetcode: 121
+url: https://leetcode.com/problems/best-time-to-buy-and-sell-stock/
+difficulty: Easy
+premium: false
+category: sliding-window
+patterns: [greedy-scan]
+prerequisites: ["Carrying a running minimum", "Reading a one-pass invariant"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+You are given an array `prices` where `prices[i]` is the price of a stock on day `i`. Choose **one**
+day to buy and a **later** day to sell, and return the largest profit possible. If no profit can be
+made, return `0`.
+
+<Examples>
+  <Example input={`prices = [7, 1, 5, 3, 6, 4]`} output="5">
+    Buy on day 1 at 1 and sell on day 4 at 6. Buying at 1 and selling at 7 is not allowed — the 7
+    comes first.
+  </Example>
+  <Example input={`prices = [7, 6, 4, 3, 1]`} output="0">
+    Prices only fall. No transaction beats doing nothing, and the answer is 0, not negative.
+  </Example>
+  <Example input={`prices = [2, 4, 1]`} output="2">
+    The lowest price of all is at the end, where it is useless — there is no later day to sell into.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= prices.length <= 10^5`
+- `0 <= prices[i] <= 10^4`
+- Exactly **one** buy and **one** sell, and the buy must come first
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **This one is not actually a sliding window**, despite the category it sits in. NeetCode files it
+  here as the warm-up; the technique is a single left-to-right scan that carries a running best. Being
+  able to say that out loud is worth more than forcing the window framing.
+- The answer is `max(prices[j] - prices[i])` over `i < j`. Fix `j` and the best partner is simply the
+  smallest price *before* it — a value you already have if you have been keeping it.
+- `n` up to `10^5` puts all pairs at `5 · 10^9`. One pass is required.
+
+</Signals>
+
+<BruteForce>
+
+Try every pair of days with `i < j` and keep the largest difference.
+
+**O(n²) time, O(1) space.** The bottleneck is that for each selling day the inner loop re-scans all
+earlier days looking for the cheapest one — the same minimum, recomputed from scratch every time.
+A minimum over a growing prefix changes by at most one comparison per step.
+
+</BruteForce>
+
+<Insight>
+
+Walking forward, the best sale today is today's price minus the cheapest price seen so far — so carry that minimum and never look back.
+
+</Insight>
+
+<Approach>
+
+1. Keep `cheapest`, the lowest price seen so far, and `best`, the largest profit so far.
+2. For each price in order:
+3. The best profit that **sells today** is `price - cheapest`. Record it if it beats `best`.
+4. Then update `cheapest` if today is cheaper.
+5. `best` starts at 0, which is what makes "never trade" the answer on a falling market.
+
+Steps 3 and 4 may be written in either order here, because a purchase and a sale on the same day
+yield exactly 0 and cannot beat a `best` that already starts at 0. Knowing *why* the order is safe
+is better than memorising one of them.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def maxProfit(self, prices: list[int]) -> int:
+        # O(n^2) time, O(1) space
+        best = 0
+        for i in range(len(prices)):
+            for j in range(i + 1, len(prices)):
+                best = max(best, prices[j] - prices[i])
+        return best
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def maxProfit(self, prices: list[int]) -> int:
+        # O(n) time, O(1) space
+        cheapest = float("inf")
+        best = 0
+
+        for price in prices:
+            best = max(best, price - cheapest)   # sell today, having bought at the low
+            cheapest = min(cheapest, price)
+
+        return best
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **The floor is 0, not negative.** On a strictly falling market every difference is negative, and
+  the answer is "do not trade". Starting `best` at `0` — not at `prices[1] - prices[0]` — is what
+  encodes that.
+- The cheapest price is only useful if a day comes **after** it. `[2, 4, 1]` answers 2, not 0: the
+  final 1 is the lowest price and completely worthless.
+- Exactly one transaction. If you find yourself adding up every rise, you are solving LC 122, which
+  is a different problem with a different answer.
+- `float("inf")` as the starting minimum is fine, and so is `prices[0]`. What is not fine is `0` —
+  with prices of 0 allowed by the constraints, that silently claims you already bought for free.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"As many transactions as you like."* — LC 122: sum every upward step. Greedy again, and it becomes
+  obvious once you see that a long rise equals the sum of its daily rises.
+- *"At most two transactions, or at most k."* — LC 123 and 188, and now it really is dynamic
+  programming: a state per (day, transactions used, holding or not).
+- *"Why is this filed under Sliding Window?"* — Because a window framing exists: `left` is the buy
+  day, `right` the sell day, and `left` jumps to `right` whenever a cheaper price appears. Same
+  arithmetic, more machinery — a good thing to be able to explain both ways.
+
+</FollowUps>

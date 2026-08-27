@@ -1,0 +1,177 @@
+---
+id: "3.4"
+slug: permutation-in-string
+title: Permutation in String
+leetcode: 567
+url: https://leetcode.com/problems/permutation-in-string/
+difficulty: Medium
+premium: false
+category: sliding-window
+patterns: [sliding-window, hashing-complement]
+prerequisites: ["Valid Anagram", "A window of fixed width"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Given two strings `s1` and `s2`, return `true` if `s2` contains a **permutation** of `s1` as a
+substring.
+
+<Examples>
+  <Example input={`s1 = "ab"
+s2 = "eidbaooo"`} output="true">
+    The substring `ba` is a rearrangement of `ab`.
+  </Example>
+  <Example input={`s1 = "ab"
+s2 = "eidboaoo"`} output="false">
+    An a and a b both occur, but never next to each other.
+  </Example>
+  <Example input={`s1 = "abc"
+s2 = "ab"`} output="false">
+    `s2` is shorter than `s1`, so no window of the required width exists at all.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= s1.length, s2.length <= 10^4`
+- `s1` and `s2` consist of **lowercase English letters**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- A permutation is a **multiset of characters**, so this is Valid Anagram asked repeatedly — the
+  counting half of the answer is already known.
+- Every candidate has exactly the same length, `|s1|`. A window of **fixed** width is the simplest
+  kind: one character enters and one leaves per step, and there is no shrinking decision to make.
+- `|s2|` up to `10^4` makes a fresh comparison of 26 counters per position perfectly affordable — but
+  the incremental version is barely longer to write and is the answer worth giving.
+
+</Signals>
+
+<BruteForce>
+
+Take every substring of `s2` of length `|s1|`, count its characters, and compare the two count
+tables.
+
+**O(n · 26) time, O(1) space.** Not disastrous — and this is the honest first answer. The bottleneck
+is that consecutive windows differ by exactly two characters, one entering and one leaving, yet all
+26 counters are rebuilt and re-compared every step. Both halves of that waste can be removed.
+
+</BruteForce>
+
+<Insight>
+
+Consecutive windows differ by one character in and one character out, so the comparison can be maintained instead of repeated.
+
+</Insight>
+
+<Approach>
+
+1. If `|s1| > |s2|`, answer `false` immediately — no window fits.
+2. Build two count arrays of 26: one for `s1`, one for the first window of `s2`.
+3. Count `matches` — how many of the 26 letters currently agree. The answer is `true` exactly when
+   `matches == 26`.
+4. Slide the window: add the entering character, remove the leaving one, and adjust `matches` for
+   **just those two letters**.
+5. A count that has just become equal raises `matches`; one that has just stopped being equal lowers
+   it. Everything else is untouched, so each step is `O(1)`.
+
+The bookkeeping in step 5 is the fiddly part. If it does not come out under pressure, comparing the
+two arrays outright is `O(26)` per step and still passes — say that, then improve it.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def checkInclusion(self, s1: str, s2: str) -> bool:
+        # O(n * 26) time, O(1) space
+        if len(s1) > len(s2):
+            return False
+
+        need = [0] * 26
+        for ch in s1:
+            need[ord(ch) - ord("a")] += 1
+
+        for start in range(len(s2) - len(s1) + 1):
+            window = [0] * 26
+            for ch in s2[start:start + len(s1)]:
+                window[ord(ch) - ord("a")] += 1
+            if window == need:
+                return True
+
+        return False
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def checkInclusion(self, s1: str, s2: str) -> bool:
+        # O(n) time, O(1) space
+        width = len(s1)
+        if width > len(s2):
+            return False
+
+        need, window = [0] * 26, [0] * 26
+        for i in range(width):
+            need[ord(s1[i]) - ord("a")] += 1
+            window[ord(s2[i]) - ord("a")] += 1
+
+        matches = sum(1 for i in range(26) if need[i] == window[i])
+
+        for right in range(width, len(s2)):
+            if matches == 26:
+                return True
+
+            entering = ord(s2[right]) - ord("a")
+            window[entering] += 1
+            if window[entering] == need[entering]:
+                matches += 1
+            elif window[entering] == need[entering] + 1:   # it was equal one step ago
+                matches -= 1
+
+            leaving = ord(s2[right - width]) - ord("a")
+            window[leaving] -= 1
+            if window[leaving] == need[leaving]:
+                matches += 1
+            elif window[leaving] == need[leaving] - 1:
+                matches -= 1
+
+        return matches == 26
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **The last window is checked after the loop, not inside it.** The loop tests `matches` at the top,
+  so the final window never reaches that test — the closing `return matches == 26` is what covers it.
+  Drop that line and every answer whose permutation sits at the very end comes back `false`.
+- `len(s1) > len(s2)` must be handled first, or the initial fill reads past the end of `s2`.
+- When adjusting `matches`, compare against `need[i] + 1` and `need[i] - 1`, not against zero. The
+  question is not "is this count right" but "did it *just stop* being right".
+- Rebuilding both 26-arrays per window is a correct answer at `O(26n)`. Say it before you optimise —
+  jumping straight to the incremental version and getting the bookkeeping wrong is the worse outcome.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Return every starting index, not just whether one exists."* — LC 438 Find All Anagrams: identical
+  window, collect `left` whenever `matches == 26` instead of returning.
+- *"What about a large or unbounded alphabet?"* — Swap the arrays for hash maps and track how many
+  keys currently agree. Space becomes `O(k)`; the sliding logic does not change.
+- *"Why not compare the two arrays every step?"* — You can, at `O(26)` per step, which is `O(n)`
+  overall with a constant of 26. The incremental version is the same complexity with a constant of 2;
+  the interesting part is being able to say which constant you are paying.
+
+</FollowUps>

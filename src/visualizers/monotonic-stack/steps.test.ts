@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSteps } from "./steps";
+import { buildSteps, buildWindowMaximum } from "./steps";
 
 const TEMPERATURES = [73, 74, 75, 71, 69, 72, 76, 73];
 
@@ -55,5 +55,48 @@ describe("monotonic-stack buildSteps", () => {
     const steps = buildSteps({ values: [70, 69, 68, 99] });
     expect(steps.at(-2)?.caption).toContain("settles the days");
     expect(steps.at(-1)?.readout).toBe("answer [3, 2, 1, 0]");
+  });
+});
+
+describe("buildWindowMaximum", () => {
+  // LeetCode 239, example 1. The expected maxima are [3, 3, 5, 5, 6, 7].
+  const NUMS = [1, 3, -1, -3, 5, 3, 6, 7];
+
+  it("emits one frame per value", () => {
+    expect(buildWindowMaximum({ values: NUMS, k: 3 })).toHaveLength(NUMS.length);
+  });
+
+  it("reports the window maxima the problem asks for", () => {
+    const steps = buildWindowMaximum({ values: NUMS, k: 3 });
+    expect(steps.at(-1)?.readout).toBe("maxima [3, 3, 5, 5, 6, 7]");
+  });
+
+  it("keeps the deque non-increasing and never longer than k", () => {
+    // Non-increasing, not strictly decreasing: the builder pops on `<`, so equal values
+    // stay side by side. That is correct — the later one simply outlives the earlier —
+    // and asserting strict decrease here would only pass by accident on this input.
+    for (const step of buildWindowMaximum({ values: NUMS, k: 3 })) {
+      const held = step.panel?.entries.map((entry) => Number(entry.value)) ?? [];
+      expect(held.length).toBeLessThanOrEqual(3);
+      for (let i = 1; i < held.length; i += 1) {
+        expect(held[i]!).toBeLessThanOrEqual(held[i - 1]!);
+      }
+    }
+  });
+
+  it("keeps equal values side by side and still reports the right maxima", () => {
+    const steps = buildWindowMaximum({ values: [4, 4, 4, 1, 4], k: 2 });
+    expect(steps.at(-1)?.readout).toBe("maxima [4, 4, 4, 4]");
+  });
+
+  it("marks the deque front as the answer for the current window", () => {
+    const steps = buildWindowMaximum({ values: NUMS, k: 3 });
+    for (const step of steps) {
+      expect(step.panel?.entries[0]?.tone).toBe("found");
+    }
+  });
+
+  it("has nothing to show when the window is wider than the input", () => {
+    expect(buildWindowMaximum({ values: [1, 2], k: 5 })).toEqual([]);
   });
 });
