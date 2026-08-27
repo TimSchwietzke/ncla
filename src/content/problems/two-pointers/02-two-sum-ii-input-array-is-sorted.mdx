@@ -1,0 +1,155 @@
+---
+id: "2.2"
+slug: two-sum-ii-input-array-is-sorted
+title: Two Sum II - Input Array Is Sorted
+leetcode: 167
+url: https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/
+difficulty: Medium
+premium: false
+category: two-pointers
+patterns: [two-pointer]
+prerequisites: ["Why sorting makes the sum steerable", "Two Sum I and its hash map"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+visualizer: { name: two-pointer, preset: two-sum-ii }
+status: complete
+---
+
+<Statement>
+
+Given a **1-indexed** array `numbers` sorted in non-decreasing order, find the two numbers that add
+up to `target` and return their positions as `[index1, index2]`, each **incremented by one**.
+
+Exactly one solution exists, the same element may not be used twice, and the solution must use only
+**constant extra space**.
+
+<Examples>
+  <Example input={`numbers = [2, 7, 11, 15]
+target = 9`} output={`[1, 2]`}>
+    2 + 7 = 9. The positions are 1 and 2, not 0 and 1.
+  </Example>
+  <Example input={`numbers = [2, 3, 4]
+target = 6`} output={`[1, 3]`}>
+    2 + 4 = 6 — the pair is not adjacent.
+  </Example>
+  <Example input={`numbers = [-1, 0]
+target = -1`} output={`[1, 2]`}>
+    Negative values are allowed; only the ordering is guaranteed.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `2 <= numbers.length <= 3 * 10^4`
+- `-1000 <= numbers[i] <= 1000` and `-1000 <= target <= 1000`
+- `numbers` is sorted in **non-decreasing** order
+- Exactly one solution exists
+- **Constant extra space** is required
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **Sorted input** is never decoration. It is the licence to move a pointer and know which way the
+  sum went.
+- "Constant extra space" rules out the hash map that solves Two Sum I. The statement is telling you
+  which of the two techniques it wants.
+- The answer is a pair of positions and the array is already ordered, so nothing has to be
+  rearranged — the difficulty that made Two Sum I need a map is gone.
+
+</Signals>
+
+<BruteForce>
+
+Try every pair: for each `i`, walk every `j > i` and test the sum.
+
+**O(n²) time, O(1) space.** It ignores the sorting completely, which is the tell. The bottleneck is
+that after `numbers[i] + numbers[j]` comes out too large, the inner loop keeps testing even larger
+`j` — every one of which is also too large, because the array is sorted. Information is being thrown
+away on every comparison.
+
+</BruteForce>
+
+<Insight>
+
+On a sorted array the sum of the two outermost values is steerable: too small can only be fixed from the left, too large only from the right.
+
+</Insight>
+
+<Approach>
+
+1. Put `left` at the first element and `right` at the last.
+2. Take `numbers[left] + numbers[right]`.
+3. If it equals the target, you are done — return `[left + 1, right + 1]`.
+4. If it is **too small**, the only way to grow it is `left += 1`; every value to the right of
+   `right` is already gone.
+5. If it is **too large**, `right -= 1` for the same reason.
+6. Each step discards one candidate permanently, so the pointers meet after at most `n` moves.
+
+<Viz name="two-pointer" preset="two-sum-ii" />
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def twoSum(self, numbers: list[int], target: int) -> list[int]:
+        # O(n^2) time, O(1) space
+        for i in range(len(numbers)):
+            for j in range(i + 1, len(numbers)):
+                if numbers[i] + numbers[j] == target:
+                    return [i + 1, j + 1]
+        return []
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def twoSum(self, numbers: list[int], target: int) -> list[int]:
+        # O(n) time, O(1) space
+        left, right = 0, len(numbers) - 1
+
+        while left < right:
+            total = numbers[left] + numbers[right]
+
+            if total == target:
+                return [left + 1, right + 1]      # 1-indexed, see pitfalls
+            if total < target:
+                left += 1                         # only the left side can grow the sum
+            else:
+                right -= 1
+
+        return []
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **The answer is 1-indexed.** Returning `[left, right]` passes every example you check in your head
+  and fails every test. Write the `+ 1` at the same moment you write the `return`.
+- Do not reach for the hash map from Two Sum I. It works and it is `O(n)` — and it uses `O(n)` space,
+  which this statement forbids outright. Knowing *why* the sorted version is the better answer here
+  is the point of having both problems.
+- The loop condition is `left < right`, not `left <= right`. With `<=` a single element could pair
+  with itself when `target == 2 * numbers[left]`.
+- Non-decreasing means duplicates are allowed. Nothing special is needed — the pointers handle
+  `[3, 3]` with `target = 6` on the first comparison.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"What if the array were not sorted?"* — Then it is Two Sum I: sorting first would destroy the
+  indices you have to return, so a hash map from value to index is the answer, at `O(n)` space.
+- *"Return every pair, not just one."* — Do not return on a hit; record it, then move **both**
+  pointers and skip over equal values on each side, or the same pair comes back repeatedly.
+- *"Three numbers instead of two."* — Fix one element and run exactly this loop on the rest. That is
+  3Sum, and it is why this problem comes before it.
+
+</FollowUps>

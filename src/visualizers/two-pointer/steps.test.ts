@@ -43,3 +43,15 @@ describe("two-pointer buildSteps", () => {
     expect(buildSteps({ values: [1], target: 2 })).toEqual([]);
   });
 });
+
+describe("index base", () => {
+  it("counts the answer from zero by default", () => {
+    const steps = buildSteps({ values: [2, 7, 11, 15], target: 9 });
+    expect(steps.at(-1)?.readout).toBe("answer [0, 1]");
+  });
+
+  it("counts from one when the problem does, as Two Sum II requires", () => {
+    const steps = buildSteps({ values: [2, 7, 11, 15], target: 9, indexBase: 1 });
+    expect(steps.at(-1)?.readout).toBe("answer [1, 2]");
+  });
+});
