@@ -1,7 +1,9 @@
 import type { Category, CategorySlug } from "./types.ts";
 
 /**
- * The 18 NeetCode 150 categories in the order of the source document.
+ * The 18 NeetCode 150 categories, in the order and with the counts of the live list —
+ * verified against neetcode.io by `scripts/diff-source.ts`, not copied from the German
+ * source document, which had Generate Parentheses under Stack and Tries before Heap.
  * Counts add up to 150 — `scripts/validate-content.ts` enforces that.
  */
 export const CATEGORIES: readonly Category[] = [
@@ -33,7 +35,7 @@ export const CATEGORIES: readonly Category[] = [
     slug: "stack",
     number: 4,
     title: "Stack",
-    count: 7,
+    count: 6,
     foundational: true,
     blurb: "Last in, first out — and the monotonic variant answers 'next greater element'.",
   },
@@ -62,16 +64,8 @@ export const CATEGORIES: readonly Category[] = [
     blurb: "Recursion with a return value — decide what each node reports upwards.",
   },
   {
-    slug: "tries",
-    number: 8,
-    title: "Tries",
-    count: 3,
-    foundational: false,
-    blurb: "Prefix trees turn 'does any word start with…' into a walk down characters.",
-  },
-  {
     slug: "heap-priority-queue",
-    number: 9,
+    number: 8,
     title: "Heap / Priority Queue",
     count: 7,
     foundational: false,
@@ -79,11 +73,19 @@ export const CATEGORIES: readonly Category[] = [
   },
   {
     slug: "backtracking",
-    number: 10,
+    number: 9,
     title: "Backtracking",
-    count: 9,
+    count: 10,
     foundational: false,
     blurb: "Build a candidate, prune it early, undo the last choice, repeat.",
+  },
+  {
+    slug: "tries",
+    number: 10,
+    title: "Tries",
+    count: 3,
+    foundational: false,
+    blurb: "Prefix trees turn 'does any word start with…' into a walk down characters.",
   },
   {
     slug: "graphs",

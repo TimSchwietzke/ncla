@@ -1,9 +1,14 @@
 import type { Pattern } from "./types.ts";
 
 /**
- * The 18 patterns. These are the 17 rows of the source document's pattern index,
- * with "DP bottom-up" split into 1-D and 2-D because the table fill looks too
+ * The 20 patterns. Eighteen of them are the 17 rows of the source document's pattern
+ * index, with "DP bottom-up" split into 1-D and 2-D because the table fill looks too
  * different for one shared visualizer.
+ *
+ * The last two go beyond that index on purpose. The source names them as patterns in the
+ * problem write-ups but forgot to list them, and no existing row is an honest home:
+ * Product of Array Except Self is prefix/suffix accumulation (LeetCode tags it "Prefix
+ * Sum" itself), and Encode and Decode Strings has no hash map, no pointer and no search.
  *
  * `hasVisualizer` flips to true as the visualizers land (milestone M3).
  * The slug is also the visualizer directory name under `src/visualizers/`.
@@ -133,6 +138,20 @@ export const PATTERNS: readonly Pattern[] = [
     title: "XOR / Bit Tricks",
     signal: "Numbers, duplicates, or an explicit ban on extra memory.",
     categories: ["bit-manipulation", "math-geometry"],
+    hasVisualizer: false,
+  },
+  {
+    slug: "prefix-suffix",
+    title: "Prefix / Suffix Accumulation",
+    signal: "The answer at i needs everything left of i and everything right of it — two passes, no nesting.",
+    categories: ["arrays-hashing"],
+    hasVisualizer: false,
+  },
+  {
+    slug: "length-prefix",
+    title: "Self-Delimiting Encoding",
+    signal: "Any separator can also appear inside the data, so the format must say how much to read.",
+    categories: ["arrays-hashing"],
     hasVisualizer: false,
   },
 ] as const;

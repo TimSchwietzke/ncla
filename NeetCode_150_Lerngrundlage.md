@@ -23,7 +23,10 @@ Empfohlener Ablauf pro Problem:
 
 ## Muster-Index (das eigentliche Lernziel)
 
-Interviews prüfen nicht 150 Lösungen, sondern ~15 Muster. Wenn du eine Aufgabe siehst, ist die erste Frage: *welches Muster?*
+Interviews prüfen nicht 150 Lösungen, sondern ~19 Muster. Wenn du eine Aufgabe siehst, ist die erste Frage: *welches Muster?*
+
+Die letzten beiden Zeilen fehlten in der ersten Fassung dieser Tabelle, obwohl die Aufgabentexte sie als
+Muster benennen. Beide sind ergänzt, weil keine der übrigen Zeilen für sie sachlich passt.
 
 | Muster | Erkennungssignal | Kategorien |
 |---|---|---|
@@ -44,6 +47,8 @@ Interviews prüfen nicht 150 Lösungen, sondern ~15 Muster. Wenn du eine Aufgabe
 | Greedy + Beweis | lokale Wahl, "reicht ein Durchlauf?" | Greedy |
 | Sortieren nach Startzeit | Intervalle | Intervals |
 | XOR / Bit-Tricks | Zahlen, Duplikate, ohne Zusatzspeicher | Bit Manipulation |
+| Präfix / Suffix | Antwort an i braucht alles links **und** alles rechts davon | Arrays & Hashing |
+| Length-Prefix-Encoding | jedes Trennzeichen kann selbst in den Daten stehen | Arrays & Hashing |
 
 ---
 
@@ -101,26 +106,26 @@ n ≤ 10 → O(n!) / O(2ⁿ) · n ≤ 20 → O(2ⁿ) · n ≤ 500 → O(n³) · 
 - **Laufzeit:** O(n) · **Speicher:** O(n)
 - **Fallstricke:** Sortieren nach Frequenz (O(n log n)) ist die naive Lösung — erkennen und übertreffen.
 
-### 1.6 Product of Array Except Self — LC 238 · Medium
+### 1.6 Encode and Decode Strings — LC 271 · Medium (Premium)
+- **Voraussetzungen:** String-Parsing, Bewusstsein für Delimiter-Kollisionen.
+- **Kernidee:** Jedes Trennzeichen kann selbst im String vorkommen — also **Länge voranstellen** statt trennen.
+- **Optimal:** Muster **Length-Prefix-Encoding**. Encode: `f"{len(s)}#{s}"` pro String. Decode: ab Pointer i bis zum nächsten `#` lesen → Länge L, dann exakt L Zeichen ab `#+1` nehmen, Pointer weitersetzen.
+- **Laufzeit:** O(n) beide Richtungen · **Speicher:** O(n)
+- **Fallstricke:** Das `#` im Inhalt stört **nicht**, weil die Länge bestimmt, wie weit gelesen wird — genau das musst du im Interview aussprechen.
+
+### 1.7 Product of Array Except Self — LC 238 · Medium
 - **Voraussetzungen:** Präfix-/Suffix-Produkte, Verbot der Division beachten.
 - **Kernidee:** Das Ergebnis für Index i ist (Produkt aller links von i) × (Produkt aller rechts von i).
 - **Optimal:** Muster **Prefix/Suffix**. Erster Durchlauf von links: `res[i] = Produkt links`. Zweiter von rechts: laufende Variable `suffix`, `res[i] *= suffix`. Das Ausgabe-Array zählt laut Aufgabe nicht als Zusatzspeicher.
 - **Laufzeit:** O(n) · **Speicher:** O(1) (ohne Output)
 - **Fallstricke:** Division ist verboten (und bricht bei Nullen). Nullen im Array sind der klassische Testfall.
 
-### 1.7 Valid Sudoku — LC 36 · Medium
+### 1.8 Valid Sudoku — LC 36 · Medium
 - **Voraussetzungen:** Sets, Index-Arithmetik für 3×3-Boxen.
 - **Kernidee:** Drei unabhängige Duplikat-Prüfungen (Zeile, Spalte, Box) lassen sich in **einem** Durchlauf erledigen.
 - **Optimal:** Muster **Hashing**. Drei Set-Arrays: `rows[9]`, `cols[9]`, `boxes[9]`. Box-Index = `(r // 3) * 3 + c // 3`. Bei jeder Ziffer alle drei Sets prüfen und befüllen.
 - **Laufzeit:** O(81) = O(1) · **Speicher:** O(1)
 - **Fallstricke:** Nur die *aktuelle* Belegung prüfen — Lösbarkeit ist nicht gefragt. `'.'` überspringen.
-
-### 1.8 Encode and Decode Strings — LC 271 · Medium (Premium)
-- **Voraussetzungen:** String-Parsing, Bewusstsein für Delimiter-Kollisionen.
-- **Kernidee:** Jedes Trennzeichen kann selbst im String vorkommen — also **Länge voranstellen** statt trennen.
-- **Optimal:** Muster **Length-Prefix-Encoding**. Encode: `f"{len(s)}#{s}"` pro String. Decode: ab Pointer i bis zum nächsten `#` lesen → Länge L, dann exakt L Zeichen ab `#+1` nehmen, Pointer weitersetzen.
-- **Laufzeit:** O(n) beide Richtungen · **Speicher:** O(n)
-- **Fallstricke:** Das `#` im Inhalt stört **nicht**, weil die Länge bestimmt, wie weit gelesen wird — genau das musst du im Interview aussprechen.
 
 ### 1.9 Longest Consecutive Sequence — LC 128 · Medium
 - **Voraussetzungen:** Hash-Set, Amortisationsargument.
@@ -140,7 +145,7 @@ n ≤ 10 → O(n!) / O(2ⁿ) · n ≤ 20 → O(2ⁿ) · n ≤ 500 → O(n³) · 
 - **Laufzeit:** O(n) · **Speicher:** O(1)
 - **Fallstricke:** Die Skip-Schleifen brauchen `while l < r`, sonst Index-Overflow. Ein gefilterter String wäre O(n) Speicher — der Interviewer will O(1).
 
-### 2.2 Two Sum II (Input Array Is Sorted) — LC 167 · Medium
+### 2.2 Two Sum II - Input Array Is Sorted — LC 167 · Medium
 - **Voraussetzungen:** Warum Sortierung Two Pointer erlaubt.
 - **Kernidee:** Bei sortiertem Array ist die Summe der Randzeiger **monoton** steuerbar: zu klein → links nach rechts, zu groß → rechts nach links.
 - **Optimal:** Muster **Two Pointer (konvergierend)**. Genau ein Durchlauf, kein Hash-Set nötig → O(1) Speicher, das ist der Unterschied zu Two Sum I.
@@ -215,7 +220,8 @@ n ≤ 10 → O(n!) / O(2ⁿ) · n ≤ 20 → O(2ⁿ) · n ≤ 500 → O(n³) · 
 - **Fallstricke:** **Indizes** speichern, nicht Werte, sonst kann man das Herausfallen nicht erkennen. Heap-Lösung ist O(n log n) — als Zwischenschritt nennen, dann verbessern.
 
 ---
-## 4. Stack (7)
+
+## 4. Stack (6)
 
 ### 4.1 Valid Parentheses — LC 20 · Easy
 - **Voraussetzungen:** Stack, Map schließend → öffnend.
@@ -238,28 +244,21 @@ n ≤ 10 → O(n!) / O(2ⁿ) · n ≤ 20 → O(2ⁿ) · n ≤ 500 → O(n³) · 
 - **Laufzeit:** O(n) · **Speicher:** O(n)
 - **Fallstricke:** Division muss **Richtung Null** trunkieren; Python `//` rundet ab → `int(a / b)` benutzen. Negative Zahlen sind gültige Tokens, also nicht auf `isdigit()` prüfen.
 
-### 4.4 Generate Parentheses — LC 22 · Medium
-- **Voraussetzungen:** Rekursion/Backtracking, Gültigkeits-Invariante.
-- **Kernidee:** Beim Aufbauen nur gültige Präfixe zulassen: `open < n` erlaubt eine öffnende, `close < open` erlaubt eine schließende.
-- **Optimal:** Muster **Backtracking** (in dieser Kategorie, weil der Aufrufstack die Rolle des Stacks spielt). Rekursion mit `(open, close)`; bei `len == 2n` Ergebnis speichern.
-- **Laufzeit:** O(4ⁿ / √n) (Catalan-Zahl) · **Speicher:** O(n) Rekursionstiefe
-- **Fallstricke:** Nicht alle 2^(2n) Strings erzeugen und filtern — die Invariante schneidet den Baum vorab.
-
-### 4.5 Daily Temperatures — LC 739 · Medium
+### 4.4 Daily Temperatures — LC 739 · Medium
 - **Voraussetzungen:** Monotoner Stack, "Next Greater Element".
 - **Kernidee:** Ein Tag wartet auf den ersten wärmeren Tag — beim Auftauchen eines wärmeren Werts löst man **alle** wartenden auf einmal auf.
 - **Optimal:** Muster **Monotoner Stack (absteigend, Indizes)**. Für jedes i: solange `t[i] > t[stack[-1]]` → poppen, `res[idx] = i - idx`. Dann i pushen. Jeder Index maximal einmal rein/raus.
 - **Laufzeit:** O(n) · **Speicher:** O(n)
 - **Fallstricke:** Indizes speichern, nicht Temperaturen. Übrige Stack-Einträge bleiben 0.
 
-### 4.6 Car Fleet — LC 853 · Medium
+### 4.5 Car Fleet — LC 853 · Medium
 - **Voraussetzungen:** Sortieren, Stack, Zeit = Distanz/Geschwindigkeit.
 - **Kernidee:** Von hinten denken: Ein Auto bildet nur dann eine neue Flotte, wenn seine Ankunftszeit **größer** ist als die des Autos vor ihm — sonst holt es auf und wird geschluckt.
 - **Optimal:** Muster **Sortieren + Monotoner Stack**. Nach Position absteigend sortieren, `time = (target - pos) / speed`. Von vorne (= dichtestes Auto zuerst) durchgehen: ist `time > stack[-1]`, pushen (neue Flotte). Antwort = Stack-Größe. Ein Stack ist nicht zwingend, eine `maxTime`-Variable reicht → O(1).
 - **Laufzeit:** O(n log n) · **Speicher:** O(n)
 - **Fallstricke:** Float-Division statt Integer. Autos an gleicher Position kommen laut Constraints nicht vor.
 
-### 4.7 Largest Rectangle in Histogram — LC 84 · Hard
+### 4.6 Largest Rectangle in Histogram — LC 84 · Hard
 - **Voraussetzungen:** Monotoner Stack, Konzept "linke/rechte Grenze".
 - **Kernidee:** Für jeden Balken das maximale Rechteck bestimmen, in dem **er** der kleinste ist. Die Grenzen sind das jeweils nächste kleinere Element links und rechts.
 - **Optimal:** Muster **Monotoner Stack (aufsteigend)**. Stack aus `(startIndex, height)`. Ist der neue Balken kleiner, so lange poppen, Fläche `height * (i - startIndex)` berechnen und den Startindex des zuletzt gepoppten übernehmen. Am Ende Reststack mit `n - start` abrechnen.
@@ -320,6 +319,7 @@ n ≤ 10 → O(n!) / O(2ⁿ) · n ≤ 20 → O(2ⁿ) · n ≤ 500 → O(n³) · 
 - **Fallstricke:** Ränder mit `-∞`/`+∞` abfangen. Immer über das kürzere Array suchen, sonst wird j negativ. Diese Aufgabe ist die schwerste der Kategorie — Merge in O(m+n) als Fallback bereithalten und ansagen.
 
 ---
+
 ## 6. Linked List (11)
 
 ### 6.1 Reverse Linked List — LC 206 · Easy
@@ -336,40 +336,40 @@ n ≤ 10 → O(n!) / O(2ⁿ) · n ≤ 20 → O(2ⁿ) · n ≤ 500 → O(n³) · 
 - **Laufzeit:** O(n + m) · **Speicher:** O(1)
 - **Fallstricke:** Ohne Dummy braucht man einen Sonderfall für den Listenkopf — der Dummy ist genau dafür da.
 
-### 6.3 Reorder List — LC 143 · Medium
+### 6.3 Linked List Cycle — LC 141 · Easy
+- **Voraussetzungen:** Floyd's Cycle Detection.
+- **Kernidee:** Zwei Läufer unterschiedlicher Geschwindigkeit treffen sich genau dann, wenn es einen Kreis gibt.
+- **Optimal:** Muster **Fast/Slow Pointer**. `slow` 1 Schritt, `fast` 2 Schritte; Treffen → Zyklus, `fast is None` → kein Zyklus.
+- **Laufzeit:** O(n) · **Speicher:** O(1)
+- **Fallstricke:** Set-Lösung ist O(n) Speicher — funktioniert, aber der Interviewer fragt nach O(1). `fast.next` auf None prüfen.
+
+### 6.4 Reorder List — LC 143 · Medium
 - **Voraussetzungen:** 6.1, 6.2, Mitte finden.
 - **Kernidee:** Zerlegen in drei bekannte Teilprobleme: Mitte finden → zweite Hälfte umdrehen → abwechselnd verweben.
 - **Optimal:** Muster **Fast/Slow + Reverse + Merge**. `slow/fast` für die Mitte, `slow.next = None` zum Trennen, zweite Hälfte reversen, dann alternierend verketten.
 - **Laufzeit:** O(n) · **Speicher:** O(1)
 - **Fallstricke:** Die Verbindung zur zweiten Hälfte kappen, sonst Zyklus. Ungerade Länge: die erste Hälfte darf einen Knoten mehr haben.
 
-### 6.4 Remove Nth Node From End of List — LC 19 · Medium
+### 6.5 Remove Nth Node From End of List — LC 19 · Medium
 - **Voraussetzungen:** Two Pointer mit festem Abstand, Dummy-Node.
 - **Kernidee:** Ein Zeiger startet n Schritte früher — wenn der vordere am Ende ist, steht der hintere genau vor dem Ziel.
 - **Optimal:** Muster **Two Pointer (versetzt)**. `left = dummy`, `right` n Schritte vor. Beide bis `right is None`. `left.next = left.next.next`.
 - **Laufzeit:** O(n), ein Durchlauf · **Speicher:** O(1)
 - **Fallstricke:** Löschen des **Kopfes** → Dummy-Node löst das. Off-by-One beim Vorlauf.
 
-### 6.5 Copy List with Random Pointer — LC 138 · Medium
+### 6.6 Copy List with Random Pointer — LC 138 · Medium
 - **Voraussetzungen:** Hash-Map als Original→Kopie-Mapping.
 - **Kernidee:** Random-Zeiger können auf noch nicht existierende Knoten zeigen → in **zwei Durchläufen** arbeiten: erst alle Knoten klonen, dann die Zeiger verdrahten.
 - **Optimal:** Muster **Hashing (zwei Durchläufe)**. Pass 1: `map[old] = Node(old.val)`. Pass 2: `map[old].next = map[old.next]`, `map[old].random = map[old.random]` (mit `map[None] = None`).
 - **Laufzeit:** O(n) · **Speicher:** O(n)
 - **Fallstricke:** Follow-up O(1) Speicher: Kopien **verschachtelt** in die Originalliste einhängen (A→A'→B→B'), Randoms setzen, dann entflechten. Kennen, aber erst auf Nachfrage.
 
-### 6.6 Add Two Numbers — LC 2 · Medium
+### 6.7 Add Two Numbers — LC 2 · Medium
 - **Voraussetzungen:** Übertrag, Dummy-Node.
 - **Kernidee:** Ziffern liegen bereits in umgekehrter Reihenfolge → schriftliche Addition von links nach rechts.
 - **Optimal:** Muster **Simulation + Dummy Head**. Schleife solange `l1 or l2 or carry`; `total = v1 + v2 + carry`; neuer Knoten `total % 10`; `carry = total // 10`.
 - **Laufzeit:** O(max(n, m)) · **Speicher:** O(max(n, m))
 - **Fallstricke:** Der **letzte Übertrag** (999 + 1) — deshalb `carry` in der Schleifenbedingung. Nie die Listen in Integer umwandeln (Overflow-Argument).
-
-### 6.7 Linked List Cycle — LC 141 · Easy
-- **Voraussetzungen:** Floyd's Cycle Detection.
-- **Kernidee:** Zwei Läufer unterschiedlicher Geschwindigkeit treffen sich genau dann, wenn es einen Kreis gibt.
-- **Optimal:** Muster **Fast/Slow Pointer**. `slow` 1 Schritt, `fast` 2 Schritte; Treffen → Zyklus, `fast is None` → kein Zyklus.
-- **Laufzeit:** O(n) · **Speicher:** O(1)
-- **Fallstricke:** Set-Lösung ist O(n) Speicher — funktioniert, aber der Interviewer fragt nach O(1). `fast.next` auf None prüfen.
 
 ### 6.8 Find the Duplicate Number — LC 287 · Medium
 - **Voraussetzungen:** 6.7, Umdeutung Array → Funktionsgraph.
@@ -445,7 +445,7 @@ n ≤ 10 → O(n!) / O(2ⁿ) · n ≤ 20 → O(2ⁿ) · n ≤ 500 → O(n³) · 
 - **Laufzeit:** O(n·m) · **Speicher:** O(h)
 - **Fallstricke:** Leerer `subRoot` ist per Definition ein Teilbaum. Bei Serialisierung Null-Marker setzen, sonst falsche Treffer.
 
-### 7.7 Lowest Common Ancestor of a BST — LC 235 · Medium
+### 7.7 Lowest Common Ancestor of a Binary Search Tree — LC 235 · Medium
 - **Voraussetzungen:** BST-Eigenschaft.
 - **Kernidee:** Der erste Knoten, bei dem sich p und q auf **verschiedene** Seiten aufteilen (oder auf den einer der beiden fällt), ist der LCA.
 - **Optimal:** Muster **BST-Navigation**. Sind beide kleiner → links; beide größer → rechts; sonst aktueller Knoten. Iterativ ohne Rekursion.
@@ -509,76 +509,52 @@ n ≤ 10 → O(n!) / O(2ⁿ) · n ≤ 20 → O(2ⁿ) · n ≤ 500 → O(n³) · 
 - **Fallstricke:** Der Index muss über die Rekursion hinweg geteilt werden (Closure/Instanzvariable). BFS-Serialisierung ist gleichwertig, aber fehleranfälliger im Parsing.
 
 ---
-## 8. Tries (3)
 
-### 8.1 Implement Trie (Prefix Tree) — LC 208 · Medium
-- **Voraussetzungen:** Baumknoten mit Kindern-Map, Endmarkierung.
-- **Kernidee:** Gemeinsame Präfixe teilen sich Knoten — Suche kostet dann nur die Wortlänge, unabhängig von der Anzahl der Wörter.
-- **Optimal:** Muster **Trie**. Knoten = `{children: dict, isEnd: bool}`. `insert` legt fehlende Kinder an und setzt am Ende `isEnd`. `search` verlangt `isEnd`, `startsWith` nicht.
-- **Laufzeit:** O(L) pro Operation · **Speicher:** O(Σ Wortlängen)
-- **Fallstricke:** `search("app")` darf nicht True liefern, nur weil `"apple"` existiert — genau dafür ist `isEnd` da.
+## 8. Heap / Priority Queue (7)
 
-### 8.2 Design Add and Search Words Data Structure — LC 211 · Medium
-- **Voraussetzungen:** 8.1, DFS im Trie.
-- **Kernidee:** Der Wildcard `.` macht die Suche zu einer Verzweigung: an dieser Stelle **alle** Kinder rekursiv probieren.
-- **Optimal:** Muster **Trie + Backtracking-DFS**. `dfs(index, node)`: bei `.` über alle `children.values()` rekursieren, sonst normal absteigen. Treffer bei `index == len(word) and node.isEnd`.
-- **Laufzeit:** O(L) ohne Wildcards, Worst Case O(26^L) bei vielen Punkten · **Speicher:** O(Σ Wortlängen)
-- **Fallstricke:** Bei Rekursion in der Schleife bei Erfolg sofort `True` zurückgeben, nicht weitersuchen.
-
-### 8.3 Word Search II — LC 212 · Hard
-- **Voraussetzungen:** 8.1, Word Search (11er-Kategorie), Pruning.
-- **Kernidee:** Nicht jedes Wort einzeln im Grid suchen, sondern **alle Wörter gleichzeitig** über einen Trie — das Grid wird nur einmal durchlaufen und tote Pfade brechen sofort ab.
-- **Optimal:** Muster **Trie + Backtracking**. Alle Wörter in einen Trie. Von jeder Zelle DFS, der parallel im Trie absteigt; existiert das Kind nicht → sofort abbrechen. Besuchte Zellen markieren und danach zurücksetzen. **Pruning:** gefundene Wörter aus dem Trie entfernen bzw. Blätter ohne Kinder abschneiden.
-- **Laufzeit:** O(m·n·4^L) Worst Case, praktisch stark reduziert · **Speicher:** O(Σ Wortlängen)
-- **Fallstricke:** Ohne Trie ist es O(Wörter × Grid × 4^L) und läuft in Timeout. Doppelte Treffer per Set oder durch Löschen im Trie verhindern.
-
----
-
-## 9. Heap / Priority Queue (7)
-
-### 9.1 Kth Largest Element in a Stream — LC 703 · Easy
+### 8.1 Kth Largest Element in a Stream — LC 703 · Easy
 - **Voraussetzungen:** Min-Heap, Grundidee "Heap der Größe k".
 - **Kernidee:** Ein **Min**-Heap der festen Größe k hält an der Spitze genau das k-größte Element.
 - **Optimal:** Muster **Top-K mit Min-Heap**. `add`: pushen, dann bei `len > k` poppen; Rückgabe `heap[0]`.
 - **Laufzeit:** O(log k) pro `add` · **Speicher:** O(k)
 - **Fallstricke:** Min-Heap für "k größte" wirkt verkehrt herum — das ist der Kern des Musters und muss erklärbar sein.
 
-### 9.2 Last Stone Weight — LC 1046 · Easy
+### 8.2 Last Stone Weight — LC 1046 · Easy
 - **Voraussetzungen:** Max-Heap (in Python: Werte negieren).
 - **Kernidee:** Reine Simulation — man braucht immer nur die zwei größten Steine.
 - **Optimal:** Muster **Max-Heap**. Solange >1 Stein: zwei poppen, Differenz bei ≠ 0 zurückpushen.
 - **Laufzeit:** O(n log n) · **Speicher:** O(n)
 - **Fallstricke:** Python hat nur Min-Heaps → alles negiert speichern. Leerer Heap am Ende → 0.
 
-### 9.3 K Closest Points to Origin — LC 973 · Medium
+### 8.3 K Closest Points to Origin — LC 973 · Medium
 - **Voraussetzungen:** 9.1, quadrierte Distanz.
 - **Kernidee:** Für den Vergleich reicht `x² + y²` — die Wurzel ist monoton und damit überflüssig.
 - **Optimal:** Muster **Top-K mit Max-Heap der Größe k** → O(n log k). Für sehr große n: **Quickselect** → O(n) im Mittel. Beide nennen.
 - **Laufzeit:** O(n log k) · **Speicher:** O(k)
 - **Fallstricke:** Vollständiges Sortieren (O(n log n)) ist die naive Lösung. `sqrt` weglassen — auch aus Präzisionsgründen.
 
-### 9.4 Kth Largest Element in an Array — LC 215 · Medium
+### 8.4 Kth Largest Element in an Array — LC 215 · Medium
 - **Voraussetzungen:** Heap, Quickselect (Lomuto/Hoare-Partition).
 - **Kernidee:** Man muss nicht sortieren, sondern nur **eine** Position korrekt platzieren — Quickselect verwirft nach jeder Partition eine Hälfte komplett.
 - **Optimal:** Muster **Quickselect**. Partitionieren; liegt der Pivot-Index auf `n - k`, ist man fertig, sonst nur in der relevanten Seite weitersuchen. Zufälliges Pivot gegen den O(n²)-Worst-Case.
 - **Laufzeit:** O(n) im Mittel, O(n²) worst case · **Speicher:** O(1)
 - **Fallstricke:** Heap-Lösung O(n log k) ist die sichere Antwort; Quickselect ist die, die beeindruckt. Indexumrechnung k-größtes = `n - k` im aufsteigend sortierten Array.
 
-### 9.5 Task Scheduler — LC 621 · Medium
+### 8.5 Task Scheduler — LC 621 · Medium
 - **Voraussetzungen:** Greedy, Counting; Heap **oder** Formel.
 - **Kernidee:** Die **häufigste** Aufgabe bestimmt das Gerüst: sie erzeugt `maxFreq - 1` Blöcke der Länge `n + 1`, alle anderen füllen die Lücken.
 - **Optimal:** Muster **Greedy-Formel**. `res = max(len(tasks), (maxFreq - 1) * (n + 1) + Anzahl der Tasks mit maxFreq)`. Heap-Simulation (Max-Heap + Queue mit Freigabezeit) ist die intuitive Alternative.
 - **Laufzeit:** O(n) mit Formel, O(n log 26) mit Heap · **Speicher:** O(1)
 - **Fallstricke:** `max(len(tasks), …)` ist zwingend — bei vielen verschiedenen Aufgaben gibt es keine Leerlaufzeiten.
 
-### 9.6 Design Twitter — LC 355 · Medium
+### 8.6 Design Twitter — LC 355 · Medium
 - **Voraussetzungen:** Hash-Maps, Heap-Merge (verwandt mit LC 23).
 - **Kernidee:** Tweets pro User als zeitgeordnete Liste speichern; der Feed ist ein **Merge der k neuesten** aus den gefolgten Listen.
 - **Optimal:** Muster **Hash-Map + Max-Heap**. Globaler absteigender Zeitzähler. `getNewsFeed`: von jedem gefolgten User den letzten Tweet in den Heap, beim Poppen den jeweils nächsten desselben Users nachschieben, bis 10 erreicht sind.
 - **Laufzeit:** O(f log f + 10 log f) pro Feed · **Speicher:** O(Tweets + Follows)
 - **Fallstricke:** Man folgt sich selbst implizit. `unfollow` eines Nicht-Gefolgten darf nicht crashen. Nicht alle Tweets sortieren.
 
-### 9.7 Find Median from Data Stream — LC 295 · Hard
+### 8.7 Find Median from Data Stream — LC 295 · Hard
 - **Voraussetzungen:** Zwei Heaps, Balance-Invariante.
 - **Kernidee:** Die Daten in zwei Hälften teilen: **Max**-Heap für die kleinere Hälfte, **Min**-Heap für die größere. Der Median steht dann direkt an den Spitzen.
 - **Optimal:** Muster **Two Heaps**. Immer erst in den Max-Heap pushen, dessen Top in den Min-Heap verschieben, dann bei Ungleichgewicht (>1) zurückbalancieren. Median = Top der größeren Hälfte bzw. Mittelwert der beiden Tops.
@@ -587,65 +563,72 @@ n ≤ 10 → O(n!) / O(2ⁿ) · n ≤ 20 → O(2ⁿ) · n ≤ 500 → O(n³) · 
 
 ---
 
-## 10. Backtracking (9)
+## 9. Backtracking (10)
 
-### 10.1 Subsets — LC 78 · Medium
+### 9.1 Subsets — LC 78 · Medium
 - **Voraussetzungen:** Rekursionsbaum, Entscheidungsdenken.
 - **Kernidee:** Pro Element genau zwei Entscheidungen: **nehmen oder nicht nehmen** → 2ⁿ Blätter.
 - **Optimal:** Muster **Backtracking (Include/Exclude)**. `dfs(i)`: bei `i == n` Kopie speichern; sonst Element anhängen → `dfs(i+1)` → wieder entfernen → `dfs(i+1)`.
 - **Laufzeit:** O(n · 2ⁿ) · **Speicher:** O(n) Rekursion
 - **Fallstricke:** Beim Speichern **Kopie** anlegen (`path[:]`), sonst landen Referenzen im Ergebnis. Bitmask-Alternative kennen.
 
-### 10.2 Combination Sum — LC 39 · Medium
+### 9.2 Combination Sum — LC 39 · Medium
 - **Voraussetzungen:** 10.1, Wiederverwendung von Elementen.
 - **Kernidee:** Ein Kandidat darf mehrfach benutzt werden → beim Rekursieren **denselben** Index behalten; um Duplikate zu vermeiden, nie zurückgehen.
 - **Optimal:** Muster **Backtracking mit Startindex**. `dfs(i, path, rest)`: Abbruch bei `rest == 0` (speichern) oder `rest < 0 or i == n`. Zweig 1: `dfs(i, …, rest - c[i])`, Zweig 2: `dfs(i+1, …, rest)`.
 - **Laufzeit:** O(2^(target/min)) · **Speicher:** O(target/min)
 - **Fallstricke:** Ohne Startindex entstehen Permutationen statt Kombinationen. Sortieren erlaubt frühes Abschneiden.
 
-### 10.3 Permutations — LC 46 · Medium
-- **Voraussetzungen:** Rekursion mit "verbrauchten" Elementen.
-- **Kernidee:** An jeder Position jedes noch unbenutzte Element ausprobieren.
-- **Optimal:** Muster **Backtracking mit used-Array**. Alternativ in-place: Position i mit jedem j ≥ i tauschen, rekursieren, zurücktauschen → O(1) Zusatzspeicher.
-- **Laufzeit:** O(n · n!) · **Speicher:** O(n)
-- **Fallstricke:** Das Zurücktauschen/Zurücksetzen nicht vergessen — das ist das "Backtracking" im Namen.
-
-### 10.4 Subsets II — LC 90 · Medium
-- **Voraussetzungen:** 10.1, Duplikat-Skipping.
-- **Kernidee:** Duplikate erzeugen identische Teilmengen → sortieren und auf **derselben Rekursionsebene** gleiche Werte nur einmal starten lassen.
-- **Optimal:** Muster **Backtracking + Sortieren**. In der Schleife: `if i > start and nums[i] == nums[i-1]: continue`.
-- **Laufzeit:** O(n · 2ⁿ) · **Speicher:** O(n)
-- **Fallstricke:** `i > start` (nicht `i > 0`) — das erlaubt Duplikate *innerhalb* einer Teilmenge, verbietet aber doppelte Zweige. Sortieren ist Voraussetzung.
-
-### 10.5 Combination Sum II — LC 40 · Medium
+### 9.3 Combination Sum II — LC 40 · Medium
 - **Voraussetzungen:** 10.2 + 10.4 kombiniert.
 - **Kernidee:** Jedes Element nur einmal verwendbar (`i + 1`) **und** Duplikat-Skipping pro Ebene.
 - **Optimal:** Muster **Backtracking + Sortieren**. Sortieren, Schleife ab `start`, `if i > start and c[i] == c[i-1]: continue`, Rekursion mit `i + 1`. `break`, sobald `c[i] > rest`.
 - **Laufzeit:** O(2ⁿ) · **Speicher:** O(n)
 - **Fallstricke:** Beide Mechanismen sind nötig — mit nur einem entstehen Duplikate oder fehlende Lösungen.
 
-### 10.6 Word Search — LC 79 · Medium
+### 9.4 Permutations — LC 46 · Medium
+- **Voraussetzungen:** Rekursion mit "verbrauchten" Elementen.
+- **Kernidee:** An jeder Position jedes noch unbenutzte Element ausprobieren.
+- **Optimal:** Muster **Backtracking mit used-Array**. Alternativ in-place: Position i mit jedem j ≥ i tauschen, rekursieren, zurücktauschen → O(1) Zusatzspeicher.
+- **Laufzeit:** O(n · n!) · **Speicher:** O(n)
+- **Fallstricke:** Das Zurücktauschen/Zurücksetzen nicht vergessen — das ist das "Backtracking" im Namen.
+
+### 9.5 Subsets II — LC 90 · Medium
+- **Voraussetzungen:** 10.1, Duplikat-Skipping.
+- **Kernidee:** Duplikate erzeugen identische Teilmengen → sortieren und auf **derselben Rekursionsebene** gleiche Werte nur einmal starten lassen.
+- **Optimal:** Muster **Backtracking + Sortieren**. In der Schleife: `if i > start and nums[i] == nums[i-1]: continue`.
+- **Laufzeit:** O(n · 2ⁿ) · **Speicher:** O(n)
+- **Fallstricke:** `i > start` (nicht `i > 0`) — das erlaubt Duplikate *innerhalb* einer Teilmenge, verbietet aber doppelte Zweige. Sortieren ist Voraussetzung.
+
+### 9.6 Generate Parentheses — LC 22 · Medium
+- **Voraussetzungen:** Rekursion/Backtracking, Gültigkeits-Invariante.
+- **Kernidee:** Beim Aufbauen nur gültige Präfixe zulassen: `open < n` erlaubt eine öffnende, `close < open` erlaubt eine schließende.
+- **Optimal:** Muster **Backtracking**. Rekursion mit `(open, close)`; bei `len == 2n` Ergebnis speichern. (NeetCode führte diese Aufgabe früher unter Stack — der Aufrufstack ist hier aber nur das Mittel, das Muster ist das Aufbauen und Verwerfen gültiger Präfixe.)
+- **Laufzeit:** O(4ⁿ / √n) (Catalan-Zahl) · **Speicher:** O(n) Rekursionstiefe
+- **Fallstricke:** Nicht alle 2^(2n) Strings erzeugen und filtern — die Invariante schneidet den Baum vorab.
+
+### 9.7 Word Search — LC 79 · Medium
 - **Voraussetzungen:** Grid-DFS, Besuchsmarkierung.
 - **Kernidee:** Von jeder Zelle aus DFS in vier Richtungen; die aktuelle Zelle während des Abstiegs sperren und danach freigeben.
 - **Optimal:** Muster **Backtracking auf Grid**. In-place markieren (z. B. `#` schreiben und danach zurückschreiben) → O(L) statt O(m·n) Zusatzspeicher. Bei falschem Zeichen oder Randüberschreitung sofort `False`.
 - **Laufzeit:** O(m·n·4^L) · **Speicher:** O(L)
 - **Fallstricke:** Das Zurücksetzen der Markierung nach der Rekursion. Optimierung: startet das Wort mit dem selteneren Zeichen, ggf. das Wort umdrehen.
 
-### 10.7 Palindrome Partitioning — LC 131 · Medium
+### 9.8 Palindrome Partitioning — LC 131 · Medium
 - **Voraussetzungen:** Backtracking, Palindromtest.
 - **Kernidee:** An jeder Position jeden möglichen Präfix-Schnitt testen; ist der Präfix ein Palindrom, rekursiv den Rest partitionieren.
 - **Optimal:** Muster **Backtracking**. `dfs(i)`: für `j` von `i` bis `n-1`, wenn `s[i..j]` Palindrom → anhängen, `dfs(j+1)`, entfernen. Optional DP-Tabelle `isPal[i][j]` vorberechnen → O(1) Test.
 - **Laufzeit:** O(n · 2ⁿ) · **Speicher:** O(n)
 - **Fallstricke:** Einzelzeichen sind Palindrome. Ohne vorberechnete Tabelle kostet jeder Test O(n) — akzeptabel, aber erwähnenswert.
 
-### 10.8 Letter Combinations of a Phone Number — LC 17 · Medium
+### 9.9 Letter Combinations of a Phone Number — LC 17 · Medium
 - **Voraussetzungen:** Mapping Ziffer → Buchstaben, kartesisches Produkt.
 - **Kernidee:** Klassisches kartesisches Produkt über die Ziffernpositionen.
 - **Optimal:** Muster **Backtracking**. `dfs(i, path)`; bei `i == len(digits)` speichern. Iterative BFS-Variante (Ergebnisliste schrittweise erweitern) ist gleichwertig.
 - **Laufzeit:** O(4ⁿ · n) · **Speicher:** O(n)
 - **Fallstricke:** Leerer Input → leere Liste (**nicht** `[""]`). 7 und 9 haben vier Buchstaben.
 
-### 10.9 N-Queens — LC 51 · Hard
+### 9.10 N-Queens — LC 51 · Hard
 - **Voraussetzungen:** Backtracking, Diagonal-Indexierung.
 - **Kernidee:** Zeile für Zeile eine Dame setzen; Konflikte über drei Sets in O(1) prüfen statt das Brett zu scannen.
 - **Optimal:** Muster **Backtracking mit Konflikt-Sets**. `cols`, `diag` (`r - c`), `antiDiag` (`r + c`). Pro Zeile alle Spalten testen, Sets setzen/zurücksetzen.
@@ -653,6 +636,32 @@ n ≤ 10 → O(n!) / O(2ⁿ) · n ≤ 20 → O(2ⁿ) · n ≤ 500 → O(n³) · 
 - **Fallstricke:** Die Diagonalformeln (`r-c` konstant auf ↘, `r+c` auf ↙) auswendig können. `r - c` kann negativ sein — Set statt Array, oder Offset `+n`.
 
 ---
+
+## 10. Tries (3)
+
+### 10.1 Implement Trie (Prefix Tree) — LC 208 · Medium
+- **Voraussetzungen:** Baumknoten mit Kindern-Map, Endmarkierung.
+- **Kernidee:** Gemeinsame Präfixe teilen sich Knoten — Suche kostet dann nur die Wortlänge, unabhängig von der Anzahl der Wörter.
+- **Optimal:** Muster **Trie**. Knoten = `{children: dict, isEnd: bool}`. `insert` legt fehlende Kinder an und setzt am Ende `isEnd`. `search` verlangt `isEnd`, `startsWith` nicht.
+- **Laufzeit:** O(L) pro Operation · **Speicher:** O(Σ Wortlängen)
+- **Fallstricke:** `search("app")` darf nicht True liefern, nur weil `"apple"` existiert — genau dafür ist `isEnd` da.
+
+### 10.2 Design Add and Search Words Data Structure — LC 211 · Medium
+- **Voraussetzungen:** 8.1, DFS im Trie.
+- **Kernidee:** Der Wildcard `.` macht die Suche zu einer Verzweigung: an dieser Stelle **alle** Kinder rekursiv probieren.
+- **Optimal:** Muster **Trie + Backtracking-DFS**. `dfs(index, node)`: bei `.` über alle `children.values()` rekursieren, sonst normal absteigen. Treffer bei `index == len(word) and node.isEnd`.
+- **Laufzeit:** O(L) ohne Wildcards, Worst Case O(26^L) bei vielen Punkten · **Speicher:** O(Σ Wortlängen)
+- **Fallstricke:** Bei Rekursion in der Schleife bei Erfolg sofort `True` zurückgeben, nicht weitersuchen.
+
+### 10.3 Word Search II — LC 212 · Hard
+- **Voraussetzungen:** 8.1, Word Search (11er-Kategorie), Pruning.
+- **Kernidee:** Nicht jedes Wort einzeln im Grid suchen, sondern **alle Wörter gleichzeitig** über einen Trie — das Grid wird nur einmal durchlaufen und tote Pfade brechen sofort ab.
+- **Optimal:** Muster **Trie + Backtracking**. Alle Wörter in einen Trie. Von jeder Zelle DFS, der parallel im Trie absteigt; existiert das Kind nicht → sofort abbrechen. Besuchte Zellen markieren und danach zurücksetzen. **Pruning:** gefundene Wörter aus dem Trie entfernen bzw. Blätter ohne Kinder abschneiden.
+- **Laufzeit:** O(m·n·4^L) Worst Case, praktisch stark reduziert · **Speicher:** O(Σ Wortlängen)
+- **Fallstricke:** Ohne Trie ist es O(Wörter × Grid × 4^L) und läuft in Timeout. Doppelte Treffer per Set oder durch Löschen im Trie verhindern.
+
+---
+
 ## 11. Graphs (13)
 
 ### 11.1 Number of Islands — LC 200 · Medium
@@ -750,26 +759,26 @@ n ≤ 10 → O(n!) / O(2ⁿ) · n ≤ 20 → O(2ⁿ) · n ≤ 500 → O(n³) · 
 
 ## 12. Advanced Graphs (6)
 
-### 12.1 Reconstruct Itinerary — LC 332 · Hard
+### 12.1 Network Delay Time — LC 743 · Medium
+- **Voraussetzungen:** Dijkstra.
+- **Kernidee:** Kürzeste Wege von einer Quelle bei nichtnegativen Gewichten; die Antwort ist das **Maximum** aller kürzesten Distanzen.
+- **Optimal:** Muster **Dijkstra mit Min-Heap**. `(dist, node)` poppen, besuchte überspringen, Nachbarn mit `dist + w` pushen. Am Ende: alle n erreicht? sonst `-1`.
+- **Laufzeit:** O(E log V) · **Speicher:** O(V + E)
+- **Fallstricke:** Nicht alle Knoten erreichbar → `-1`. Nicht das Minimum, sondern das Maximum zurückgeben. Bei negativen Gewichten wäre Bellman-Ford nötig — Dijkstra gilt hier nur wegen `w ≥ 0`.
+
+### 12.2 Reconstruct Itinerary — LC 332 · Hard
 - **Voraussetzungen:** Eulerpfad, Hierholzer-Algorithmus.
 - **Kernidee:** Gesucht ist ein **Eulerpfad** (jede Kante genau einmal). Greedy allein sackt in Sackgassen — Hierholzer löst das, indem Knoten erst **nach** Erschöpfen aller Kanten ans Ergebnis kommen.
 - **Optimal:** Muster **Hierholzer (Post-Order DFS)**. Ziele pro Start lexikografisch sortieren (Min-Heap oder sortierte Liste, von hinten poppen); DFS, Knoten nach der Rekursion an die Ergebnisliste anhängen, am Ende **umdrehen**.
 - **Laufzeit:** O(E log E) · **Speicher:** O(E)
 - **Fallstricke:** Naives Backtracking läuft bei großen Eingaben in Timeout. Das Anhängen **nach** der Rekursion ist der ganze Trick. Start immer "JFK".
 
-### 12.2 Min Cost to Connect All Points — LC 1584 · Medium
+### 12.3 Min Cost to Connect All Points — LC 1584 · Medium
 - **Voraussetzungen:** Minimaler Spannbaum, Prim oder Kruskal.
 - **Kernidee:** Vollständiger Graph mit Manhattan-Distanzen; gesucht ist der MST.
 - **Optimal:** Muster **Prim mit Min-Heap**. Von Punkt 0 starten, günstigste Kante zu einem unbesuchten Knoten poppen, dessen Kanten pushen, bis alle n besucht sind. Kruskal (Kanten sortieren + Union-Find) ist gleichwertig, aber bei n² Kanten meist langsamer.
 - **Laufzeit:** O(n² log n) · **Speicher:** O(n²)
 - **Fallstricke:** Beim Poppen prüfen, ob der Knoten schon besucht ist (veraltete Heap-Einträge). Manhattan: `|x1-x2| + |y1-y2|`, kein Euklid.
-
-### 12.3 Network Delay Time — LC 743 · Medium
-- **Voraussetzungen:** Dijkstra.
-- **Kernidee:** Kürzeste Wege von einer Quelle bei nichtnegativen Gewichten; die Antwort ist das **Maximum** aller kürzesten Distanzen.
-- **Optimal:** Muster **Dijkstra mit Min-Heap**. `(dist, node)` poppen, besuchte überspringen, Nachbarn mit `dist + w` pushen. Am Ende: alle n erreicht? sonst `-1`.
-- **Laufzeit:** O(E log V) · **Speicher:** O(V + E)
-- **Fallstricke:** Nicht alle Knoten erreichbar → `-1`. Nicht das Minimum, sondern das Maximum zurückgeben. Bei negativen Gewichten wäre Bellman-Ford nötig — Dijkstra gilt hier nur wegen `w ≥ 0`.
 
 ### 12.4 Swim in Rising Water — LC 778 · Hard
 - **Voraussetzungen:** Dijkstra-Variante oder Binärsuche + BFS.
@@ -793,9 +802,8 @@ n ≤ 10 → O(n!) / O(2ⁿ) · n ≤ 20 → O(2ⁿ) · n ≤ 500 → O(n³) · 
 - **Fallstricke:** Die Kopie ist der entscheidende Punkt — ohne sie überschreitet man die Stopp-Grenze. Reines Dijkstra nach Kosten ist hier **falsch**, weil ein teurerer Weg mit weniger Stopps besser sein kann (nur mit Zustand `(node, stops)` korrekt).
 
 ---
-## 13. 1-D Dynamic Programming (12)
 
-> **Vorgehen bei jeder DP-Aufgabe:** 1) Zustand definieren (`dp[i]` bedeutet was genau?) 2) Rekurrenz aufstellen 3) Basisfälle 4) Reihenfolge der Berechnung 5) Speicher optimieren. Punkt 1 sauber aussprechen ist im Interview mehr wert als schnelles Tippen.
+## 13. 1-D Dynamic Programming (12)
 
 ### 13.1 Climbing Stairs — LC 70 · Easy
 - **Voraussetzungen:** Rekurrenz, Fibonacci.
@@ -963,6 +971,7 @@ n ≤ 10 → O(n!) / O(2ⁿ) · n ≤ 20 → O(2ⁿ) · n ≤ 500 → O(n³) · 
 - **Fallstricke:** `*` bezieht sich auf das **vorherige** Zeichen. Der Null-Vorkommen-Zweig muss auch greifen, wenn der String schon zu Ende ist (`"" vs "a*b*"` → True). Diese Aufgabe ist die schwerste des Sets — Struktur vor Geschwindigkeit.
 
 ---
+
 ## 15. Greedy (8)
 
 ### 15.1 Maximum Subarray — LC 53 · Medium
@@ -1024,8 +1033,6 @@ n ≤ 10 → O(n!) / O(2ⁿ) · n ≤ 20 → O(2ⁿ) · n ≤ 500 → O(n³) · 
 ---
 
 ## 16. Intervals (6)
-
-> **Grundregel:** Fast jede Intervall-Aufgabe beginnt mit *nach Startzeit sortieren* — Ausnahme: 16.3 sortiert nach **Ende**. Überlappungstest: `a.start < b.end and b.start < a.end`.
 
 ### 16.1 Insert Interval — LC 57 · Medium
 - **Voraussetzungen:** Sortierte, disjunkte Eingabe; Fallunterscheidung.
@@ -1132,8 +1139,6 @@ n ≤ 10 → O(n!) / O(2ⁿ) · n ≤ 20 → O(2ⁿ) · n ≤ 500 → O(n³) · 
 ---
 
 ## 18. Bit Manipulation (7)
-
-> **XOR-Grundregeln:** `x ^ x = 0`, `x ^ 0 = x`, kommutativ und assoziativ. Weitere Bausteine: `n & (n-1)` löscht das niedrigste gesetzte Bit; `n & -n` isoliert es; `n & 1` liest das letzte Bit; `n >> 1` schiebt.
 
 ### 18.1 Single Number — LC 136 · Easy
 - **Voraussetzungen:** XOR-Eigenschaften.
