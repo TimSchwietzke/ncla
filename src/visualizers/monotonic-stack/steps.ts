@@ -78,3 +78,81 @@ export function buildSteps({ values }: MonotonicStackInput): ArrayStep[] {
 
   return steps;
 }
+
+export interface WindowMaximumInput {
+  values: number[];
+  /** Window width. Every frame reports the maximum of the last k values. */
+  k: number;
+}
+
+/**
+ * Maximum of a sliding window with a monotonic deque — the same discipline as above,
+ * with a second reason to discard: values also fall out of the back of the window.
+ *
+ * The deque holds indices in decreasing value order, so its front is always the answer
+ * for the current window. It rides in the side panel because the whole difficulty of the
+ * problem is what is being kept and why (CLAUDE.md §9).
+ */
+export function buildWindowMaximum({ values, k }: WindowMaximumInput): ArrayStep[] {
+  const steps: ArrayStep[] = [];
+  if (k < 1 || values.length < k) return steps;
+
+  const deque: number[] = []; // indices, values decreasing from front to back
+  const output: number[] = [];
+
+  const panel = () => ({
+    label: "deque",
+    emptyHint: "empty",
+    entries: deque.map((index, position) => ({
+      key: `${index}`,
+      value: String(values[index] ?? 0),
+      tone: (position === 0 ? "found" : "active") as CellTone,
+    })),
+  });
+
+  for (let right = 0; right < values.length; right += 1) {
+    const value = values[right] ?? 0;
+    const dropped: number[] = [];
+
+    while (deque.length > 0 && (values[deque.at(-1) ?? 0] ?? 0) < value) {
+      dropped.push(deque.pop() as number);
+    }
+    deque.push(right);
+
+    const left = right - k + 1;
+    let expired: number | null = null;
+    if (deque[0] !== undefined && deque[0] < left) {
+      expired = deque.shift() as number;
+    }
+
+    const complete = right >= k - 1;
+    if (complete) output.push(values[deque[0] ?? 0] ?? 0);
+
+    const reasons: string[] = [];
+    if (dropped.length > 0) {
+      reasons.push(
+        `${value} is larger, so ${dropped.length === 1 ? "index" : "indices"} ${dropped.join(", ")} can never win again`,
+      );
+    }
+    if (expired !== null) reasons.push(`index ${expired} has fallen out of the window`);
+
+    steps.push({
+      caption: complete
+        ? `${reasons.length > 0 ? reasons.join(", and ") + ". " : ""}The window ${left}..${right} has maximum ${values[deque[0] ?? 0]}.`
+        : `${reasons.length > 0 ? reasons.join(", and ") + ". " : ""}The window is not full yet — ${k - right - 1} more to go.`,
+      values,
+      tones: values.map((_, i) => {
+        if (i > right) return "dim" as CellTone;
+        if (i < Math.max(0, left)) return "dim" as CellTone;
+        if (i === deque[0]) return "found" as CellTone;
+        return "active" as CellTone;
+      }),
+      markers: [{ index: right, label: "r" }],
+      ...(complete ? { span: { start: left, end: right, label: `window ${k}` } } : {}),
+      readout: `maxima [${output.join(", ")}]`,
+      panel: panel(),
+    });
+  }
+
+  return steps;
+}

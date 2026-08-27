@@ -1,0 +1,184 @@
+---
+id: "3.5"
+slug: minimum-window-substring
+title: Minimum Window Substring
+leetcode: 76
+url: https://leetcode.com/problems/minimum-window-substring/
+difficulty: Hard
+premium: false
+category: sliding-window
+patterns: [sliding-window, hashing-complement]
+prerequisites: ["Sliding window with a validity condition", "Counter arithmetic with duplicates"]
+targetComplexity: { time: "O(m + n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Given strings `s` and `t`, return the **shortest** substring of `s` that contains every character of
+`t`, **including duplicates**. If there is no such substring, return `""`. The answer is guaranteed
+to be unique.
+
+<Examples>
+  <Example input={`s = "ADOBECODEBANC"
+t = "ABC"`} output={`"BANC"`}>
+    `ADOBEC` also contains all three, but it is six long and `BANC` is four.
+  </Example>
+  <Example input={`s = "a"
+t = "a"`} output={`"a"`}>
+    The whole string is the smallest window.
+  </Example>
+  <Example input={`s = "a"
+t = "aa"`} output={`""`}>
+    Two a's are required and only one exists. Duplicates in `t` count.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `m == s.length`, `n == t.length`, `1 <= m, n <= 10^5`
+- `s` and `t` consist of uppercase and lowercase English letters
+- **Follow-up:** find an `O(m + n)` algorithm
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **"Shortest substring such that …"** is the sliding window sentence in its shrinking form. Growing
+  the window can only ever *help* the condition, and shrinking can only ever hurt it — that monotonic
+  relationship is what makes a window legal here.
+- The condition involves duplicates, so it is a **multiset** containment, not a set one. A plain
+  "have I seen this character" check silently answers the wrong question.
+- `m` up to `10^5` and the follow-up demanding `O(m + n)` together rule out re-checking the whole
+  window at each step.
+
+</Signals>
+
+<BruteForce>
+
+Take every substring of `s`, count its characters, and keep the shortest that covers `t`.
+
+**O(m² · n) time, O(n) space.** The bottleneck is twofold: the substrings overlap almost completely,
+and every candidate is validated from scratch. Both are fixed by the same move — carry the counts and
+a single number saying how close the window is to being valid.
+
+</BruteForce>
+
+<Insight>
+
+Grow the window on the right until it is valid, then shrink it from the left as far as it will go, and record the smallest valid width along the way.
+
+</Insight>
+
+<Approach>
+
+1. Count `t` into `need`. Let `required` be the number of **distinct** characters in it.
+2. Keep `window` counts and `have` — how many distinct characters currently reach their required
+   count. The window is valid exactly when `have == required`.
+3. Move `right` one step: add the character. If its window count has just reached its needed count,
+   `have += 1`.
+4. **While the window is valid**, record it if it beats the best so far, then remove `s[left]` and
+   move `left` right. If that drops a character below its needed count, `have -= 1`.
+5. At the end, slice the best window out of `s` — once.
+
+The `while` in step 4 is what separates this from the other window problems: a valid window is
+shrunk as far as it will go before the right edge moves again. Every index enters and leaves at most
+once, so the whole sweep is linear despite the nested loop.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def minWindow(self, s: str, t: str) -> str:
+        # O(m^2 * n) time, O(n) space
+        from collections import Counter
+
+        need = Counter(t)
+        best = ""
+
+        for start in range(len(s)):
+            window: Counter = Counter()
+            for end in range(start, len(s)):
+                window[s[end]] += 1
+                if all(window[ch] >= count for ch, count in need.items()):
+                    if best == "" or end - start + 1 < len(best):
+                        best = s[start:end + 1]
+                    break                       # longer windows from this start are worse
+
+        return best
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def minWindow(self, s: str, t: str) -> str:
+        # O(m + n) time, O(n) space
+        if len(t) > len(s):
+            return ""
+
+        need: dict[str, int] = {}
+        for ch in t:
+            need[ch] = need.get(ch, 0) + 1
+
+        window: dict[str, int] = {}
+        have, required = 0, len(need)
+        best_start, best_length = 0, float("inf")
+        left = 0
+
+        for right, ch in enumerate(s):
+            window[ch] = window.get(ch, 0) + 1
+            if ch in need and window[ch] == need[ch]:      # == , not >=
+                have += 1
+
+            while have == required:                        # shrink as far as it will go
+                if right - left + 1 < best_length:
+                    best_start, best_length = left, right - left + 1
+
+                dropped = s[left]
+                window[dropped] -= 1
+                if dropped in need and window[dropped] < need[dropped]:
+                    have -= 1
+                left += 1
+
+        if best_length == float("inf"):
+            return ""
+        return s[best_start:best_start + int(best_length)]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`window[ch] == need[ch]`, never `>=`.** With `>=` a character that appears five times when three
+  are needed raises `have` three separate times, `have` overshoots `required`, and the window is
+  declared valid far too early. This is the single most common way this problem fails.
+- **Store the window as a start and a length, not as a string.** Slicing `s` inside the loop turns an
+  `O(m)` algorithm into `O(m²)` — the one place where a correct-looking solution quietly loses the
+  follow-up.
+- Duplicates in `t` are the point. `t = "aa"` needs two a's, and any implementation built on a *set*
+  of required characters answers `"a"` for `s = "a"` instead of `""`.
+- No window found must return `""`. Guarding on `best_length == inf` is cleaner than initialising the
+  best to `s` itself, which is wrong whenever `s` does not contain `t` at all.
+- The `while` inside the `for` is not `O(m²)`. Say the amortisation out loud: `left` only ever moves
+  forward, so across the whole run it advances at most `m` times.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"What if `t` could contain any Unicode character?"* — Nothing changes. `need` is already a hash
+  map, and `required` is its key count; only the space claim becomes `O(distinct characters of t)`.
+- *"The longest window with at most k distinct characters instead."* — LC 340: the same expand and
+  contract, with the condition flipped from "covers everything" to "holds too much".
+- *"Return every minimal window, not one."* — The uniqueness guarantee disappears, so collect all
+  windows of the best length instead of overwriting — but only after a first pass has established
+  what that length is.
+
+</FollowUps>

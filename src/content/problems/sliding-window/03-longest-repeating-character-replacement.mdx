@@ -1,0 +1,159 @@
+---
+id: "3.3"
+slug: longest-repeating-character-replacement
+title: Longest Repeating Character Replacement
+leetcode: 424
+url: https://leetcode.com/problems/longest-repeating-character-replacement/
+difficulty: Medium
+premium: false
+category: sliding-window
+patterns: [sliding-window]
+prerequisites: ["Stating a window's validity condition", "Counting with a fixed alphabet"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+You are given a string `s` of uppercase letters and an integer `k`. You may change **at most `k`**
+characters, each to any uppercase letter you like. Return the length of the longest substring that
+can be made to consist of a single repeated letter.
+
+<Examples>
+  <Example input={`s = "ABAB"
+k = 2`} output="4">
+    Change both A's into B's — or both B's into A's — and the whole string is uniform.
+  </Example>
+  <Example input={`s = "AABABBA"
+k = 1`} output="4">
+    Changing the middle A into a B gives `AABBBBA`, whose `BBBB` is four long.
+  </Example>
+  <Example input={`s = "AAAA"
+k = 0`} output="4">
+    No changes allowed and none needed.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= s.length <= 10^5`
+- `s` consists of **uppercase English letters** only
+- `0 <= k <= s.length`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **"Longest substring such that …"** is the sliding window sentence. The only work is turning "such
+  that" into a condition you can check in `O(1)`.
+- The condition here: a window can be made uniform exactly when the characters that are *not* the most
+  frequent one number at most `k` — that is, `length - maxFrequency <= k`.
+- The alphabet is fixed at 26, so the counts are `O(1)` space and can live in a plain array.
+
+</Signals>
+
+<BruteForce>
+
+Take every substring, count its characters, and check whether `length - maxFrequency <= k`.
+
+**O(n²) time (or O(n³) if you recount from scratch), O(1) space.** The bottleneck is that neighbouring
+substrings share almost all their characters: extending a window by one letter changes exactly one
+count. Rebuilding the frequency table for each candidate throws that away.
+
+</BruteForce>
+
+<Insight>
+
+A window can be made uniform exactly when the characters that are not its most frequent one fit inside k.
+
+</Insight>
+
+<Approach>
+
+1. Keep a count array for the current window and `max_frequency`, the highest count seen in it.
+2. Move `right` one step at a time, incrementing that character's count and updating `max_frequency`.
+3. If `(right - left + 1) - max_frequency > k`, the window is invalid: drop the character at `left`
+   and move `left` one step right.
+4. The window therefore **never shrinks** — it either grows or slides — so its final width is the
+   answer.
+
+Step 4 is the part worth pausing on. Because the window only ever slides when it is invalid, its
+width is a high-water mark, and the answer can simply be read off at the end rather than tracked with
+a `max`.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def characterReplacement(self, s: str, k: int) -> int:
+        # O(n^2) time, O(1) space
+        best = 0
+
+        for i in range(len(s)):
+            counts = [0] * 26
+            max_frequency = 0
+            for j in range(i, len(s)):
+                counts[ord(s[j]) - ord("A")] += 1
+                max_frequency = max(max_frequency, counts[ord(s[j]) - ord("A")])
+                if (j - i + 1) - max_frequency <= k:
+                    best = max(best, j - i + 1)
+
+        return best
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def characterReplacement(self, s: str, k: int) -> int:
+        # O(n) time, O(1) space — 26 counters
+        counts = [0] * 26
+        left = 0
+        max_frequency = 0
+
+        for right in range(len(s)):
+            counts[ord(s[right]) - ord("A")] += 1
+            max_frequency = max(max_frequency, counts[ord(s[right]) - ord("A")])
+
+            if (right - left + 1) - max_frequency > k:   # invalid: slide, do not shrink
+                counts[ord(s[left]) - ord("A")] -= 1
+                left += 1
+
+        return len(s) - left
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`max_frequency` is never lowered, and that looks wrong.** It is not. A smaller `max_frequency`
+  could only ever make the window *stricter*, so it can never unlock a longer answer than one already
+  recorded. The stale value can make the window look valid when it is not — but only at a width that
+  was already achieved legitimately, so the answer never grows too large. Have this argument ready;
+  it is the question this problem exists to ask.
+- **`if`, not `while`.** The window slides by one when it becomes invalid and never contracts further.
+  Using `while` still returns the right answer but destroys the high-water-mark reasoning, and then
+  the final `return` has to change too.
+- Returning `len(s) - left` only works because of that. If you write the `while` version, track the
+  best width explicitly instead — mixing the two is how this problem gets subtly wrong answers.
+- `ord(ch) - ord("A")` — uppercase. The constraints say so; using `"a"` shifts every index by 32 and
+  reads out of bounds.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Lowercase and uppercase mixed."* — Widen the count array to 52 or use a hash map. Nothing else
+  changes, and the space claim becomes `O(alphabet)`.
+- *"Return the substring, not its length."* — The final window is `s[left:]` trimmed to the best
+  width; remember the right edge when the width last grew.
+- *"At most k distinct characters instead."* — LC 340: same window, different condition — shrink while
+  the count map holds more than `k` keys. The pattern is identical; only the predicate moves.
+
+</FollowUps>
