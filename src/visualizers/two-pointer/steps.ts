@@ -4,13 +4,19 @@ export interface TwoPointerInput {
   /** Must be sorted ascending — that is the precondition the pattern trades on. */
   values: number[];
   target: number;
+  /**
+   * What the answer is counted from. LeetCode's Two Sum II returns 1-indexed positions
+   * and the whole pitfall of that problem is forgetting it, so the readout has to agree
+   * with the problem it illustrates. Defaults to 0.
+   */
+  indexBase?: number;
 }
 
 /**
  * Converging two pointers on a sorted array: find the pair that sums to target.
  * Pure and deterministic — every frame is precomputed (CLAUDE.md §9).
  */
-export function buildSteps({ values, target }: TwoPointerInput): ArrayStep[] {
+export function buildSteps({ values, target, indexBase = 0 }: TwoPointerInput): ArrayStep[] {
   const steps: ArrayStep[] = [];
   if (values.length < 2) return steps;
 
@@ -34,7 +40,7 @@ export function buildSteps({ values, target }: TwoPointerInput): ArrayStep[] {
           { index: left, label: "l" },
           { index: right, label: "r" },
         ],
-        readout: `answer [${left}, ${right}]`,
+        readout: `answer [${left + indexBase}, ${right + indexBase}]`,
       });
       return steps;
     }

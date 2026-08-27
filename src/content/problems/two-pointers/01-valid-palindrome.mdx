@@ -1,0 +1,145 @@
+---
+id: "2.1"
+slug: valid-palindrome
+title: Valid Palindrome
+leetcode: 125
+url: https://leetcode.com/problems/valid-palindrome/
+difficulty: Easy
+premium: false
+category: two-pointers
+patterns: [two-pointer]
+prerequisites: ["Character classification with isalnum", "In-place pointers"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+A phrase is a **palindrome** if, after lowercasing every letter and removing every
+non-alphanumeric character, it reads the same forwards and backwards. Given a string `s`, return
+`true` if it is a palindrome.
+
+<Examples>
+  <Example input={`s = "A man, a plan, a canal: Panama"`} output="true">
+    Ignoring case, spaces and punctuation leaves `amanaplanacanalpanama`.
+  </Example>
+  <Example input={`s = "race a car"`} output="false">
+    `raceacar` reads differently backwards — the very first and last letters already disagree.
+  </Example>
+  <Example input={`s = " "`} output="true">
+    Nothing alphanumeric survives. An empty string reads the same in both directions.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= s.length <= 2 * 10^5`
+- `s` consists only of printable ASCII characters
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- "Reads the same forwards and backwards" compares position `i` against position `n - 1 - i`. Two
+  ends moving towards each other is the shape of the answer before you write a line.
+- The characters that count are scattered among characters that do not, so the pointers must be able
+  to **skip** rather than step uniformly.
+- `n` reaches `2 · 10^5` — comfortable for one pass, and comfortable for a filtered copy too. Which
+  is exactly why the interviewer will ask about the memory instead.
+
+</Signals>
+
+<BruteForce>
+
+Build a cleaned string — lowercase, alphanumeric only — and compare it with its reverse.
+
+**O(n) time, O(n) space.** This one is not asymptotically slower, and it is a perfectly good first
+answer. The bottleneck is memory: it materialises a second copy of the input just to compare two
+ends of it. The comparison never needed the copy, only the ability to look past the characters that
+do not count.
+
+</BruteForce>
+
+<Insight>
+
+Walk in from both ends and skip anything that is not alphanumeric — the cleaned string never has to exist.
+
+</Insight>
+
+<Approach>
+
+1. Put `left` at 0 and `right` at `n - 1`.
+2. While `left < right`:
+3. Advance `left` while it points at a non-alphanumeric character — but only while `left < right`.
+4. Retreat `right` the same way, under the same guard.
+5. Compare the two characters case-insensitively. Any mismatch means `false`.
+6. Step both inwards and repeat. Surviving the loop means `true`.
+
+The `left < right` condition inside the skip loops is the part that gets forgotten. Without it a
+string of pure punctuation walks a pointer straight off the end.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def isPalindrome(self, s: str) -> bool:
+        # O(n) time, O(n) space
+        cleaned = [ch.lower() for ch in s if ch.isalnum()]
+        return cleaned == cleaned[::-1]
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def isPalindrome(self, s: str) -> bool:
+        # O(n) time, O(1) space
+        left, right = 0, len(s) - 1
+
+        while left < right:
+            while left < right and not s[left].isalnum():     # guard, not decoration
+                left += 1
+            while left < right and not s[right].isalnum():
+                right -= 1
+
+            if s[left].lower() != s[right].lower():
+                return False
+
+            left += 1
+            right -= 1
+
+        return True
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Both skip loops need `left < right`.** On `s = ",,,"` the inner loop would otherwise run `left`
+  past the end and `s[left]` raises `IndexError`. This is the single most common way this problem
+  breaks, and it never shows up on a well-behaved test string.
+- The cleaned-copy version is `O(n)` space and the interviewer wants `O(1)`. Say the copy first, then
+  say why you are not keeping it — that is the whole conversation this problem exists for.
+- `isalnum()` is the right test, not `isalpha()`. Digits count: `"0P"` is not a palindrome, but
+  `"a1a"` is.
+- Lowercase **at the comparison**, not while scanning. Calling `.lower()` on the whole string first
+  is another `O(n)` copy, which is the thing you were avoiding.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Allow one character to be removed."* — LC 680: on the first mismatch, try skipping `left` or
+  skipping `right` and check whether either remainder is a plain palindrome. Still `O(n)`.
+- *"Why not use `filter` and `reversed`?"* — Perfectly readable and still `O(n)` time, but it
+  allocates. Naming the trade-off is worth more than avoiding the builtin.
+- *"What about Unicode, where case folding is not one-to-one?"* — `str.casefold()` rather than
+  `.lower()`, and be explicit that "alphanumeric" is now a much larger set.
+
+</FollowUps>

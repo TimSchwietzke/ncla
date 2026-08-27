@@ -1,0 +1,171 @@
+---
+id: "2.3"
+slug: 3sum
+title: 3Sum
+leetcode: 15
+url: https://leetcode.com/problems/3sum/
+difficulty: Medium
+premium: false
+category: two-pointers
+patterns: [two-pointer]
+prerequisites: ["Two Sum II", "Sorting", "Duplicate handling"]
+targetComplexity: { time: "O(n^2)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Given an integer array `nums`, return **all** triplets `[nums[i], nums[j], nums[k]]` with distinct
+indices whose values sum to zero. The result must not contain duplicate triplets; the order of the
+triplets and of the values inside them does not matter.
+
+<Examples>
+  <Example input={`nums = [-1, 0, 1, 2, -1, -4]`} output={`[[-1, -1, 2], [-1, 0, 1]]`}>
+    Three index triplets sum to zero, but two of them hold the same values — only two distinct
+    triplets survive.
+  </Example>
+  <Example input={`nums = [0, 1, 1]`} output={`[]`}>
+    The only possible triplet sums to 2.
+  </Example>
+  <Example input={`nums = [0, 0, 0]`} output={`[[0, 0, 0]]`}>
+    Three separate indices holding the same value form one valid triplet — and exactly one.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `3 <= n <= 3000`
+- `-10^5 <= nums[i] <= 10^5`
+- The result must contain **no duplicate triplets**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Three values that must sum to a fixed number. Fix one of them and the other two are a **Two Sum on
+  a target** — a problem you already know how to do in one pass.
+- The output is a set of **values**, not indices. Nothing stops you from sorting, and sorting is what
+  makes both the two-pointer sweep and the deduplication possible.
+- `n` is only 3000, so `O(n²)` at nine million steps is comfortably intended. `O(n³)` at 27 billion
+  is not.
+
+</Signals>
+
+<BruteForce>
+
+Three nested loops over every index triple, collecting those that sum to zero, then deduplicate by
+sorting each triplet and pushing it through a set.
+
+**O(n³) time, O(number of triplets) space.** The bottleneck is the innermost loop: once `i` and `j`
+are chosen, the third value is completely determined — it must be `-(nums[i] + nums[j])`. Searching
+for a value you can compute is the same waste as in Two Sum, and here it costs a whole factor of `n`.
+
+</BruteForce>
+
+<Insight>
+
+Sort the array, fix one value, and the rest of the problem is Two Sum II on the suffix to its right.
+
+</Insight>
+
+<Approach>
+
+1. **Sort** the array. This is what allows both the pointer sweep and the duplicate skipping.
+2. Walk `i` from left to right and treat `nums[i]` as the fixed value.
+3. If `nums[i] > 0`, stop entirely — the array is sorted, so every remaining triplet is positive.
+4. If `nums[i] == nums[i - 1]`, skip it: this value was already fixed once and would produce the same
+   triplets.
+5. Otherwise run two converging pointers over `i + 1 … n - 1` looking for the sum `-nums[i]`, exactly
+   as in Two Sum II.
+6. On a hit, record the triplet and move **both** pointers, then advance `left` past any equal values
+   so the same triplet is not reported twice.
+
+Steps 4 and 6 are two different deduplications — one for the fixed value, one for the pair. Both are
+needed, and mixing them up is what produces near-miss solutions.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def threeSum(self, nums: list[int]) -> list[list[int]]:
+        # O(n^3) time, O(k) space for k triplets
+        n = len(nums)
+        found = set()
+
+        for i in range(n):
+            for j in range(i + 1, n):
+                for k in range(j + 1, n):
+                    if nums[i] + nums[j] + nums[k] == 0:
+                        found.add(tuple(sorted((nums[i], nums[j], nums[k]))))
+
+        return [list(triplet) for triplet in found]
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def threeSum(self, nums: list[int]) -> list[list[int]]:
+        # O(n^2) time, O(1) space beyond the output and the sort
+        nums.sort()
+        res: list[list[int]] = []
+
+        for i, first in enumerate(nums):
+            if first > 0:                       # sorted: nothing after this can reach zero
+                break
+            if i > 0 and first == nums[i - 1]:  # this value was already fixed once
+                continue
+
+            left, right = i + 1, len(nums) - 1
+            while left < right:
+                total = first + nums[left] + nums[right]
+
+                if total < 0:
+                    left += 1
+                elif total > 0:
+                    right -= 1
+                else:
+                    res.append([first, nums[left], nums[right]])
+                    left += 1
+                    right -= 1
+                    while left < right and nums[left] == nums[left - 1]:
+                        left += 1               # skip the pair duplicates
+
+        return res
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Duplicates are the entire problem.** There are two separate skips: one for the fixed value
+  (`i > 0 and first == nums[i - 1]`) and one for the left pointer after a hit. Leaving either out
+  produces repeated triplets, and both are easy to forget under pressure.
+- **Write `left < right` before `nums[left] == nums[left - 1]`.** Python evaluates `and` left to
+  right, so the other order can index past the end of the array. NeetCode's published solution has
+  them the wrong way round; the array bounds happen to save it, but it is not a habit worth copying.
+- Collecting into a set of sorted tuples also works and gives the right answer. Say it, then show the
+  skipping — the interviewer is checking whether you can reason about duplicates rather than paper
+  over them.
+- `nums.sort()` mutates the caller's list. Harmless on LeetCode, worth a sentence anywhere else.
+- The `first > 0` break is an early exit, not a correctness fix — but it is free, and saying why it
+  is safe shows you are using the sortedness deliberately.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"4Sum."* — LC 18: another loop outside this one, fixing two values and running the same sweep, at
+  `O(n³)`. The deduplication rule repeats at every level.
+- *"The closest sum to a target instead of exactly zero."* — LC 16: never return early, track the
+  best difference seen, and move the pointer by the same sign rule.
+- *"Can you do it without sorting?"* — With a hash set per fixed element, yes, at `O(n²)` time and
+  `O(n)` space — but the deduplication becomes much fussier. Sorting buys the tidy version.
+
+</FollowUps>

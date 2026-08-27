@@ -1,0 +1,170 @@
+---
+id: "2.5"
+slug: trapping-rain-water
+title: Trapping Rain Water
+leetcode: 42
+url: https://leetcode.com/problems/trapping-rain-water/
+difficulty: Hard
+premium: false
+category: two-pointers
+patterns: [two-pointer, prefix-suffix]
+prerequisites: ["Prefix maxima", "Container With Most Water", "Reading a running maximum"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Given `n` non-negative integers describing an elevation map where every bar has width 1, compute how
+much rain water it traps.
+
+Water only rests where something taller stands on **both** sides, and it can never rise above the
+lower of those two walls. LeetCode shows this as a picture; the wording here has to stand in for it.
+
+<Examples>
+  <Example input={`height = [0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]`} output="6">
+    Six separate units of water, in the dips at indices 2, 4, 5, 6 and 9.
+  </Example>
+  <Example input={`height = [4, 2, 0, 3, 2, 5]`} output="9">
+    One large basin between the 4 on the left and the 5 on the right.
+  </Example>
+  <Example input={`height = [3, 0, 3]`} output="3">
+    A single pit between two equal walls holds three units.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `n == height.length`
+- `1 <= n <= 2 * 10^4`
+- `0 <= height[i] <= 10^5`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The water above one position depends on the **maximum to its left** and the **maximum to its
+  right** — a per-index quantity split into a left part and a right part. That is prefix/suffix
+  thinking before it is two-pointer thinking.
+- Those maxima are *running* values: moving one step changes each by at most one comparison. Anything
+  that updates in `O(1)` per step wants to be carried, not recomputed.
+- Only the **smaller** of the two maxima ever appears in the answer. Half of what you would compute
+  is guaranteed to be discarded, which is the opening for dropping the arrays entirely.
+
+</Signals>
+
+<BruteForce>
+
+For every position, scan left for the tallest bar, scan right for the tallest bar, and add
+`min(left_max, right_max) - height[i]`.
+
+**O(n²) time, O(1) space.** Correct and easy to argue, which makes it a good thing to say out loud
+first. The bottleneck is that both scans are almost the same work each time: the left maximum at
+`i + 1` is the left maximum at `i` compared against one new bar. Every position rebuilds a value that
+had already been computed one step earlier.
+
+</BruteForce>
+
+<Insight>
+
+The water over a position is set by the smaller of the two surrounding maxima, so the side whose running maximum is smaller already knows its answer.
+
+</Insight>
+
+<Approach>
+
+1. The honest intermediate step is two arrays: `left_max[i]` from a forward pass, `right_max[i]` from
+   a backward pass, then sum `min(left_max[i], right_max[i]) - height[i]`. That is **O(n) time and
+   O(n) space**, and it is a complete answer worth writing if the pointer version does not come.
+2. Now compress it. Put `left` and `right` at the ends, carrying `left_max` and `right_max` for the
+   parts already seen.
+3. If `left_max < right_max`, the left side is the binding constraint: whatever lies further right,
+   there is already something at least `right_max` tall over there, so position `left` can be settled
+   now. Step `left` inwards, update `left_max`, and add `left_max - height[left]`.
+4. Otherwise do the mirror image on the right.
+5. Each step settles exactly one position, so the whole sweep is one pass with two variables.
+
+Updating the maximum **before** adding the water is what keeps the contribution from going negative:
+after the update, `left_max` is at least `height[left]`.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def trap(self, height: list[int]) -> int:
+        # O(n^2) time, O(1) space
+        water = 0
+
+        for i in range(len(height)):
+            left_max = 0
+            for j in range(i + 1):              # inclusive: the bar itself counts
+                left_max = max(left_max, height[j])
+
+            right_max = 0
+            for j in range(i, len(height)):
+                right_max = max(right_max, height[j])
+
+            water += min(left_max, right_max) - height[i]
+
+        return water
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def trap(self, height: list[int]) -> int:
+        # O(n) time, O(1) space
+        left, right = 0, len(height) - 1
+        left_max, right_max = height[left], height[right]
+        water = 0
+
+        while left < right:
+            if left_max < right_max:            # the left wall is the binding one
+                left += 1
+                left_max = max(left_max, height[left])
+                water += left_max - height[left]
+            else:
+                right -= 1
+                right_max = max(right_max, height[right])
+                water += right_max - height[right]
+
+        return water
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Both maxima are inclusive of the position itself.** That is what makes
+  `min(left_max, right_max) - height[i]` non-negative. Treat them as strictly left and strictly right
+  and a bar taller than everything around it contributes a negative amount.
+- **Update the running maximum before adding the water**, not after. Reversing those two lines is the
+  bug that produces a negative total on a rising slope, and it survives the first example.
+- Move on the comparison of the **maxima**, not of the current bars — or at least know why the two
+  formulations agree. The side with the smaller maximum is the one whose level is already pinned;
+  the other side is guaranteed to have something at least that tall waiting.
+- The two-array version is not a failure. `O(n)` space is a real answer, and it is the right thing to
+  write down while you work out the pointer version out loud. Do not skip it and then get stuck.
+- This is **not** Container With Most Water. There, two walls hold one body of water and the bars
+  between them are ignored; here every position holds its own column and those bars displace water.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Solve it with a stack."* — A monotonic decreasing stack of indices fills the basins horizontally,
+  layer by layer, in `O(n)` time and `O(n)` space. It is the other pattern LeetCode tags this problem
+  with, and it generalises to problems where you need the basins themselves rather than the total.
+- *"Return the water above each position, not the sum."* — The two-array version gives it directly.
+  The pointer version can too, since each step settles exactly one index — write it there.
+- *"Two dimensions."* — LC 407: the boundary is no longer two walls but a whole rim, so you process
+  cells in increasing height order out of a min-heap. Same idea, different frontier.
+
+</FollowUps>
