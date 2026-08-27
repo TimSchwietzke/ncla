@@ -1,0 +1,196 @@
+---
+id: "1.8"
+slug: valid-sudoku
+title: Valid Sudoku
+leetcode: 36
+url: https://leetcode.com/problems/valid-sudoku/
+difficulty: Medium
+premium: false
+category: arrays-hashing
+patterns: [hashing-complement]
+prerequisites: ["Sets for duplicate detection", "Index arithmetic for 3x3 boxes"]
+targetComplexity: { time: "O(1)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Determine whether a `9 x 9` Sudoku board is valid. Only the **filled** cells are checked, against
+three rules: every row, every column and every one of the nine `3 x 3` sub-boxes must contain the
+digits `1-9` without repetition. Empty cells are written as `'.'`.
+
+A partially filled board can be valid without being solvable — solvability is **not** asked.
+
+<Examples>
+  <Example input={`board = [["5","3",".",".","7",".",".",".","."],
+         ["6",".",".","1","9","5",".",".","."],
+         [".","9","8",".",".",".",".","6","."],
+         ["8",".",".",".","6",".",".",".","3"],
+         ["4",".",".","8",".","3",".",".","1"],
+         ["7",".",".",".","2",".",".",".","6"],
+         [".","6",".",".",".",".","2","8","."],
+         [".",".",".","4","1","9",".",".","5"],
+         [".",".",".",".","8",".",".","7","9"]]`} output="true">
+    No row, column or box repeats a digit.
+  </Example>
+  <Example input={`board = [["8","3",".",".","7",".",".",".","."],
+         ["6",".",".","1","9","5",".",".","."],
+         [".","9","8",".",".",".",".","6","."],
+         ["8",".",".",".","6",".",".",".","3"],
+         ["4",".",".","8",".","3",".",".","1"],
+         ["7",".",".",".","2",".",".",".","6"],
+         [".","6",".",".",".",".","2","8","."],
+         [".",".",".","4","1","9",".",".","5"],
+         [".",".",".",".","8",".",".","7","9"]]`} output="false">
+    Example 1 with the top-left 5 changed to 8. Column 0 now holds two 8s.
+  </Example>
+  <Example input={`board = [["5","3",".",".",".",".",".",".","."],
+         [".",".",".",".",".",".",".",".","."],
+         [".",".","5",".",".",".",".",".","."],
+         [".",".",".",".",".",".",".",".","."],
+         [".",".",".",".",".",".",".",".","."],
+         [".",".",".",".",".",".",".",".","."],
+         [".",".",".",".",".",".",".",".","."],
+         [".",".",".",".",".",".",".",".","."],
+         [".",".",".",".",".",".",".",".","."]]`} output="false">
+    Every row and every column is clean. Only the box rule catches the two 5s.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `board.length == 9` and `board[i].length == 9`
+- `board[i][j]` is a digit `'1'`–`'9'` or `'.'`
+- The digits are **characters**, not integers
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Three independent *"no duplicates here"* rules. Duplicate detection is a set, so this is three
+  families of sets and one membership test each.
+- The board is fixed at `9 x 9`. There is **no `n`**, so there is no asymptotic win to hunt — a rare
+  and worth-noticing shape for an interview problem.
+- Only the current filling matters. "Could this be completed?" is a different, much harder problem,
+  and the statement rules it out explicitly.
+
+</Signals>
+
+<BruteForce>
+
+Check the three rules in three separate sweeps: once over the rows, once over the columns, once over
+the boxes, each with a fresh set.
+
+**O(1) time and space** — and that is the honest answer, because 81 cells is a constant. This is the
+unusual case where the naive solution is *not* asymptotically worse. The bottleneck is structural
+rather than mathematical: the board is read three times and the box sweep needs its own index
+juggling, when every cell already knows which row, which column and which box it belongs to.
+
+Say this plainly in an interview. Claiming a complexity win that is not there is worse than having
+none.
+
+</BruteForce>
+
+<Insight>
+
+Every cell belongs to exactly one row, one column and one box, so a single pass can feed all three checks at once.
+
+</Insight>
+
+<Approach>
+
+1. Keep three lists of nine sets: `rows`, `cols`, `boxes`.
+2. Walk all 81 cells. Skip `'.'` immediately — empty cells are not values.
+3. Compute the box index as `(r // 3) * 3 + c // 3`. The row block contributes `(r // 3) * 3`, the
+   column block contributes `c // 3`.
+4. If the digit is already in `rows[r]`, `cols[c]` or `boxes[b]`, the board is invalid — return
+   `false`.
+5. Otherwise add it to all three and continue. Surviving the loop means valid.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def isValidSudoku(self, board: list[list[str]]) -> bool:
+        # O(1) time and space — 81 cells, but three separate sweeps over them
+        def no_repeat(cells: list[str]) -> bool:
+            digits = [c for c in cells if c != "."]
+            return len(digits) == len(set(digits))
+
+        for r in range(9):
+            if not no_repeat(board[r]):
+                return False
+
+        for c in range(9):
+            if not no_repeat([board[r][c] for r in range(9)]):
+                return False
+
+        for b in range(9):
+            top, left = (b // 3) * 3, (b % 3) * 3
+            box = [board[top + i][left + j] for i in range(3) for j in range(3)]
+            if not no_repeat(box):
+                return False
+
+        return True
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def isValidSudoku(self, board: list[list[str]]) -> bool:
+        # O(1) time and space, and a single pass over the board
+        rows: list[set[str]] = [set() for _ in range(9)]
+        cols: list[set[str]] = [set() for _ in range(9)]
+        boxes: list[set[str]] = [set() for _ in range(9)]
+
+        for r in range(9):
+            for c in range(9):
+                digit = board[r][c]
+                if digit == ".":
+                    continue
+
+                b = (r // 3) * 3 + c // 3
+                if digit in rows[r] or digit in cols[c] or digit in boxes[b]:
+                    return False
+
+                rows[r].add(digit)
+                cols[c].add(digit)
+                boxes[b].add(digit)
+
+        return True
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **The box index is `(r // 3) * 3 + c // 3`.** Writing `r // 3 + c // 3` is the classic slip, and it
+  fails quietly — several boxes collapse into one index and valid boards start reporting `false`.
+  Check a corner while you write it: `(8, 8)` must give `2 * 3 + 2 = 8`.
+- Skip `'.'` before anything else. Without it the empty cells collide with each other on the very
+  second cell and every board is invalid.
+- **Only the current filling is checked.** The statement says a valid board need not be solvable — do
+  not start solving. That is LC 37, and it is a different problem.
+- The cells are **strings**. `board[r][c] == 5` is silently always `False`, and the board comes back
+  valid no matter what is on it.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Now actually solve it."* — LC 37 Sudoku Solver: backtracking, where these same three sets become
+  the pruning test that makes the search feasible.
+- *"Generalise to an `n² x n²` board."* — The same code with `b = (r // n) * n + c // n`. The work is
+  linear in the number of cells, which is `n⁴`.
+- *"One set instead of three?"* — Encode each observation as a distinct string — `"5 in row 3"`,
+  `"5 in col 7"`, `"5 in box 4"` — and put all three into one set. Same work, one container, and a
+  neat trick to have ready.
+
+</FollowUps>

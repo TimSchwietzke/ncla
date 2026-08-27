@@ -1,0 +1,159 @@
+---
+id: "1.9"
+slug: longest-consecutive-sequence
+title: Longest Consecutive Sequence
+leetcode: 128
+url: https://leetcode.com/problems/longest-consecutive-sequence/
+difficulty: Medium
+premium: false
+category: arrays-hashing
+patterns: [hashing-complement]
+prerequisites: ["Hash set", "An amortisation argument for a loop inside a loop"]
+targetComplexity: { time: "O(n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Given an unsorted array of integers `nums`, return the length of the longest run of **consecutive
+integers**. The numbers do not have to be adjacent in the array — only their values matter. You must
+run in `O(n)` time.
+
+<Examples>
+  <Example input={`nums = [100, 4, 200, 1, 3, 2]`} output="4">
+    `1, 2, 3, 4` — scattered across the array, and 100 and 200 are runs of length 1.
+  </Example>
+  <Example input={`nums = [0, 3, 7, 2, 5, 8, 4, 6, 0, 1]`} output="9">
+    `0` through `8`. The repeated 0 changes nothing.
+  </Example>
+  <Example input={`nums = [1, 0, 1, 2]`} output="3">
+    `0, 1, 2`. Duplicates never extend a run.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `0 <= n <= 10^5` — the **empty array** is a legal input
+- `-10^9 <= nums[i] <= 10^9`
+- The algorithm must run in `O(n)` time
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- "Consecutive" is about **values**, not positions. The order of the array is irrelevant, and the only
+  question ever asked is *"is `x + 1` present?"* — membership, so a hash set.
+- `O(n)` is demanded **in the statement**, which rules out the sort that would otherwise be the
+  obvious answer. That is a deliberate instruction.
+- Values reach `±10^9` while `n` is only `10^5`, so the numbers are sparse. No array indexed by value
+  can be built.
+
+</Signals>
+
+<BruteForce>
+
+Sort the distinct values, then walk them and count how long each run of consecutive numbers lasts.
+
+**O(n log n) time, O(n) space.** Correct, short, and *explicitly disallowed* by the required
+complexity — which is exactly why it is worth stating first: it proves you understood the problem
+before you started fighting the constraint. The bottleneck is that sorting establishes a full order
+between all `n` values when the algorithm only ever asks a yes/no membership question.
+
+</BruteForce>
+
+<Insight>
+
+Only start counting at a number that has no predecessor in the set, and every run gets walked exactly once.
+
+</Insight>
+
+<Approach>
+
+1. Put every value into a set. Duplicates disappear for free.
+2. For each value `x` in the **set**: if `x - 1` is also present, `x` sits in the middle of a run —
+   skip it, because the run will be counted from its own start.
+3. Otherwise `x` begins a run. Count upwards while `x + 1`, `x + 2`, … are in the set.
+4. Keep the longest count seen.
+
+The loop inside a loop looks like `O(n²)`, and the amortisation argument is the part to say out loud:
+the inner walk only ever starts at a value with no predecessor, so across the entire run of the
+algorithm each value is stepped over exactly once. Total inner work is `O(n)`.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def longestConsecutive(self, nums: list[int]) -> int:
+        # O(n log n) time, O(n) space — correct, but the statement demands O(n)
+        if not nums:
+            return 0
+
+        ordered = sorted(set(nums))
+        best = 1
+        run = 1
+
+        for i in range(1, len(ordered)):
+            if ordered[i] == ordered[i - 1] + 1:
+                run += 1
+                best = max(best, run)
+            else:
+                run = 1
+
+        return best
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def longestConsecutive(self, nums: list[int]) -> int:
+        # O(n) time, O(n) space
+        values = set(nums)
+        best = 0
+
+        for x in values:                    # the set, not the list — see pitfalls
+            if x - 1 in values:
+                continue                    # not a start; its run is counted elsewhere
+
+            length = 1
+            while x + length in values:
+                length += 1
+            best = max(best, length)
+
+        return best
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Iterate over the set, not the original list.** On `[1] * 100000` the list version walks the same
+  single-element run a hundred thousand times. The set has one element and the loop runs once.
+- **The `x - 1 in values` guard is the algorithm.** Drop it and the inner loop starts from every
+  value: on `[1, 2, 3, …, n]` that is `O(n²)`, and every small hand-test still passes. This is the
+  line that makes the complexity claim true.
+- The empty array is a legal input and must return `0`. Starting `best` at `1` returns 1 for an empty
+  array — initialise it to `0`.
+- Duplicates need no handling at all; the set removes them. Say that instead of writing a dedupe
+  pass, and instead of reaching for a `Counter`.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Return the sequence itself, not its length."* — Remember the starting value next to `best` and
+  rebuild the run at the end. Do not collect values as you go; that turns a scan into allocation.
+- *"Numbers keep arriving and the answer must stay current."* — Union-find: when `x` arrives, merge
+  it with `x - 1` and `x + 1` if they are present, and track the largest component. That is why
+  LeetCode tags this problem with Union-Find.
+- *"What if duplicates had to count towards the length?"* — Then a set is the wrong structure
+  entirely, because multiplicity suddenly matters. Count with a hash map and the problem becomes a
+  different one — worth saying, rather than patching the set solution.
+
+</FollowUps>

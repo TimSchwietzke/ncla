@@ -1,0 +1,153 @@
+---
+id: "1.7"
+slug: product-of-array-except-self
+title: Product of Array Except Self
+leetcode: 238
+url: https://leetcode.com/problems/product-of-array-except-self/
+difficulty: Medium
+premium: false
+category: arrays-hashing
+patterns: [prefix-suffix]
+prerequisites: ["Running products", "Why division is banned here"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Given an integer array `nums`, return an array `answer` where `answer[i]` is the product of every
+element of `nums` **except** `nums[i]`. You must run in `O(n)` time and **without division**.
+
+<Examples>
+  <Example input={`nums = [1, 2, 3, 4]`} output={`[24, 12, 8, 6]`}>
+    `answer[0] = 2·3·4 = 24`, `answer[3] = 1·2·3 = 6`.
+  </Example>
+  <Example input={`nums = [-1, 1, 0, -3, 3]`} output={`[0, 0, 9, 0, 0]`}>
+    One zero: every position except its own becomes 0, and index 2 gets `-1·1·-3·3 = 9`.
+  </Example>
+  <Example input={`nums = [0, 0, 2]`} output={`[0, 0, 0]`}>
+    With two zeros, every position still has a zero somewhere else in the array.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `2 <= n <= 10^5`
+- `-30 <= nums[i] <= 30`
+- Every `answer[i]` is guaranteed to fit in a 32-bit integer
+- **Follow-up:** `O(1)` extra space — the output array does not count
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **"Everything except me"** splits cleanly into *everything to my left* times *everything to my
+  right*. That decomposition is the pattern, and spotting it is the whole problem.
+- Division is banned **in the statement**. When a problem forbids the obvious tool, it is telling you
+  the intended answer does not use it — and here the ban is also a correctness warning.
+- `O(n)` is demanded outright, and `n` reaches `10^5`. Recomputing each product from scratch is
+  `10^10` multiplications.
+
+</Signals>
+
+<BruteForce>
+
+For every `i`, multiply every other element together.
+
+**O(n²) time, O(1) space beyond the output.** The bottleneck is repetition with a very specific
+shape: the product of everything left of `i` is rebuilt from nothing for each `i`, even though moving
+from `i` to `i + 1` only folds in one more factor. A value that changes by one multiplication per
+step wants to be carried, not recomputed.
+
+</BruteForce>
+
+<Insight>
+
+The answer at i is the product of everything to its left times the product of everything to its right — two running passes, no nesting.
+
+</Insight>
+
+<Approach>
+
+1. Walk left to right and fill `res[i]` with the product of everything **strictly left** of `i`.
+   `res[0]` is 1, because nothing is left of the first element.
+2. Walk right to left carrying a single running variable `suffix`, the product of everything
+   **strictly right** of the current index.
+3. Multiply it in: `res[i] *= suffix`, then fold `nums[i]` into `suffix` for the next step.
+4. After both passes `res[i]` holds left × right, which is the answer.
+
+The honest intermediate step is two separate arrays, `prefix` and `suffix`. Name it, then notice that
+the output array can serve as the prefix array and the suffix only ever needs its current value —
+that is what collapses the space to `O(1)` extra.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def productExceptSelf(self, nums: list[int]) -> list[int]:
+        # O(n^2) time, O(1) space beyond the output
+        n = len(nums)
+        res = [1] * n
+
+        for i in range(n):
+            for j in range(n):
+                if i != j:
+                    res[i] *= nums[j]
+
+        return res
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def productExceptSelf(self, nums: list[int]) -> list[int]:
+        # O(n) time, O(1) space beyond the output
+        n = len(nums)
+        res = [1] * n
+
+        for i in range(1, n):               # res[i] = product of everything left of i
+            res[i] = res[i - 1] * nums[i - 1]
+
+        suffix = 1
+        for i in range(n - 1, -1, -1):      # fold in everything right of i
+            res[i] *= suffix
+            suffix *= nums[i]               # only now does nums[i] join the suffix
+
+        return res
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Division is banned for a reason, not to be awkward.** One zero makes `total // nums[i]` a division
+  by zero; two zeros make `total` itself zero, so a special case for "exactly one zero" does not save
+  it either. Run any division solution on `[0, 0, 2]` and watch it produce nonsense.
+- The second pass must **multiply into** `res`, not overwrite it. `res[i] = suffix` throws the prefix
+  away and the answer becomes the suffix alone.
+- `suffix *= nums[i]` comes **after** `res[i] *= suffix`, exactly as the prefix pass reads
+  `nums[i - 1]` and not `nums[i]`. The running value must never contain the element it is being used
+  for. Getting this order wrong is the one bug that survives small hand-tests.
+- State the space claim precisely: `O(1)` **extra**, because the problem excludes the output array.
+  Claiming plain `O(1)` while returning an `n`-element array invites a correction you do not want.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Can you do it in `O(1)` extra space?"* — LeetCode's own follow-up, and the code above is the
+  answer: the output array doubles as the prefix scratch space and the suffix is a single variable.
+- *"What if division were allowed?"* — Total product divided by `nums[i]`, plus a branch for exactly
+  one zero and another for two or more. Quicker to type, three ways to get wrong, and it is why the
+  statement removes the option.
+- *"Sums instead of products?"* — The same two passes with `+` and a running sum. That is the
+  prefix-sum pattern, and it is exactly what LeetCode tags this problem with.
+
+</FollowUps>
