@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSteps, buildWindowMaximum } from "./steps";
+import { buildLargestRectangle, buildSteps, buildWindowMaximum } from "./steps";
 
 const TEMPERATURES = [73, 74, 75, 71, 69, 72, 76, 73];
 
@@ -98,5 +98,43 @@ describe("buildWindowMaximum", () => {
 
   it("has nothing to show when the window is wider than the input", () => {
     expect(buildWindowMaximum({ values: [1, 2], k: 5 })).toEqual([]);
+  });
+});
+
+describe("buildLargestRectangle", () => {
+  // LeetCode 84, example 1. The answer is 10: the 5 and the 6 at width 2.
+  const HEIGHTS = [2, 1, 5, 6, 2, 3];
+
+  it("emits one frame per bar plus a closing frame", () => {
+    expect(buildLargestRectangle({ heights: HEIGHTS })).toHaveLength(HEIGHTS.length + 1);
+  });
+
+  it("finds the largest rectangle the problem asks for", () => {
+    const steps = buildLargestRectangle({ heights: HEIGHTS });
+    expect(steps.at(-1)?.readout).toBe("largest 10");
+  });
+
+  it("ends with the winning bars marked and nothing left on the stack", () => {
+    const last = buildLargestRectangle({ heights: HEIGHTS }).at(-1);
+    expect(last?.span).toEqual({ start: 2, end: 3, label: "10" });
+    expect(last?.panel?.entries).toEqual([]);
+  });
+
+  it("keeps the stack heights increasing from bottom to top", () => {
+    for (const step of buildLargestRectangle({ heights: HEIGHTS })) {
+      // The panel is rendered top-first, so read it back to front.
+      const held = (step.panel?.entries ?? []).map((entry) => Number(entry.value)).reverse();
+      for (let i = 1; i < held.length; i += 1) {
+        expect(held[i]!).toBeGreaterThan(held[i - 1]!);
+      }
+    }
+  });
+
+  it("handles a rising histogram, where nothing pops until the end", () => {
+    expect(buildLargestRectangle({ heights: [2, 4] }).at(-1)?.readout).toBe("largest 4");
+  });
+
+  it("handles a flat histogram, where one rectangle spans everything", () => {
+    expect(buildLargestRectangle({ heights: [3, 3, 3] }).at(-1)?.readout).toBe("largest 9");
   });
 });

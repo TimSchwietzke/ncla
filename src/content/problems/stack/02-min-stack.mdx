@@ -1,0 +1,164 @@
+---
+id: "4.2"
+slug: min-stack
+title: Min Stack
+leetcode: 155
+url: https://leetcode.com/problems/min-stack/
+difficulty: Medium
+premium: false
+category: stack
+patterns: [stack-lifo]
+prerequisites: ["Stack API", "Thinking in invariants"]
+targetComplexity: { time: "O(1)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Design a stack that supports `push`, `pop`, `top` and `getMin`, with **every operation in `O(1)`**.
+
+`getMin()` returns the smallest value currently on the stack. `pop`, `top` and `getMin` are only ever
+called on a non-empty stack.
+
+<Examples>
+  <Example input={`push(-2), push(0), push(-3)
+getMin()`} output="-3">
+    The stack holds -2, 0, -3 and the smallest of them is -3.
+  </Example>
+  <Example input={`… then pop()
+top()`} output="0">
+    The -3 is gone, so 0 is on top again.
+  </Example>
+  <Example input={`… then getMin()`} output="-2">
+    The minimum has to **come back** to -2. This is the whole problem: it moves backwards in time.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `-2^31 <= val <= 2^31 - 1`
+- `pop`, `top` and `getMin` are only called on a non-empty stack
+- At most `3 * 10^4` calls in total
+- Every operation must be `O(1)`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- `getMin` in `O(1)` rules out scanning, and a single stored minimum is not enough either — popping
+  the minimum has to **restore the previous one**, and a single variable cannot remember it.
+- The stack itself already tracks history perfectly. Whatever the minimum was when a value was pushed
+  is exactly what it must be again once that value is popped.
+- Nothing is ever inserted in the middle. Every change is at the top, which is what lets a parallel
+  structure stay in step for free.
+
+</Signals>
+
+<BruteForce>
+
+Keep one plain list. `getMin` scans it.
+
+**`push`, `pop` and `top` are `O(1)`; `getMin` is `O(n)`.** Correct, and it is the right first thing
+to say. The bottleneck is that the minimum is recomputed from a collection that barely changed —
+after a push, the new minimum is either the old one or the value just pushed, and nothing else.
+
+</BruteForce>
+
+<Insight>
+
+Store, next to each value, what the minimum was at the moment it was pushed — then popping restores the old minimum for free.
+
+</Insight>
+
+<Approach>
+
+1. Keep two stacks that always have the same height: `stack` for the values, `mins` for the running
+   minimum.
+2. On `push(val)`: append `val`, and append `min(val, current minimum)` — or `val` itself if `mins` is
+   empty.
+3. On `pop()`: pop **both**. The top of `mins` is now whatever it was before that push, which is
+   exactly right.
+4. `top()` reads `stack[-1]`, `getMin()` reads `mins[-1]`. Both are one lookup.
+
+The equivalent version stores tuples `(value, minimum)` in a single stack. Same idea, same
+complexity — mention both, since interviewers differ on which they consider tidier.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class MinStack:
+    def __init__(self) -> None:
+        # push/pop/top are O(1); getMin is O(n)
+        self.stack: list[int] = []
+
+    def push(self, val: int) -> None:
+        self.stack.append(val)
+
+    def pop(self) -> None:
+        self.stack.pop()
+
+    def top(self) -> int:
+        return self.stack[-1]
+
+    def getMin(self) -> int:
+        return min(self.stack)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class MinStack:
+    def __init__(self) -> None:
+        # every operation O(1), O(n) space
+        self.stack: list[int] = []
+        self.mins: list[int] = []      # mins[i] = minimum of stack[0..i]
+
+    def push(self, val: int) -> None:
+        self.stack.append(val)
+        self.mins.append(val if not self.mins else min(val, self.mins[-1]))
+
+    def pop(self) -> None:
+        self.stack.pop()
+        self.mins.pop()                # both, always — they move in lockstep
+
+    def top(self) -> int:
+        return self.stack[-1]
+
+    def getMin(self) -> int:
+        return self.mins[-1]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Pop both stacks, every time.** Popping only `stack` lets `mins` drift, and `getMin` then reports a
+  minimum for values that are no longer there. It is the one bug in this problem, and it does not
+  surface until a pop happens to remove the minimum.
+- Do not try to push onto `mins` only when the value is a *new* minimum. That version needs the pop to
+  ask "was the value I am removing the current minimum?", and with duplicate minima — push 5, push 5,
+  pop — the bookkeeping goes wrong unless you also count them.
+- A single `self.minimum` variable cannot work. The problem is not finding the minimum, it is
+  restoring the previous one, and one variable has no memory.
+- `getMin` must not scan. If your `getMin` contains `min(...)` over the stack, you have written the
+  brute force — which is fine to *say*, not to submit.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Can you do it with `O(1)` extra space?"* — Yes, with delta encoding: store `2 * val - minimum`
+  when a new minimum arrives, and reverse the arithmetic on pop. It is clever, it risks overflow with
+  32-bit values, and it is worth mentioning only if you are asked.
+- *"A max stack too."* — A third stack, or store `(value, minimum, maximum)` triples. The pattern
+  generalises to any function whose value over a prefix is cheap to extend.
+- *"A min **queue**."* — Much harder, because a queue removes from the far end. Two stacks, or a
+  monotonic deque — the same structure as Sliding Window Maximum.
+
+</FollowUps>

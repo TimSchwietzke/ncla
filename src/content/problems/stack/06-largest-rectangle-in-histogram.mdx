@@ -1,0 +1,168 @@
+---
+id: "4.6"
+slug: largest-rectangle-in-histogram
+title: Largest Rectangle in Histogram
+leetcode: 84
+url: https://leetcode.com/problems/largest-rectangle-in-histogram/
+difficulty: Hard
+premium: false
+category: stack
+patterns: [monotonic-stack]
+prerequisites: ["Monotonic stack", "Next smaller element on both sides"]
+targetComplexity: { time: "O(n)", space: "O(n)" }
+visualizer: { name: monotonic-stack, preset: largest-rectangle }
+status: complete
+---
+
+<Statement>
+
+Given `heights`, the bar heights of a histogram where every bar has width 1, return the area of the
+**largest rectangle** that fits inside it. A rectangle may span several bars, but its height is
+limited by the shortest bar it covers.
+
+<Examples>
+  <Example input={`heights = [2, 1, 5, 6, 2, 3]`} output="10">
+    The bars of height 5 and 6 give `5 x 2 = 10`. The 6 alone is only 6, and stretching wider drops
+    the height to 2.
+  </Example>
+  <Example input={`heights = [2, 4]`} output="4">
+    Either `2 x 2 = 4` across both, or `4 x 1 = 4` on the taller bar alone.
+  </Example>
+  <Example input={`heights = [3, 3, 3]`} output="9">
+    A flat histogram is one rectangle spanning everything.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= heights.length <= 10^5`
+- `0 <= heights[i] <= 10^4` — a bar may have **height 0**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Every rectangle is limited by its **shortest** bar, so each candidate can be labelled by that bar.
+  Asking "for this bar, how wide can a rectangle of exactly its height get?" turns one hard search
+  into `n` easy ones.
+- The width for a bar runs from the **next shorter bar on its left** to the **next shorter bar on its
+  right**. Next-smaller-element on both sides is monotonic-stack territory by definition.
+- `n` up to `10^5` makes the `O(n²)` pairwise scan `10^10`. `O(n)` is required.
+
+</Signals>
+
+<BruteForce>
+
+For each bar, walk left and right while the bars are at least as tall, and multiply that width by the
+bar's height.
+
+**O(n²) time, O(1) space.** The bottleneck is that the two walks repeat each other: the bar to the
+right of a tall run re-walks the same run its neighbour just walked. Both boundaries are
+next-smaller-element queries, and a monotonic stack answers all `n` of them in one pass.
+
+</BruteForce>
+
+<Insight>
+
+Each bar anchors the largest rectangle in which it is the shortest, and its left edge is wherever the bar it displaced began.
+
+</Insight>
+
+<Approach>
+
+1. Keep a stack of `(start, height)` pairs, heights increasing from bottom to top.
+2. For each bar `i` with height `h`, let `start = i`.
+3. **While** the top of the stack is taller than `h`, pop it. That bar can go no further right, so its
+   rectangle is `height * (i - start_of_that_entry)` — record it, and pull `start` back to that
+   entry's start.
+4. Push `(start, h)`. The current bar now claims the ground of everything it displaced, because it is
+   shorter and therefore extends across all of it.
+5. When the pass ends, everything still on the stack reaches the **right edge**: its area is
+   `height * (n - start)`.
+
+Step 3's `start = index` is the crux and the reason for storing pairs. A bar's rectangle does not
+begin where the bar stands — it begins as far left as the run it is now the minimum of.
+
+<Viz name="monotonic-stack" preset="largest-rectangle" />
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def largestRectangleArea(self, heights: list[int]) -> int:
+        # O(n^2) time, O(1) space
+        best = 0
+
+        for i, height in enumerate(heights):
+            left = i
+            while left > 0 and heights[left - 1] >= height:
+                left -= 1
+
+            right = i
+            while right + 1 < len(heights) and heights[right + 1] >= height:
+                right += 1
+
+            best = max(best, height * (right - left + 1))
+
+        return best
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def largestRectangleArea(self, heights: list[int]) -> int:
+        # O(n) time, O(n) space
+        best = 0
+        stack: list[tuple[int, int]] = []      # (start index, height), heights increasing
+
+        for i, height in enumerate(heights):
+            start = i
+            while stack and stack[-1][1] > height:
+                index, tall = stack.pop()
+                best = max(best, tall * (i - index))
+                start = index                  # the new bar inherits the ground it displaced
+            stack.append((start, height))
+
+        for index, height in stack:            # these run all the way to the right edge
+            best = max(best, height * (len(heights) - index))
+
+        return best
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Push the displaced `start`, not `i`.** Popping a taller bar means the current bar spans that
+  bar's ground too, so it must remember where that ground began. Pushing `(i, height)` instead is the
+  defining bug of this problem, and it under-reports every wide rectangle.
+- **The drain at the end is not optional.** Bars that never meet a shorter one to their right are
+  still candidates, and they reach the right edge. A strictly increasing histogram like `[1, 2, 3]`
+  produces nothing at all without it.
+- Pop on `>` , not `>=`. With `>=` an equal-height neighbour is popped and measured too early; the
+  answer still comes out right because the later bar inherits the start, but the reasoning gets much
+  harder to state. Pick `>` and know why.
+- Heights may be **0**. Such a bar pops everything and contributes nothing, which is correct — but a
+  solution that skips zero bars to "save work" also loses the pops they were supposed to trigger.
+- The loop inside a loop is `O(n)`. Say the amortisation out loud: every index is pushed once and
+  popped at most once.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"The largest all-ones rectangle in a binary matrix."* — LC 85: build a histogram of consecutive
+  ones per column, row by row, and run exactly this function on each. The Hard becomes a subroutine.
+- *"With sentinels instead of a drain loop."* — Append a bar of height 0 (and prepend one) and the
+  final loop disappears, because the sentinel pops everything. Tidier, and worth knowing as a trick.
+- *"The largest rectangle containing a given bar."* — That is the per-bar value this algorithm
+  computes and discards; record it per index instead of only keeping the maximum.
+
+</FollowUps>
