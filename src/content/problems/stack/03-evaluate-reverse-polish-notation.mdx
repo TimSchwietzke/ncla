@@ -1,0 +1,171 @@
+---
+id: "4.3"
+slug: evaluate-reverse-polish-notation
+title: Evaluate Reverse Polish Notation
+leetcode: 150
+url: https://leetcode.com/problems/evaluate-reverse-polish-notation/
+difficulty: Medium
+premium: false
+category: stack
+patterns: [stack-lifo]
+prerequisites: ["Postfix notation", "Integer division truncating toward zero"]
+targetComplexity: { time: "O(n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Evaluate an arithmetic expression given in **Reverse Polish Notation**: each operator follows its two
+operands. The operators are `+`, `-`, `*` and `/`; division **truncates toward zero**; there is no
+division by zero, and every intermediate result fits in a 32-bit integer.
+
+<Examples>
+  <Example input={`tokens = ["2", "1", "+", "3", "*"]`} output="9">
+    `(2 + 1) * 3`. The `+` consumes the 2 and the 1; the `*` consumes their result and the 3.
+  </Example>
+  <Example input={`tokens = ["4", "13", "5", "/", "+"]`} output="6">
+    `4 + (13 / 5)` — and `13 / 5` is 2, not 2.6.
+  </Example>
+  <Example input={`tokens = ["7", "-3", "/"]`} output="-2">
+    `7 / -3` truncates toward zero to -2. Floor division would give -3.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= tokens.length <= 10^4`
+- Each token is an operator, or an integer in `[-200, 200]`
+- Division always **truncates toward zero**
+- No division by zero; all intermediate results fit in a 32-bit integer
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Postfix notation means an operator's operands are always the **two most recent** unconsumed values.
+  Most recent first is last in, first out.
+- No parentheses appear anywhere, and none are needed — that is the entire point of the notation, and
+  it is why one linear pass suffices.
+- The two subtractive operators care about **order**, so whatever holds the operands has to preserve
+  it. A bag of numbers would not do.
+
+</Signals>
+
+<BruteForce>
+
+Repeatedly scan the token list for the leftmost operator whose two predecessors are both numbers,
+replace those three tokens with the result, and start again.
+
+**O(n²) time, O(n) space.** It mirrors how you would evaluate it by hand and it is correct. The
+bottleneck is the rescanning: after a replacement, everything to the left is unchanged, yet the next
+pass reads it all again. The stack simply remembers where it was.
+
+</BruteForce>
+
+<Insight>
+
+An operator always applies to the two most recently produced values, so pushing numbers and popping pairs evaluates the whole expression in one pass.
+
+</Insight>
+
+<Approach>
+
+1. Keep a stack of integers and walk the tokens once.
+2. A number is pushed.
+3. An operator pops **twice**: the first pop is the **right** operand, the second is the left.
+4. Apply the operator and push the result.
+5. When the tokens run out, the single value on the stack is the answer.
+
+Step 3 is where this goes wrong. `pop()` returns the value pushed *last*, which is the right-hand
+operand — so `b = pop(); a = pop(); a - b`. Reversing them is invisible for `+` and `*` and silently
+wrong for `-` and `/`.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def evalRPN(self, tokens: list[str]) -> int:
+        # O(n^2) time, O(n) space
+        items: list[str] = list(tokens)
+
+        while len(items) > 1:
+            for i in range(2, len(items)):
+                if items[i] in "+-*/" and len(items[i]) == 1:
+                    a, b = int(items[i - 2]), int(items[i - 1])
+                    if items[i] == "+":
+                        value = a + b
+                    elif items[i] == "-":
+                        value = a - b
+                    elif items[i] == "*":
+                        value = a * b
+                    else:
+                        value = int(a / b)
+                    items[i - 2:i + 1] = [str(value)]
+                    break
+
+        return int(items[0])
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def evalRPN(self, tokens: list[str]) -> int:
+        # O(n) time, O(n) space
+        stack: list[int] = []
+
+        for token in tokens:
+            if token not in ("+", "-", "*", "/"):
+                stack.append(int(token))       # int(), not isdigit(): "-3" is a number
+                continue
+
+            right = stack.pop()                # the last value pushed is the right operand
+            left = stack.pop()
+
+            if token == "+":
+                stack.append(left + right)
+            elif token == "-":
+                stack.append(left - right)
+            elif token == "*":
+                stack.append(left * right)
+            else:
+                stack.append(int(left / right))  # truncates toward zero, unlike //
+
+        return stack[-1]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Python's `//` is the wrong division.** It floors, so `-7 // 2` is `-4` while the problem wants
+  `-3`. Use `int(left / right)`, which truncates toward zero. This is the single most common failure
+  on this problem, and it only shows up once a negative operand appears.
+- **Do not detect numbers with `isdigit()`.** `"-3"` is a perfectly valid token and `"-3".isdigit()`
+  is `False`, so a negative number gets treated as an operator. Test for membership in the operator
+  set instead.
+- **Pop order matters.** `b = pop(); a = pop()` and then `a - b`. Getting it backwards passes every
+  test made only of `+` and `*`.
+- `int(left / right)` goes through a float. That is exact here because the constraints keep every
+  value inside 32 bits, well within a float's 53 bits of precision — but say so, because the same
+  line would be wrong for genuinely large integers.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Exact integer truncation without a float."* — `q = abs(left) // abs(right)` and then negate it
+  when the signs differ. Uglier, and correct for any magnitude.
+- *"Infix notation with parentheses instead."* — LC 224 / 227: two stacks, one for values and one for
+  operators, plus precedence rules. Or convert to postfix first with the shunting-yard algorithm and
+  reuse exactly the code above.
+- *"Validate the input."* — Check that the stack has at least two entries before each operator and
+  exactly one at the end. The statement guarantees validity here; production code would not.
+
+</FollowUps>

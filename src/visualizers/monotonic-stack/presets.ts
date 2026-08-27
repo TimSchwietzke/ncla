@@ -1,11 +1,17 @@
 import type { Preset } from "../registry";
-import { buildSteps, buildWindowMaximum } from "./steps";
+import { buildLargestRectangle, buildSteps, buildWindowMaximum } from "./steps";
 
 /** One named input per problem that uses this pattern — the sketch per problem. */
 export const presets: Record<string, Preset> = {
   "daily-temperatures": {
     label: "Daily Temperatures",
     build: () => buildSteps({ values: [73, 74, 75, 71, 69, 72, 76, 73] }),
+  },
+  "largest-rectangle": {
+    label: "Largest Rectangle in Histogram",
+    // The problem's own example. The 5 and the 6 pop against the 2, which is the frame
+    // that shows a rectangle reaching back past where its bar actually stands.
+    build: () => buildLargestRectangle({ heights: [2, 1, 5, 6, 2, 3] }),
   },
   "sliding-window-maximum": {
     label: "Sliding Window Maximum — k = 3",

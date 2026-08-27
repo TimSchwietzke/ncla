@@ -1,14 +1,16 @@
 import type { Pattern } from "./types.ts";
 
 /**
- * The 20 patterns. Eighteen of them are the 17 rows of the source document's pattern
+ * The 21 patterns. Eighteen of them are the 17 rows of the source document's pattern
  * index, with "DP bottom-up" split into 1-D and 2-D because the table fill looks too
  * different for one shared visualizer.
  *
- * The last two go beyond that index on purpose. The source names them as patterns in the
+ * The last three go beyond that index on purpose. The source names them as patterns in the
  * problem write-ups but forgot to list them, and no existing row is an honest home:
  * Product of Array Except Self is prefix/suffix accumulation (LeetCode tags it "Prefix
- * Sum" itself), and Encode and Decode Strings has no hash map, no pointer and no search.
+ * Sum" itself), Encode and Decode Strings has no hash map, no pointer and no search, and
+ * Valid Parentheses, Min Stack and Evaluate RPN use a plain LIFO stack with nothing
+ * monotonic about it — "next greater element" is the wrong trigger to learn for them.
  *
  * `hasVisualizer` flips to true as the visualizers land (milestone M3).
  * The slug is also the visualizer directory name under `src/visualizers/`.
@@ -152,6 +154,13 @@ export const PATTERNS: readonly Pattern[] = [
     title: "Self-Delimiting Encoding",
     signal: "Any separator can also appear inside the data, so the format must say how much to read.",
     categories: ["arrays-hashing"],
+    hasVisualizer: false,
+  },
+  {
+    slug: "stack-lifo",
+    title: "Stack (LIFO)",
+    signal: "Whatever was opened last must be settled first — matching, undoing, or evaluating.",
+    categories: ["stack"],
     hasVisualizer: false,
   },
 ] as const;
