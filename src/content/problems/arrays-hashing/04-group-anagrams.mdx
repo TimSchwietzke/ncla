@@ -1,0 +1,151 @@
+---
+id: "1.4"
+slug: group-anagrams
+title: Group Anagrams
+leetcode: 49
+url: https://leetcode.com/problems/group-anagrams/
+difficulty: Medium
+premium: false
+category: arrays-hashing
+patterns: [hashing-complement]
+prerequisites: ["Hash map with a composite key", "Tuples are hashable, lists are not"]
+targetComplexity: { time: "O(n * k)", space: "O(n * k)" }
+status: complete
+---
+
+<Statement>
+
+Given an array of strings `strs`, group the **anagrams** together. The groups, and the strings inside
+them, may be returned in any order.
+
+<Examples>
+  <Example input={`strs = ["eat", "tea", "tan", "ate", "nat", "bat"]`} output={`[["bat"], ["nat", "tan"], ["ate", "eat", "tea"]]`}>
+    Three groups. Nothing in the input can be rearranged into `"bat"`.
+  </Example>
+  <Example input={`strs = [""]`} output={`[[""]]`}>
+    The empty string is a legal input and forms its own group.
+  </Example>
+  <Example input={`strs = ["a"]`} output={`[["a"]]`}>
+    A single string is already a complete group.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= strs.length <= 10^4`
+- `0 <= strs[i].length <= 100`
+- `strs[i]` consists of lowercase English letters
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **"Group … together"** is a hash map from a key to a bucket. The entire problem collapses into one
+  question: *what is the key?*
+- Anagrams differ only in the **order** of their characters, so the key has to be something order
+  cannot change. That rules out the string itself and points at a canonical form.
+- The empty string is allowed, so the key has to survive a word with no characters at all.
+
+</Signals>
+
+<BruteForce>
+
+For each string, walk the groups built so far and test whether it is an anagram of that group's first
+member. Start a new group if none matches.
+
+**O(n² · k log k) time, O(n · k) space** for `n` strings of length `k`. The bottleneck is that
+"which group do I belong to" is answered by *searching* every existing group. A key turns that search
+into a single lookup — the same trade as in Two Sum, one level up.
+
+</BruteForce>
+
+<Insight>
+
+Give every anagram the same canonical key — its character counts — and the hash map does the grouping for you.
+
+</Insight>
+
+<Approach>
+
+1. Keep a dictionary from **key → list of strings**.
+2. For each string, build a 26-slot array of character counts.
+3. Convert it to a `tuple` and use that as the key. A list cannot be a dictionary key; a tuple can.
+4. Append the string to that key's bucket.
+5. Return the dictionary's values.
+
+There are two sensible keys, and naming both is part of a good answer. The **sorted string** costs
+`O(k log k)` per word and is shorter to write. The **count tuple** costs `O(k + 26)` and is the
+better asymptotic answer — which is why it is the one written below.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def groupAnagrams(self, strs: list[str]) -> list[list[str]]:
+        # O(n^2 * k log k) time, O(n * k) space
+        groups: list[list[str]] = []
+
+        for s in strs:
+            for group in groups:
+                if sorted(group[0]) == sorted(s):
+                    group.append(s)
+                    break
+            else:                       # no group matched, so start one
+                groups.append([s])
+
+        return groups
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def groupAnagrams(self, strs: list[str]) -> list[list[str]]:
+        # O(n * k) time, O(n * k) space
+        groups: dict[tuple[int, ...], list[str]] = {}
+
+        for s in strs:
+            counts = [0] * 26
+            for ch in s:
+                counts[ord(ch) - ord("a")] += 1
+
+            key = tuple(counts)                     # a list is unhashable, a tuple is not
+            groups.setdefault(key, []).append(s)
+
+        return list(groups.values())
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`tuple(counts)` is mandatory.** Handing a list to a dictionary raises `TypeError: unhashable
+  type: 'list'`. This is by far the most common way this problem fails in Python, and it is worth
+  saying while you type it rather than after the error.
+- The empty string needs no special case. Its key is 26 zeros, which is a perfectly good key, and it
+  lands in its own group exactly as the example requires.
+- Be honest about the two keys. `O(n · k)` beats `O(n · k log k)` asymptotically, but with `k ≤ 100`
+  the counting version pays a fixed 26 per word — in practice they are close. The count tuple is the
+  better *answer*, not automatically the faster *program*.
+- Do not sort the output or the groups. The statement allows any order, and sorting to make the
+  result "look like" the example adds `O(n log n)` for nothing.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"What if the strings can hold any Unicode character?"* — The 26-slot array breaks. Key on a
+  sorted string, or on `tuple(sorted(Counter(s).items()))`; space becomes `O(k)` per distinct
+  character rather than a fixed 26.
+- *"Return only the largest group."* — Same map, then take the longest value. Still one pass over the
+  input and one over the buckets; there is no need to sort them.
+- *"What if `strs` does not fit in memory?"* — The key is a pure function of the string, so the work
+  shards cleanly: hash the key, send each string to that shard, and group each shard on its own.
+
+</FollowUps>

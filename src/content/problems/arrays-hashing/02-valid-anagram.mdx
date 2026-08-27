@@ -1,0 +1,139 @@
+---
+id: "1.2"
+slug: valid-anagram
+title: Valid Anagram
+leetcode: 242
+url: https://leetcode.com/problems/valid-anagram/
+difficulty: Easy
+premium: false
+category: arrays-hashing
+patterns: [hashing-complement]
+prerequisites: ["Hash map as a counter", "Character to index arithmetic"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Given two strings `s` and `t`, return `true` if `t` is an **anagram** of `s` — the same characters
+with the same multiplicities, in any order — and `false` otherwise.
+
+<Examples>
+  <Example input={`s = "anagram"
+t = "nagaram"`} output="true">
+    Both hold three a's, one n, one g, one r and one m.
+  </Example>
+  <Example input={`s = "rat"
+t = "car"`} output="false">
+    Same length, but t has a c that s never had.
+  </Example>
+  <Example input={`s = "aacc"
+t = "ccac"`} output="false">
+    Both strings have length four and use only a and c — and yet they are not anagrams.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= s.length, t.length <= 5 * 10^4`
+- `s` and `t` consist of **lowercase English letters**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- "Anagram" means *same multiset of characters*. Multiset means counting — ordering is a detour.
+- The alphabet is fixed at 26, so the counter costs a constant amount of memory no matter how long
+  the strings are. That is what makes the target space `O(1)`.
+- Two strings of different lengths can never be anagrams, so there is a free answer before any work
+  starts.
+
+</Signals>
+
+<BruteForce>
+
+Sort both strings and compare: `sorted(s) == sorted(t)`.
+
+**O(n log n) time, O(n) space.** Correct, one line, and worth saying first — it shows you have
+understood what an anagram is. The bottleneck is that sorting establishes a *full order* on the
+characters when all the question needs is *how many of each*. Counting is linear; ordering is not.
+
+</BruteForce>
+
+<Insight>
+
+Two strings are anagrams exactly when their character counts match, and counting is linear where sorting is not.
+
+</Insight>
+
+<Approach>
+
+1. If the lengths differ, return `false` right away.
+2. Keep one array of 26 counters, indexed by `ord(ch) - ord("a")`.
+3. Walk both strings **together**: add one for the character from `s`, subtract one for the character
+   from `t`.
+4. The strings are anagrams exactly when every counter ended at zero.
+
+The single pass over both strings only works because step 1 guaranteed equal lengths — that check is
+a correctness guard, not an optimisation.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def isAnagram(self, s: str, t: str) -> bool:
+        # O(n log n) time, O(n) space
+        return sorted(s) == sorted(t)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def isAnagram(self, s: str, t: str) -> bool:
+        # O(n) time, O(1) space — 26 counters, independent of n
+        if len(s) != len(t):
+            return False
+
+        counts = [0] * 26
+
+        for a, b in zip(s, t):                  # equal lengths, so one pass covers both
+            counts[ord(a) - ord("a")] += 1
+            counts[ord(b) - ord("a")] -= 1
+
+        return all(count == 0 for count in counts)
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **The length check is not optional.** `zip` stops at the shorter string, so without it `"ab"` and
+  `"abc"` would balance to all zeros and be reported as anagrams. This is the one way to get the
+  single-pass version wrong.
+- `Counter(s) == Counter(t)` is the same idea and perfectly acceptable — but know what you wrote: it
+  is a hash map, so its space is `O(k)` in the number of distinct characters rather than a fixed 26.
+  That is exactly the trade the Unicode follow-up asks about.
+- `ord(ch) - ord("a")` silently assumes lowercase ASCII. The constraints promise it; say so out loud
+  instead of relying on it in silence — with an uppercase letter the index goes negative and Python
+  will happily write to the wrong end of the array.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"What if the inputs contain Unicode characters?"* — LeetCode's own follow-up. The 26-slot array
+  breaks; switch to a hash map keyed by character. Time stays `O(n)`, space becomes `O(k)` for `k`
+  distinct characters.
+- *"Group every anagram in a list together."* — That is Group Anagrams, and the count tuple you just
+  built becomes the dictionary key.
+- *"No extra space at all."* — Sort both in place and compare. Python strings are immutable, so this
+  needs a language with mutable character arrays; naming that limitation is part of the answer.
+
+</FollowUps>

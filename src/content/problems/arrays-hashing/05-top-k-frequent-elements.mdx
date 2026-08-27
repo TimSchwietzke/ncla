@@ -1,0 +1,160 @@
+---
+id: "1.5"
+slug: top-k-frequent-elements
+title: Top K Frequent Elements
+leetcode: 347
+url: https://leetcode.com/problems/top-k-frequent-elements/
+difficulty: Medium
+premium: false
+category: arrays-hashing
+patterns: [hashing-complement, heap-topk]
+prerequisites: ["Hash map as a counter", "A frequency is bounded by n"]
+targetComplexity: { time: "O(n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Given an integer array `nums` and an integer `k`, return the `k` most frequent elements. The answer
+may be returned in any order.
+
+<Examples>
+  <Example input={`nums = [1, 1, 1, 2, 2, 3]
+k = 2`} output={`[1, 2]`}>
+    1 appears three times, 2 twice, 3 once. The top two are 1 and 2.
+  </Example>
+  <Example input={`nums = [1]
+k = 1`} output={`[1]`}>
+    One distinct value, and `k` may never exceed that count.
+  </Example>
+  <Example input={`nums = [1, 2, 1, 2, 1, 2, 3, 1, 3, 2]
+k = 2`} output={`[1, 2]`}>
+    1 and 2 appear four times each — they share a frequency, and both are wanted.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= n <= 10^5`
+- `-10^4 <= nums[i] <= 10^4`
+- `k` is in the range `[1, number of distinct elements]`
+- The answer is guaranteed to be **unique**
+- **Follow-up:** the algorithm must be better than `O(n log n)`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- "The `k` most frequent" splits into two steps: count, then select. Counting is a hash map and is
+  never the hard part — the selection is where the problem lives.
+- The follow-up **bans `O(n log n)` outright**, which is a direct instruction not to sort the counts.
+  When a statement rules out the obvious solution, it is telling you the shape of the intended one.
+- A frequency is at least 1 and at most `n`. A small bounded integer is an **array index** waiting to
+  be used, and that is what lets you avoid sorting entirely.
+
+</Signals>
+
+<BruteForce>
+
+Count every value with a hash map, then sort the distinct values by their frequency and take the
+first `k`.
+
+**O(n + u log u) time, O(u) space** for `u` distinct values. Perfectly correct, and precisely the
+solution the follow-up tells you to beat. The bottleneck is that sorting produces a *complete
+ranking* when you only need the top `k` — and it throws away the fact that the sort keys are small
+integers with a known upper bound.
+
+</BruteForce>
+
+<Insight>
+
+A frequency is always between 1 and n, so it can be an array index instead of a sort key.
+
+</Insight>
+
+<Approach>
+
+1. Count each value into a dictionary — one pass.
+2. Build `buckets`, a list of `n + 1` empty lists. `buckets[f]` will hold every value that occurred
+   exactly `f` times.
+3. Drop each value into its bucket — one pass over the distinct values.
+4. Walk the buckets from `n` down to `1`, collecting values until you have `k` of them.
+
+Every step is linear, so the whole thing is `O(n)`. No comparison sort ever happens: the frequency
+*is* the position.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def topKFrequent(self, nums: list[int], k: int) -> list[int]:
+        # O(n + u log u) time, O(u) space — u = number of distinct values
+        counts: dict[int, int] = {}
+        for x in nums:
+            counts[x] = counts.get(x, 0) + 1
+
+        ranked = sorted(counts, key=lambda value: counts[value], reverse=True)
+        return ranked[:k]
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def topKFrequent(self, nums: list[int], k: int) -> list[int]:
+        # O(n) time, O(n) space
+        counts: dict[int, int] = {}
+        for x in nums:
+            counts[x] = counts.get(x, 0) + 1
+
+        # buckets[f] holds every value seen exactly f times. f can be n, so n + 1 slots.
+        buckets: list[list[int]] = [[] for _ in range(len(nums) + 1)]
+        for value, frequency in counts.items():
+            buckets[frequency].append(value)
+
+        result: list[int] = []
+        for frequency in range(len(nums), 0, -1):
+            for value in buckets[frequency]:
+                result.append(value)
+                if len(result) == k:        # test per value, never per bucket
+                    return result
+
+        return result
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Test the length after every value, not after every bucket.** A bucket can hold several values, so
+  `result += buckets[f]` followed by `if len(result) == k` can step straight past `k` and never fire
+  — the function then runs off the end of the loop and returns `None`. NeetCode's own published
+  solution has exactly this shape: on `nums = [1, 2, 3], k = 2` it returns nothing at all. The
+  LeetCode judge never catches it, because the "answer is unique" guarantee means the cut always
+  falls between two buckets — but an interviewer asking *"what about ties?"* will.
+- `buckets` needs `n + 1` slots, not `n`. A single value repeated `n` times lands in `buckets[n]`.
+- The values themselves cannot index an array — they run down to `-10^4`. Only their *frequencies*
+  can. Keep the hash map for the counting step.
+- Do not sort the counts "just to be safe". The follow-up explicitly forbids `O(n log n)`, and
+  reaching for `sorted` after building the buckets throws away the whole point.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Do it with a heap instead."* — `heapq.nlargest(k, counts, key=counts.get)` is `O(u log k)`.
+  Asymptotically worse than the buckets, and still a completely reasonable first answer in an
+  interview — say it, then say why the bounded frequency lets you do better.
+- *"What if the answer is not unique?"* — Any `k` values with maximal frequency are acceptable. The
+  per-value break already produces a valid answer; the bucket-at-a-time version does not.
+- *"The data streams in and `k` is fixed."* — Buckets need every count up front, so they stop
+  working. Keep a size-`k` min-heap keyed by frequency instead — that is the Heap category's whole
+  subject, and this is the bridge to it.
+
+</FollowUps>

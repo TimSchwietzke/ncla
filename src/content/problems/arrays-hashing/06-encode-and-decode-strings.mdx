@@ -1,0 +1,152 @@
+---
+id: "1.6"
+slug: encode-and-decode-strings
+title: Encode and Decode Strings
+leetcode: 271
+url: https://leetcode.com/problems/encode-and-decode-strings/
+difficulty: Medium
+premium: true
+category: arrays-hashing
+patterns: [length-prefix]
+prerequisites: ["String slicing", "Awareness of delimiter collisions"]
+targetComplexity: { time: "O(n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Design an algorithm to encode a list of strings into a **single string**, which is then sent over the
+network and decoded back into the original list. You write both ends: `encode(strs)` produces the
+string, `decode(s)` must return a list equal to the original.
+
+<Examples>
+  <Example input={`strs = ["Hello", "World"]`} output={`["Hello", "World"]`}>
+    Two ordinary strings. Whatever `encode` produces, `decode` has to return this list unchanged.
+  </Example>
+  <Example input={`strs = [""]`} output={`[""]`}>
+    A single empty string. It must not come back as an empty list.
+  </Example>
+  <Example input={`strs = ["4#abc", "x"]`} output={`["4#abc", "x"]`}>
+    The payload itself contains a `#` and a digit. Both have to survive the round trip untouched.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `0 <= strs.length < 100`
+- `0 <= strs[i].length < 200`
+- `strs[i]` may contain **any of the 256 valid ASCII characters**
+- **Follow-up:** could you write a generalised algorithm that works on any set of characters?
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The payload may contain **any** character. That single line kills every separator you could pick,
+  because whatever you choose can also appear inside the data.
+- The empty string is legal, so the format must distinguish *one empty string* from *no strings at
+  all* — a distinction that a naive join loses.
+- You control **both ends**. That means you get to design the wire format, and the decoder can simply
+  be told how far to read instead of having to search.
+
+</Signals>
+
+<BruteForce>
+
+Join the strings with a separator: `"#".join(strs)`, and `s.split("#")` to get them back.
+
+This one is not slow — it is **wrong**. `["a#b"]` encodes to `a#b` and decodes to `["a", "b"]`, and
+no other single character rescues it, because the constraints permit all 256. The bottleneck here is
+not time at all; it is that the decoder has to *guess* where a string ends. Recognising that a
+correct-looking solution is simply incorrect is the whole exercise.
+
+</BruteForce>
+
+<Insight>
+
+Prefix each string with its length, and the decoder never has to guess where a string ends — it is told.
+
+</Insight>
+
+<Approach>
+
+1. **Encode:** for each string emit its length, then a `#`, then the string itself. `"Hello"` becomes
+   `5#Hello`, and the pieces are concatenated with nothing between them.
+2. **Decode:** keep a pointer `i` at the start of the next record.
+3. Scan forward to the first `#` — everything between `i` and it is the length `L`.
+4. The payload is the `L` characters that begin right after that `#`. Take them.
+5. Move `i` past the payload and repeat until the string is exhausted.
+
+Step 4 is why a `#` inside the data is harmless: the decoder **jumps over** the payload by length and
+never looks inside it. Saying that sentence out loud is what the interviewer is waiting for.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Codec:
+    # Wrong on purpose: correct only as long as no string contains the separator.
+    def encode(self, strs: list[str]) -> str:
+        return "#".join(strs)
+
+    def decode(self, s: str) -> list[str]:
+        return s.split("#")          # ["a#b"] comes back as ["a", "b"]
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Codec:
+    def encode(self, strs: list[str]) -> str:
+        # O(n) time, O(n) space
+        return "".join(f"{len(s)}#{s}" for s in strs)
+
+    def decode(self, s: str) -> list[str]:
+        # O(n) time, O(n) space
+        result: list[str] = []
+        i = 0
+
+        while i < len(s):
+            hash_at = s.index("#", i)               # the first # after i closes the length
+            length = int(s[i:hash_at])
+            start = hash_at + 1
+            result.append(s[start:start + length])
+            i = start + length                      # jump the payload, never scan it
+
+        return result
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **A `#` in the payload is not a problem, and knowing why is the answer.** `s.index("#", i)` only
+  ever runs over a *length field*, which is digits. The payload is skipped by arithmetic. An
+  implementation that calls `s.split("#")` anywhere has lost this property.
+- `["a", ""]` and `["a"]` must not collide. They do not: `1#a0#` against `1#a`. Any separator-based
+  format fails this pair, and it is the fastest way to show your format is sound.
+- The empty list encodes to `""` and must decode back to `[]`, not `[""]`. The `while i < len(s)`
+  loop gives that for free; a `split` on an empty string does not.
+- Read the length by scanning to the delimiter, not by taking a fixed number of digits. Lengths here
+  stay under 200, but a format that breaks at 10 characters is a format with a bug waiting.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Could you write a generalised algorithm for any set of characters?"* — LeetCode's own follow-up,
+  and this **already is one**. The length field uses only digits and one delimiter, and both are read
+  by position rather than by search, so the payload's alphabet never matters. Say exactly that
+  instead of proposing something new.
+- *"What if the strings are enormous?"* — The format streams: read a length, read that many bytes,
+  repeat. Nothing requires the whole encoded string in memory at once.
+- *"Why not escape the separator instead?"* — It works — double every `#`, then unescape — but
+  decoding becomes a character-by-character state machine and the output can double in size. Length
+  prefixing keeps the bookkeeping to a couple of characters per string.
+
+</FollowUps>
