@@ -1,0 +1,156 @@
+---
+id: "5.2"
+slug: search-a-2d-matrix
+title: Search a 2D Matrix
+leetcode: 74
+url: https://leetcode.com/problems/search-a-2d-matrix/
+difficulty: Medium
+premium: false
+category: binary-search
+patterns: [binary-search]
+prerequisites: ["Binary Search", "Index arithmetic between 1-D and 2-D"]
+targetComplexity: { time: "O(log(m * n))", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+An `m x n` matrix has two properties: every row is sorted ascending, and the first value of each row
+is larger than the last value of the row above it. Return `true` if `target` is present. The solution
+must run in `O(log(m · n))`.
+
+<Examples>
+  <Example input={`matrix = [[1, 3, 5, 7],
+          [10, 11, 16, 20],
+          [23, 30, 34, 60]]
+target = 3`} output="true">
+    Row 0 spans 1 to 7, so 3 can only be there — and it is.
+  </Example>
+  <Example input={`matrix = [[1, 3, 5, 7],
+          [10, 11, 16, 20],
+          [23, 30, 34, 60]]
+target = 13`} output="false">
+    13 falls between rows: row 1 runs 10 to 20 but never holds it.
+  </Example>
+  <Example input={`matrix = [[1]]
+target = 1`} output="true">
+    A single cell is still a valid matrix.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `m == matrix.length`, `n == matrix[i].length`, `1 <= m, n <= 100`
+- `-10^4 <= matrix[i][j], target <= 10^4`
+- Rows are sorted, and each row starts above where the previous one ended
+- Must run in `O(log(m · n))`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The second property is the whole gift: reading the matrix **row by row** produces one globally
+  sorted sequence. The two-dimensional shape is presentation, not structure.
+- `O(log(m · n))` is `O(log m + log n)`, so either one search over `m · n` cells or two nested
+  searches will do. Both are correct; the flattened one is shorter to write and harder to get wrong.
+- Nothing here needs the values to be distinct or positive. The only thing being used is the ordering.
+
+</Signals>
+
+<BruteForce>
+
+Look at every cell.
+
+**O(m · n) time, O(1) space.** With `m, n <= 100` that is ten thousand cells and would pass — which
+is exactly why the statement pins the complexity. The bottleneck is that the scan ignores both
+sortedness properties, and each of them is worth a logarithm.
+
+</BruteForce>
+
+<Insight>
+
+Read row after row and the matrix is one sorted array of length m·n, so index i lives at row i // n, column i % n.
+
+</Insight>
+
+<Approach>
+
+1. Treat the matrix as a virtual array of `m · n` values.
+2. Run an ordinary binary search over the index range `[0, m · n - 1]`.
+3. Translate a flat index `i` into a cell: `row = i // n`, `column = i % n`.
+4. Compare and halve exactly as in the one-dimensional case.
+
+The alternative is two searches: first over the rows, comparing `target` against each row's last
+value to find the row that could contain it, then within that row. Same complexity, twice the loop
+bounds to get right. Name both, write the flattened one.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def searchMatrix(self, matrix: list[list[int]], target: int) -> bool:
+        # O(m * n) time, O(1) space
+        for row in matrix:
+            for value in row:
+                if value == target:
+                    return True
+        return False
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def searchMatrix(self, matrix: list[list[int]], target: int) -> bool:
+        # O(log(m * n)) time, O(1) space
+        rows, cols = len(matrix), len(matrix[0])
+        low, high = 0, rows * cols - 1
+
+        while low <= high:
+            mid = low + (high - low) // 2
+            value = matrix[mid // cols][mid % cols]     # flat index -> cell
+
+            if value == target:
+                return True
+            if value < target:
+                low = mid + 1
+            else:
+                high = mid - 1
+
+        return False
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Divide by the number of columns, not rows.** `mid // cols` gives the row and `mid % cols` the
+  column. Swapping them still runs, still returns a boolean, and is wrong on any non-square matrix —
+  the worst kind of bug, because square test cases pass.
+- The second matrix property is load-bearing. Without "each row starts above the previous row's end"
+  the flattening is not sorted, and this becomes LC 240, which is a different algorithm entirely
+  (start at a corner and walk).
+- `matrix[0]` is safe here because `m, n >= 1`. If the constraints allowed an empty matrix, that line
+  would be the crash.
+- Two nested binary searches are equally correct — but they need `while top <= bot` on the outside and
+  a separate check that a row was actually found. More places to slip for the same complexity.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Rows sorted, columns sorted, but rows do not continue each other."* — LC 240: start at the
+  top-right corner and move left on too-large, down on too-small. `O(m + n)`, and binary search does
+  not apply.
+- *"Return the position, not just whether it is there."* — Return `(mid // cols, mid % cols)` instead
+  of `True`; the flattening pays off again.
+- *"Count how many values are below the target."* — Binary search for the insertion point rather than
+  the value, and `low` after the loop is the count.
+
+</FollowUps>

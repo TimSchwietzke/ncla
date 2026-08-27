@@ -1,0 +1,172 @@
+---
+id: "5.6"
+slug: time-based-key-value-store
+title: Time Based Key-Value Store
+leetcode: 981
+url: https://leetcode.com/problems/time-based-key-value-store/
+difficulty: Medium
+premium: false
+category: binary-search
+patterns: [binary-search, hashing-complement]
+prerequisites: ["Binary Search for an insertion point", "Hash map of lists"]
+targetComplexity: { time: "O(1) set, O(log n) get", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Design a store that keeps several timestamped values per key.
+
+`set(key, value, timestamp)` records a value. `get(key, timestamp)` returns the value stored with the
+**largest** timestamp that is still `<= timestamp`, or `""` if there is none.
+
+Timestamps passed to `set` are **strictly increasing**.
+
+<Examples>
+  <Example input={`set("foo", "bar", 1)
+get("foo", 1)`} output={`"bar"`}>
+    An exact hit on the timestamp.
+  </Example>
+  <Example input={`… then get("foo", 3)`} output={`"bar"`}>
+    Nothing was written at 3, so the most recent earlier write wins.
+  </Example>
+  <Example input={`… set("foo", "bar2", 4)
+then get("foo", 2)`} output={`"bar"`}>
+    Queries look **backwards** only. The later write at 4 is invisible from 2.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= key.length, value.length <= 100`, lowercase letters and digits
+- `1 <= timestamp <= 10^7`
+- Timestamps given to `set` are **strictly increasing**
+- At most `2 * 10^5` calls in total
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Two lookups stacked on top of each other: *which key* is a hash map, *which timestamp* is a search.
+  Splitting the problem along that seam is most of the work.
+- **"The largest value that is still at most `x`"** is a binary search for an insertion point, not for
+  an exact match. That phrasing is the recognisable one.
+- The promise that timestamps arrive **increasing** is the load-bearing constraint: each key's list is
+  already sorted, so `set` never has to insert in the middle and never has to sort.
+
+</Signals>
+
+<BruteForce>
+
+Keep a list per key and, on `get`, scan it backwards for the first timestamp at or below the query.
+
+**`set` is `O(1)`, `get` is `O(n)`.** Correct and short. The bottleneck is that the list is already
+sorted and the scan ignores it — with `2 · 10^5` calls, repeatedly walking a long history is what
+turns an easy design problem into a timeout.
+
+</BruteForce>
+
+<Insight>
+
+Each key's history is already sorted by construction, so the right value is one binary search for an insertion point away.
+
+</Insight>
+
+<Approach>
+
+1. Keep a dictionary from **key → list of `(timestamp, value)`**, appended in arrival order.
+2. `set` appends. Because timestamps only increase, the list stays sorted for free.
+3. `get` binary-searches that list for the largest timestamp `<= query`.
+4. Keep a running `answer`: whenever `history[mid]` is at or below the query it is a candidate, so
+   record its value and move **right** looking for something later.
+5. When the range empties, the last recorded candidate is the answer — or `""` if nothing was ever
+   recorded.
+
+The "record and keep going" shape in step 4 is the same one as Koko: the search is not looking for an
+exact match but for the **boundary** of a monotone condition.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class TimeMap:
+    def __init__(self) -> None:
+        # set is O(1); get is O(n) in the key's history
+        self.store: dict[str, list[tuple[int, str]]] = {}
+
+    def set(self, key: str, value: str, timestamp: int) -> None:
+        self.store.setdefault(key, []).append((timestamp, value))
+
+    def get(self, key: str, timestamp: int) -> str:
+        for stamp, value in reversed(self.store.get(key, [])):
+            if stamp <= timestamp:
+                return value
+        return ""
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class TimeMap:
+    def __init__(self) -> None:
+        # set is O(1); get is O(log n), O(n) space
+        self.store: dict[str, list[tuple[int, str]]] = {}
+
+    def set(self, key: str, value: str, timestamp: int) -> None:
+        # Timestamps arrive increasing, so appending keeps the list sorted.
+        self.store.setdefault(key, []).append((timestamp, value))
+
+    def get(self, key: str, timestamp: int) -> str:
+        history = self.store.get(key, [])
+        answer = ""
+        low, high = 0, len(history) - 1
+
+        while low <= high:
+            mid = low + (high - low) // 2
+            stamp, value = history[mid]
+
+            if stamp <= timestamp:
+                answer = value          # a candidate — but something later may also fit
+                low = mid + 1
+            else:
+                high = mid - 1
+
+        return answer
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`get` looks backwards only.** Returning the nearest timestamp in either direction is the intuitive
+  misreading and it is wrong: a value written *after* the query does not exist yet from the query's
+  point of view.
+- **An unknown key must return `""`, not raise.** `self.store.get(key, [])` handles it; `self.store[key]`
+  does not, and the tests do query keys that were never set.
+- Do not sort inside `set`. The strictly-increasing guarantee is what makes append correct — but say
+  out loud that you are relying on it, because without it you would need `bisect.insort` and `set`
+  would become `O(n)`.
+- Record the candidate value, not just its index, and keep searching right. Returning at the first
+  `stamp <= timestamp` you happen to land on gives *a* valid earlier value rather than the *latest*
+  one.
+- `bisect.bisect_right` over a list of timestamps does the same job in one line. Knowing the manual
+  loop matters more, because the next problem in this family will not have a library function.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"What if timestamps arrived out of order?"* — `set` would have to insert in sorted position with
+  `bisect.insort`, making it `O(n)`; `get` would be unchanged. Naming which guarantee you leaned on is
+  the point of this question.
+- *"Delete a key's history before a given time."* — The list is sorted, so binary search the cut point
+  and slice once, rather than filtering.
+- *"Values at a timestamp from *any* key."* — A different index entirely: one global list sorted by
+  timestamp, with the key stored alongside. Worth saying that the current design cannot answer it.
+
+</FollowUps>

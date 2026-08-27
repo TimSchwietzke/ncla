@@ -1,0 +1,152 @@
+---
+id: "5.1"
+slug: binary-search
+title: Binary Search
+leetcode: 704
+url: https://leetcode.com/problems/binary-search/
+difficulty: Easy
+premium: false
+category: binary-search
+patterns: [binary-search]
+prerequisites: ["A sorted array", "Half-open versus closed ranges"]
+targetComplexity: { time: "O(log n)", space: "O(1)" }
+visualizer: { name: binary-search, preset: search-sorted-array }
+status: complete
+---
+
+<Statement>
+
+Given a sorted array `nums` of **unique** integers and a `target`, return the index of `target`, or
+`-1` if it is absent. The algorithm must run in `O(log n)`.
+
+<Examples>
+  <Example input={`nums = [-1, 0, 3, 5, 9, 12]
+target = 9`} output="4">
+    Three comparisons are enough: the middle 3, then 9.
+  </Example>
+  <Example input={`nums = [-1, 0, 3, 5, 9, 12]
+target = 2`} output="-1">
+    2 would belong between 0 and 3, and the range closes on nothing.
+  </Example>
+  <Example input={`nums = [5]
+target = 5`} output="0">
+    A single element still has to be examined once.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= nums.length <= 10^4`
+- `-10^4 < nums[i], target < 10^4`
+- All integers are **unique**, and `nums` is sorted ascending
+- The algorithm must run in `O(log n)`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **Sorted input plus a required `O(log n)`** is the least subtle signal in the whole list. There is
+  exactly one technique that halves a sorted range.
+- Comparing against the middle element answers more than "is this it": it also says which **half** the
+  answer cannot be in. Every comparison must throw away work, or the logarithm does not appear.
+- This is the template the rest of the category is built on. Getting the loop bounds right here is
+  what makes the rotated and answer-space variants writable at all.
+
+</Signals>
+
+<BruteForce>
+
+Scan from left to right until the value shows up.
+
+**O(n) time, O(1) space.** Correct, and it ignores the one thing you were given: the ordering. The
+bottleneck is that each comparison rules out a single element, while a comparison against the middle
+rules out half the array. That is the difference between `10^4` steps and fourteen.
+
+</BruteForce>
+
+<Insight>
+
+Comparing against the middle element does not just test it — it eliminates the entire half that cannot contain the target.
+
+</Insight>
+
+<Approach>
+
+1. Keep a **closed** range `[low, high]`, initially the whole array.
+2. While `low <= high`, take `mid = low + (high - low) // 2`.
+3. If `nums[mid] == target`, return `mid`.
+4. If `nums[mid] < target`, the answer cannot be at `mid` or left of it — set `low = mid + 1`.
+5. Otherwise set `high = mid - 1`.
+6. When `low` passes `high` the range is empty and the target is absent.
+
+The `+ 1` and `- 1` in steps 4 and 5 are what guarantee progress. With a closed range, `mid` has just
+been ruled out, so it must be excluded — leaving it in is how binary searches hang forever.
+
+<Viz name="binary-search" preset="search-sorted-array" />
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def search(self, nums: list[int], target: int) -> int:
+        # O(n) time, O(1) space
+        for i, value in enumerate(nums):
+            if value == target:
+                return i
+        return -1
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def search(self, nums: list[int], target: int) -> int:
+        # O(log n) time, O(1) space
+        low, high = 0, len(nums) - 1
+
+        while low <= high:                       # closed range: high is a valid index
+            mid = low + (high - low) // 2        # avoids overflow in fixed-width languages
+
+            if nums[mid] == target:
+                return mid
+            if nums[mid] < target:
+                low = mid + 1                    # mid is ruled out, so step past it
+            else:
+                high = mid - 1
+
+        return -1
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`low <= high`, not `low < high`.** With a closed range the last candidate is a single index where
+  `low == high`; stopping early skips it, and `[5]` with target 5 returns `-1`.
+- **Move past `mid`, never onto it.** `low = mid` instead of `mid + 1` makes the range stop shrinking
+  as soon as it has two elements, and the loop spins forever. Every binary search bug is one of these
+  two lines.
+- `low + (high - low) // 2` and `(low + high) // 2` are identical in Python, which has unbounded
+  integers. In Java or C++ the second overflows on large arrays. Write the safe one and be able to say
+  why — interviewers ask.
+- Decide up front whether your range is **closed** `[low, high]` or **half-open** `[low, high)`. Both
+  work; mixing them mid-function does not. This is worth stating out loud before you type.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Return where it *would* go if it is absent."* — LC 35: return `low` after the loop instead of
+  `-1`. `low` ends up exactly at the insertion point, which is the fact the next few problems live on.
+- *"Duplicates are allowed — find the first occurrence."* — Do not return on a hit; record it and keep
+  searching left with `high = mid - 1`. The same shape gives the last occurrence with `low = mid + 1`.
+- *"Why is a scan sometimes faster in practice?"* — For small arrays, cache locality beats the
+  logarithm. Mention it as a real engineering caveat, not as a reason to skip the algorithm.
+
+</FollowUps>

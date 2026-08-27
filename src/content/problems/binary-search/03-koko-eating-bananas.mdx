@@ -1,0 +1,162 @@
+---
+id: "5.3"
+slug: koko-eating-bananas
+title: Koko Eating Bananas
+leetcode: 875
+url: https://leetcode.com/problems/koko-eating-bananas/
+difficulty: Medium
+premium: false
+category: binary-search
+patterns: [binary-search]
+prerequisites: ["Binary Search", "Recognising a monotone yes/no question"]
+targetComplexity: { time: "O(n log(max pile))", space: "O(1)" }
+visualizer: { name: binary-search, preset: koko-bananas }
+status: complete
+---
+
+<Statement>
+
+There are `n` piles of bananas and the guards return in `h` hours. Koko picks one **eating speed**
+`k`, and each hour she eats up to `k` bananas from a single pile — if that pile has fewer left, she
+finishes it and idles for the rest of the hour.
+
+Return the **smallest** `k` that lets her finish every pile within `h` hours.
+
+<Examples>
+  <Example input={`piles = [3, 6, 7, 11]
+h = 8`} output="4">
+    At speed 4 the piles take 1 + 2 + 2 + 3 = 8 hours. At speed 3 they take 10.
+  </Example>
+  <Example input={`piles = [30, 11, 23, 4, 20]
+h = 5`} output="30">
+    Five piles in five hours means one pile per hour, so the speed must match the largest pile.
+  </Example>
+  <Example input={`piles = [30, 11, 23, 4, 20]
+h = 6`} output="23">
+    One spare hour is enough to split the largest pile, so 23 suffices.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= piles.length <= 10^4`
+- `piles.length <= h <= 10^9` — there is always at least one hour per pile
+- `1 <= piles[i] <= 10^9`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **The answer is a number in a known range**, not an element of the input. The smallest useful speed
+  is 1 and the largest ever needed is `max(piles)` — anything faster still costs one hour per pile.
+- Checking a *given* speed is easy: `sum(ceil(pile / k))` hours. When verifying a candidate is cheap
+  but finding it is not, that is the shape of a search over the answer.
+- The check is **monotone**: if speed `k` works then so does every speed above it. That property, and
+  nothing else, is what licenses bisection.
+
+</Signals>
+
+<BruteForce>
+
+Try every speed from 1 upwards and return the first that fits in `h` hours.
+
+**O(n · max(piles)) time, O(1) space.** Correct, and with piles up to `10^9` it is `10^13` operations.
+The bottleneck is not the feasibility check — that part is already linear and unavoidable — it is
+that the candidates are tested one at a time, although the yes/no answers form a single block of noes
+followed by a single block of yeses.
+
+</BruteForce>
+
+<Insight>
+
+If a speed works then every faster speed works too, so the feasible speeds form one unbroken block — and a block can be bisected.
+
+</Insight>
+
+<Approach>
+
+1. The answer lies in `[1, max(piles)]`. Nothing slower than 1 exists and nothing faster than the
+   biggest pile ever helps.
+2. Binary search that **range of candidate answers** — not the array.
+3. For a candidate `k`, compute `hours = sum(ceil(pile / k))`.
+4. If `hours <= h`, `k` works: record it and look for something smaller (`high = k - 1`).
+5. Otherwise `k` is too slow: `low = k + 1`.
+6. The last recorded working speed is the smallest one.
+
+The row in the animation below is the **range of speeds**, not the piles. That substitution is the
+whole idea, and it is what makes the rest of this family — capacities, distances, thresholds — the
+same problem.
+
+<Viz name="binary-search" preset="koko-bananas" />
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def minEatingSpeed(self, piles: list[int], h: int) -> int:
+        # O(n * max(piles)) time, O(1) space
+        for speed in range(1, max(piles) + 1):
+            hours = sum(-(-pile // speed) for pile in piles)     # ceil without floats
+            if hours <= h:
+                return speed
+        return max(piles)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def minEatingSpeed(self, piles: list[int], h: int) -> int:
+        # O(n log(max piles)) time, O(1) space
+        low, high = 1, max(piles)
+        best = high                                  # max(piles) always works
+
+        while low <= high:
+            speed = low + (high - low) // 2
+            hours = sum(-(-pile // speed) for pile in piles)      # ceil(pile / speed)
+
+            if hours <= h:
+                best = speed                         # works — try to go slower
+                high = speed - 1
+            else:
+                low = speed + 1                      # too slow
+
+        return best
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Start the range at 1, not 0.** A speed of 0 eats nothing and divides by zero. The lower bound of a
+  search over the answer is part of the problem statement, not a formality.
+- **`max(piles)` is the right upper bound.** Going faster than the largest pile changes nothing —
+  every pile still costs one hour. A loose bound like `10^9` also works and costs only a few more
+  iterations, but knowing the tight one shows you understand the shape.
+- **Use `-(-pile // speed)` or `math.ceil`, and know the difference.** `pile // speed` floors, which
+  under-counts the hours and reports speeds as feasible when they are not. With values up to `10^9`,
+  integer arithmetic is also safer than `math.ceil(pile / speed)` on floats.
+- Record the working candidate before shrinking. Returning `low` after the loop happens to work here
+  too, but an explicit `best` says what you mean and survives being adapted to a *largest*-feasible
+  variant.
+- The check is `hours <= h`, not `<`. Finishing exactly on the hour is finishing.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Capacity to Ship Packages Within D Days."* — LC 1011: the same search over the answer, with
+  "capacity" instead of "speed" and a running-sum feasibility check. Recognising it as this problem is
+  the entire difficulty.
+- *"Split an array into k subarrays minimising the largest sum."* — LC 410: again the same, and the
+  standard demonstration that this pattern replaces a much harder dynamic program.
+- *"How do you know the feasibility is monotone?"* — Eating faster never takes more hours, since
+  `ceil(p / k)` is non-increasing in `k`. Say that sentence; without it, bisecting is a guess.
+
+</FollowUps>

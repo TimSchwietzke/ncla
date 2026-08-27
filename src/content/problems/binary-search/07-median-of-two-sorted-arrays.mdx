@@ -1,0 +1,182 @@
+---
+id: "5.7"
+slug: median-of-two-sorted-arrays
+title: Median of Two Sorted Arrays
+leetcode: 4
+url: https://leetcode.com/problems/median-of-two-sorted-arrays/
+difficulty: Hard
+premium: false
+category: binary-search
+patterns: [binary-search]
+prerequisites: ["Binary Search", "What a median is, in terms of a partition"]
+targetComplexity: { time: "O(log(min(m, n)))", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Given two sorted arrays `nums1` and `nums2`, return the **median** of the two combined. The run time
+must be `O(log(m + n))`.
+
+The median of a combined length `k` is the middle value when `k` is odd, and the mean of the two
+middle values when `k` is even.
+
+<Examples>
+  <Example input={`nums1 = [1, 3]
+nums2 = [2]`} output="2.0">
+    Combined they are `[1, 2, 3]`, so the middle value is 2.
+  </Example>
+  <Example input={`nums1 = [1, 2]
+nums2 = [3, 4]`} output="2.5">
+    Combined `[1, 2, 3, 4]`, so the mean of the two middle values, `(2 + 3) / 2`.
+  </Example>
+  <Example input={`nums1 = []
+nums2 = [1, 2, 3, 4]`} output="2.5">
+    One array may be empty — only their combined length is guaranteed to be at least 1.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `0 <= m, n <= 1000` and `1 <= m + n <= 2000` — either array may be **empty**
+- `-10^6 <= nums1[i], nums2[i] <= 10^6`
+- Must run in `O(log(m + n))`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The required complexity is **below linear**, which forbids merging. Any solution that touches every
+  element is already too slow, no matter how tidy.
+- A median is not really "the middle element" — it is a **cut**. It splits the combined values into a
+  left half and a right half of known sizes, where everything left is at most everything right.
+- Choosing how many values to take from the first array fixes how many come from the second, because
+  the left half's total size is known. One unknown, over a small range: that is a binary search.
+
+</Signals>
+
+<BruteForce>
+
+Merge the two arrays and read off the middle.
+
+**O(m + n) time, O(m + n) space** — or `O(1)` space if you walk both arrays with two pointers and stop
+halfway. Perfectly correct, and it is the answer you should state first, because the interviewer needs
+to see that you know what a median is before you start bisecting. The bottleneck is that merging
+produces the whole ordering when the question asks about a single cut.
+
+</BruteForce>
+
+<Insight>
+
+The median is a cut that puts a known number of values on the left, so guessing how many come from the shorter array fixes everything else.
+
+</Insight>
+
+<Approach>
+
+1. Make `A` the **shorter** array. This bounds the search to `O(log(min(m, n)))` and keeps the index
+   arithmetic in range.
+2. The left half must hold `half = (m + n + 1) // 2` values. Adding the `+ 1` puts the extra element
+   on the left when the total is odd, which makes the odd case read cleanly later.
+3. Binary search `i`, **how many values are taken from `A`**, over `[0, len(A)]`. Then `j = half - i`
+   comes from `B`, with no freedom left.
+4. Look at the four values around the cut: `a_left = A[i-1]`, `a_right = A[i]`, `b_left = B[j-1]`,
+   `b_right = B[j]`. Missing ends become `-inf` and `+inf`, which removes every boundary special case.
+5. The cut is correct when `a_left <= b_right` **and** `b_left <= a_right` — everything on the left is
+   at most everything on the right.
+6. If `a_left > b_right`, too much was taken from `A`: search left. Otherwise search right.
+7. On a correct cut: for an odd total the answer is `max(a_left, b_left)`; for an even total it is the
+   mean of `max(a_left, b_left)` and `min(a_right, b_right)`.
+
+Note that `i` counts **elements taken**, not an index — that is why its range runs to `len(A)`
+inclusive and why `A[i-1]` and `A[i]` are the two values straddling the cut.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def findMedianSortedArrays(self, nums1: list[int], nums2: list[int]) -> float:
+        # O(m + n) time, O(m + n) space
+        merged = sorted(nums1 + nums2)
+        middle = len(merged) // 2
+
+        if len(merged) % 2:
+            return float(merged[middle])
+        return (merged[middle - 1] + merged[middle]) / 2
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def findMedianSortedArrays(self, nums1: list[int], nums2: list[int]) -> float:
+        # O(log(min(m, n))) time, O(1) space
+        A, B = nums1, nums2
+        if len(A) > len(B):
+            A, B = B, A                          # always bisect the shorter one
+
+        total = len(A) + len(B)
+        half = (total + 1) // 2                  # size of the left side of the cut
+        low, high = 0, len(A)
+
+        while low <= high:
+            i = low + (high - low) // 2          # how many values come from A
+            j = half - i                         # the rest come from B
+
+            a_left = A[i - 1] if i > 0 else float("-inf")
+            a_right = A[i] if i < len(A) else float("inf")
+            b_left = B[j - 1] if j > 0 else float("-inf")
+            b_right = B[j] if j < len(B) else float("inf")
+
+            if a_left <= b_right and b_left <= a_right:      # the cut is valid
+                if total % 2:
+                    return float(max(a_left, b_left))
+                return (max(a_left, b_left) + min(a_right, b_right)) / 2
+
+            if a_left > b_right:
+                high = i - 1                     # took too many from A
+            else:
+                low = i + 1                      # took too few
+
+        return 0.0                               # unreachable for valid input
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Bisect the shorter array.** Not only for the complexity: with `A` the longer one, `j = half - i`
+  can fall outside `B` entirely, and the four-value lookup breaks. The swap is a correctness step
+  disguised as an optimisation.
+- **`i` counts elements, not indices.** Its range is `[0, len(A)]` — inclusive at both ends, because
+  taking none and taking all are both legal cuts. Using `len(A) - 1` loses the "all of A" cut and
+  fails whenever the median sits entirely inside one array.
+- **The infinities are what remove the special cases.** `a_left = -inf` when nothing is taken from `A`
+  makes `a_left <= b_right` trivially true, which is exactly right. Hand-writing those boundary
+  branches instead is where this problem usually dies.
+- **`half = (total + 1) // 2`, with the `+ 1`.** It puts the extra element on the left for odd totals,
+  which is why the odd case is `max(a_left, b_left)` and needs no further adjustment. Drop the `+ 1`
+  and the odd case flips to `min(a_right, b_right)` — also correct, but only if you change both.
+- Either array may be empty. The infinities cover that too, as long as the swap put the empty one in
+  `A`.
+- Say the merge solution out loud first. It is `O(m + n)`, it is right, and starting from it is what
+  makes the cut argument land instead of appearing out of nowhere.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"The k-th smallest of the two arrays."* — The same cut with `half = k`, and it is the more general
+  problem: the median is just `k = (m + n + 1) // 2`.
+- *"More than two arrays."* — The partition argument does not generalise; use a min-heap over the
+  arrays, at `O(k log arrays)`, or binary-search the *value* rather than the cut.
+- *"Why `log(min(m, n))` rather than `log(m + n)`?"* — Only the shorter array is searched, and it is
+  a better bound than the statement asks for. Worth pointing out, since it is free.
+
+</FollowUps>
