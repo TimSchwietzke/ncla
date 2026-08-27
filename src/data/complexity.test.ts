@@ -29,7 +29,7 @@ describe("cheat sheet tables", () => {
   });
 
   it("has a trigger for every pattern, so the generated table has no gaps", () => {
-    expect(PATTERNS).toHaveLength(18);
+    expect(PATTERNS).toHaveLength(20);
     for (const pattern of PATTERNS) {
       expect(pattern.signal.trim().length).toBeGreaterThan(10);
     }

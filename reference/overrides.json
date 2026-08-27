@@ -1,0 +1,129 @@
+{
+  "note": "LeetCode's GraphQL endpoint returns no statement for its seven paid-only problems, so these come from neetcode.io's own problem pages instead. NeetCode restates the problems in its own words and sometimes with its own bounds — every entry names its source so the provenance stays visible. `scripts/fetch-reference.ts` merges this file into reference/neetcode150.json.",
+  "problems": {
+    "encode-and-decode-strings": {
+      "source": "https://neetcode.io/problems/string-encode-and-decode",
+      "statement": "Design an algorithm to encode a list of strings to a single string. The encoded string is then sent over the network and decoded back to the original list of strings. Machine 1 (the sender) has `String encode(List<String> strs)`, machine 2 (the receiver) has `List<String> decode(String s)`. The decoded list must equal the original one.",
+      "examples": [
+        { "input": "strs = [\"Hello\",\"World\"]", "output": "[\"Hello\",\"World\"]" },
+        { "input": "strs = [\"\"]", "output": "[\"\"]" }
+      ],
+      "constraints": [
+        "0 <= strs.length < 100",
+        "0 <= strs[i].length < 200",
+        "strs[i] contains any possible characters out of 256 valid ASCII characters."
+      ],
+      "followUp": "Could you write a generalized algorithm to work on any possible set of characters?"
+    },
+    "walls-and-gates": {
+      "source": "https://neetcode.io/problems/islands-and-treasure",
+      "statement": "You are given an m x n 2D grid initialized with three possible values: -1 is a wall that cannot be traversed, 0 is a gate, and 2147483647 (INF) is an empty room. Fill each empty room with the distance to its nearest gate; a room that cannot reach a gate keeps INF. Movement is up, down, left or right. Modify the grid in place. NeetCode restates this as 'Islands and Treasure' with water, treasure chests and land.",
+      "examples": [
+        {
+          "input": "grid = [[2147483647,-1,0,2147483647],[2147483647,2147483647,2147483647,-1],[2147483647,-1,2147483647,-1],[0,-1,2147483647,2147483647]]",
+          "output": "[[3,-1,0,1],[2,2,1,-1],[1,-1,2,-1],[0,-1,3,4]]"
+        },
+        { "input": "grid = [[0,-1],[2147483647,2147483647]]", "output": "[[0,-1],[1,2]]" }
+      ],
+      "constraints": [
+        "m == grid.length",
+        "n == grid[i].length",
+        "1 <= m, n <= 100",
+        "grid[i][j] is one of {-1, 0, 2147483647}"
+      ],
+      "followUp": null
+    },
+    "graph-valid-tree": {
+      "source": "https://neetcode.io/problems/valid-tree",
+      "statement": "Given n nodes labeled from 0 to n - 1 and a list of undirected edges, decide whether these edges make up a valid tree. All edges are undirected, so [0, 1] and [1, 0] are the same edge and do not both appear.",
+      "examples": [
+        { "input": "n = 5, edges = [[0,1],[0,2],[0,3],[1,4]]", "output": "true" },
+        { "input": "n = 5, edges = [[0,1],[1,2],[2,3],[1,3],[1,4]]", "output": "false" }
+      ],
+      "constraints": [
+        "1 <= n <= 2000",
+        "0 <= edges.length <= 5000",
+        "edges[i].length == 2",
+        "0 <= a_i, b_i < n",
+        "a_i != b_i",
+        "There are no self-loops or repeated edges."
+      ],
+      "followUp": null
+    },
+    "number-of-connected-components-in-an-undirected-graph": {
+      "source": "https://neetcode.io/problems/count-connected-components",
+      "statement": "You have an undirected graph of n nodes labeled from 0 to n - 1, given as an integer n and an array edges where edges[i] = [a_i, b_i] means there is an edge between a_i and b_i. Return the number of connected components in the graph.",
+      "examples": [
+        { "input": "n = 5, edges = [[0,1],[1,2],[3,4]]", "output": "2" },
+        { "input": "n = 5, edges = [[0,1],[1,2],[2,3],[3,4]]", "output": "1" }
+      ],
+      "constraints": [
+        "1 <= n <= 2000",
+        "1 <= edges.length <= 5000",
+        "edges[i].length == 2",
+        "0 <= a_i < n",
+        "0 <= b_i < n",
+        "a_i != b_i",
+        "There are no repeated edges."
+      ],
+      "followUp": null
+    },
+    "alien-dictionary": {
+      "source": "https://neetcode.io/problems/foreign-dictionary",
+      "statement": "A new alien language uses the English alphabet, but the order of the letters is unknown. Given a list of words sorted lexicographically by the rules of that language, return a string of its unique letters in increasing order. Return \"\" if the arrangement is impossible; if several orders are valid, return any of them.",
+      "examples": [
+        { "input": "words = [\"z\",\"o\"]", "output": "\"zo\"", "explanation": "From \"z\" and \"o\" we know 'z' < 'o'." },
+        {
+          "input": "words = [\"hrn\",\"hrf\",\"er\",\"enn\",\"rfnn\"]",
+          "output": "\"hernf\"",
+          "explanation": "'n' < 'f', 'h' < 'e', 'r' < 'n', 'e' < 'r' — one valid order is \"hernf\"."
+        },
+        {
+          "input": "words = [\"abc\",\"ab\"]",
+          "output": "\"\"",
+          "explanation": "The second word is a prefix of the first but comes after it, which no ordering can produce."
+        }
+      ],
+      "constraints": [
+        "1 <= words.length <= 100",
+        "1 <= words[i].length <= 100",
+        "words[i] consists of only lowercase English letters."
+      ],
+      "followUp": null
+    },
+    "meeting-rooms": {
+      "source": "https://neetcode.io/problems/meeting-schedule",
+      "statement": "Given an array of meeting time intervals [[start_1,end_1],[start_2,end_2],...] with start_i < end_i, determine whether a person could attend all meetings without a conflict. The intervals may arrive in any order, and (0,8),(8,10) is not a conflict at 8.",
+      "examples": [
+        {
+          "input": "intervals = [(0,30),(5,10),(15,20)]",
+          "output": "false",
+          "explanation": "(0,30) overlaps both (5,10) and (15,20)."
+        },
+        { "input": "intervals = [(5,8),(9,15)]", "output": "true" }
+      ],
+      "constraints": [
+        "0 <= intervals.length <= 500",
+        "0 <= intervals[i].start < intervals[i].end <= 1,000,000"
+      ],
+      "followUp": null
+    },
+    "meeting-rooms-ii": {
+      "source": "https://neetcode.io/problems/meeting-schedule-ii",
+      "statement": "Given an array of meeting time intervals [[start_1,end_1],[start_2,end_2],...] with start_i < end_i, find the minimum number of rooms required to hold all meetings without a conflict. (0,8),(8,10) is not a conflict at 8.",
+      "examples": [
+        {
+          "input": "intervals = [(0,40),(5,10),(15,20)]",
+          "output": "2",
+          "explanation": "room 1 takes (0,40), room 2 takes (5,10) and (15,20)."
+        },
+        { "input": "intervals = [(4,9)]", "output": "1" }
+      ],
+      "constraints": [
+        "0 <= intervals.length <= 100,000",
+        "0 <= intervals[i].start < intervals[i].end <= 1,000,000"
+      ],
+      "followUp": null
+    }
+  }
+}

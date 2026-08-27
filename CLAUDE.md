@@ -21,15 +21,29 @@ sollen im Kopf englisch abgelegt sein. Niemals deutsche Strings in die App schre
 
 ## 2. Ausgangslage und Rollen der Dateien
 
-- `NeetCode_150_Lerngrundlage.md` — **die inhaltliche Quelle der Wahrheit.** 1194 Zeilen, alle 150
-  Aufgaben in 18 Kategorien mit *Voraussetzungen · Kernidee · Optimal · Laufzeit · Fallstricke*,
-  dazu Muster-Index (17 Muster), Komplexitäts-Spickzettel und Interview-Anhang.
-  **Read-only.** Nicht umschreiben, nicht übersetzen, nicht löschen — sie ist das Referenzdokument,
-  gegen das der englische Content geprüft wird.
+- `reference/neetcode150.json` — **die maschinelle Grundwahrheit.** Für alle 150 Aufgaben:
+  Kategorie, Position, `id`, LeetCode-Nummer und -Titel, Schwierigkeit, Premium-Flag, Statement,
+  Beispiele, **Constraints**, Follow-up, Topic-Tags, Hints und NeetCodes Referenzlösung.
+  Erzeugt von `npm run reference:fetch` aus den Quellen, denen die Daten gehören: die
+  NeetCode-150-Liste aus neetcode.io, Nummer/Schwierigkeit/Premium aus LeetCodes Aufgabenindex,
+  Aufgabentext und Constraints aus LeetCodes GraphQL, Lösungen aus `neetcode-gh/leetcode`.
+  **Nie von Hand bearbeiten** — Ausnahme ist `reference/overrides.json` für die sieben
+  Premium-Aufgaben, zu denen LeetCode nichts herausgibt.
+- `NeetCode_150_Lerngrundlage.md` — die **didaktische** Quelle: pro Aufgabe *Voraussetzungen ·
+  Kernidee · Optimal · Laufzeit · Fallstricke*, dazu Muster-Index, Komplexitäts-Spickzettel und
+  Interview-Anhang. Sie war als Grundidee gedacht, nicht als Wahrheit, und wurde gegen die
+  Grundwahrheit korrigiert (Kategorie-Reihenfolge, Generate Parentheses, 34 `id`s, 2 Titel).
+  **Nicht mehr read-only**, aber jede Änderung an Struktur oder Metadaten muss `npm run
+  reference:diff` sauber lassen. Ihre Prosa ist wertvoll und wird nicht umgeschrieben.
 - `src/content/**` — der daraus erzeugte, englische, erweiterte App-Content. Übersetzung ist das
   Minimum; jede Aufgabe wird zusätzlich um Statement, Brute Force, Lösungscode und Follow-ups ergänzt.
-- Wenn Quelle und App-Content sich widersprechen: die Quelle gewinnt inhaltlich, es sei denn sie ist
-  nachweislich falsch — dann den Widerspruch im Antworttext ansprechen, nicht stillschweigend abweichen.
+- **Rangfolge bei Widersprüchen:** `reference/neetcode150.json` schlägt die Lerngrundlage schlägt
+  Erinnerung. Statement, Beispiele und Constraints kommen **wörtlich von LeetCode** — NeetCode
+  formuliert um und nennt teils andere Schranken, und `<Signals>` rechnet aus der Constraint-Größe
+  die erlaubte Komplexität ab. Die Lerngrundlage liefert die Didaktik, nicht die Zahlen.
+- **Auch die Referenzlösungen sind nicht unfehlbar.** `npm run reference:smoke` führt sie gegen
+  LeetCodes eigene Beispiele aus; zwei Dateien im NeetCode-Repo sind syntaktisch kaputt und stehen
+  namentlich in `KNOWN_UPSTREAM_BREAKAGE`. Kopierter Code wird ausgeführt, nicht geglaubt.
 
 ---
 
@@ -77,7 +91,10 @@ Abhängigkeiten sparsam halten. Vor dem Hinzufügen eines Pakets kurz begründen
 
 ```
 ncla/
-├── CLAUDE.md · README.md · NeetCode_150_Lerngrundlage.md   # Quelle, read-only
+├── CLAUDE.md · README.md · NeetCode_150_Lerngrundlage.md   # didaktische Quelle
+├── reference/
+│   ├── neetcode150.json               # Grundwahrheit, generiert — nie von Hand
+│   └── overrides.json                 # die 7 Premium-Aufgaben, von neetcode.io
 ├── index.html · package.json · tsconfig.json · vite.config.ts
 ├── src-tauri/                         # Desktop-Hülle, nur Konfiguration und ein Rust-Einstieg
 │   ├── tauri.conf.json                # Fenster, Identifier, CSP, Bundle-Ziele
@@ -85,6 +102,9 @@ ncla/
 │   ├── Cargo.toml · build.rs · src/   # nichts App-Logisches, nur der Start
 ├── scripts/
 │   ├── lib/                           # frontmatter.ts (+ Test), collect.ts
+│   ├── fetch-reference.ts             # baut reference/neetcode150.json
+│   ├── diff-source.ts                 # Lerngrundlage gegen die Grundwahrheit
+│   ├── smoke-reference.py             # führt alle 150 Referenzlösungen aus
 │   ├── build-index.ts                 # erzeugt src/data/generated/index.ts
 │   ├── validate-content.ts            # Frontmatter, Pflichtsektionen, Referenzen
 │   └── vite-plugin-content-index.ts   # hält den Index im Dev-Server frisch
@@ -310,14 +330,25 @@ Schublade. Timer und Reveal-Steuerung aus M2 gehören in die Meta-Rail.
 
 ## 9. Visualizer-Architektur
 
-Ein Visualizer pro Muster, **18 insgesamt** (Slugs aus `data/patterns.ts`). Das sind die 17 Zeilen des
-Muster-Index der Quelle, wobei „DP bottom-up“ in `dp-1d` und `dp-2d` aufgeteilt ist — die
-Tabellenfüllung sieht in beiden Fällen zu unterschiedlich aus für einen gemeinsamen Visualizer:
+Ein Visualizer pro Muster, **20 insgesamt** (Slugs aus `data/patterns.ts`). Achtzehn davon sind die
+17 Zeilen des Muster-Index der Quelle, wobei „DP bottom-up“ in `dp-1d` und `dp-2d` aufgeteilt ist —
+die Tabellenfüllung sieht in beiden Fällen zu unterschiedlich aus für einen gemeinsamen Visualizer:
 
 `hashing-complement` · `two-pointer` · `sliding-window` · `monotonic-stack` · `binary-search` ·
 `fast-slow-pointer` · `tree-dfs` · `bfs-level-order` · `backtracking` · `union-find` ·
 `topological-sort` · `dijkstra-prim` · `heap-topk` · `dp-1d` · `dp-2d` · `greedy-scan` ·
 `interval-sweep` · `bit-tricks`
+
+Die letzten beiden gehen **bewusst über den Index der Quelle hinaus**, weil keine vorhandene Zeile
+für sie sachlich passt — die Quelle nennt sie in den Aufgabentexten als Muster und hat vergessen,
+sie in die Tabelle zu schreiben:
+
+`prefix-suffix` (Product of Array Except Self; LeetCode taggt die Aufgabe selbst mit „Prefix Sum“) ·
+`length-prefix` (Encode and Decode Strings — kein Hashing, kein Zeiger, keine Suche)
+
+Ein weiteres Muster kommt nur dazu, wenn es in mindestens zwei der 150 Aufgaben trägt. „Bucket Sort“
+etwa taucht genau einmal auf (Top K Frequent) und bekommt deshalb keins — dort stehen
+`hashing-complement` und `heap-topk`, und der Bucket-Trick lebt im `<Insight>`.
 
 Verbindliches Muster für jeden Visualizer:
 
@@ -349,12 +380,12 @@ Verbindliches Muster für jeden Visualizer:
 6. `steps.test.ts` prüft mindestens: erster Frame = Ausgangszustand, letzter Frame = korrektes
    Ergebnis, Frame-Anzahl plausibel.
 
-**Stand:** Fünf der achtzehn Muster laufen — `hashing-complement`, `sliding-window`,
+**Stand:** Fünf der zwanzig Muster laufen — `hashing-complement`, `sliding-window`,
 `monotonic-stack`, `two-pointer`, `binary-search`. `core/` enthält `types.ts`, den zustandslosen
 `ArrayTrack.tsx`, `layout.ts` (kollidierende Marker) und `StepPlayer.tsx`. Eingebunden sind sie über
 `registry.ts` in `<Viz>` und auf `PatternDetail`.
 
-Die restlichen dreizehn kommen **mit ihrem Content**, nicht auf Vorrat. Baum, Graph, Gitter und Heap
+Die restlichen fünfzehn kommen **mit ihrem Content**, nicht auf Vorrat. Baum, Graph, Gitter und Heap
 brauchen je einen eigenen Renderer neben `ArrayTrack`; der Player und das Preset-System sind schon
 darauf ausgelegt, weil `StepPlayer` nur `steps` und eine `render`-Funktion kennt.
 **Nicht neu erfinden, was in `core/` schon steht.**
@@ -412,11 +443,15 @@ Wochen an Historie stillschweigend zu überschreiben wäre der schlimmste Fehler
 
 ## 11. Arbeitsweise in diesem Repo
 
-- **Reihenfolge der Quelle beibehalten.** Kategorien 1–18 und die Nummerierung innerhalb der
-  Kategorien sind stabile Identifikatoren.
+- **Reihenfolge der geprüften Liste beibehalten.** Kategorien 1–18 und die Nummerierung innerhalb
+  der Kategorien kommen aus `reference/neetcode150.json` und sind stabile Identifikatoren. Nicht aus
+  der Lerngrundlage abschreiben — die lag bei Kategorie-Reihenfolge und 34 `id`s daneben.
+  `npm run reference:diff` muss nach jeder Änderung sauber durchlaufen.
 - **Content-Batches:** Aufgaben immer kategorieweise abarbeiten, nie quer. Nach jeder Kategorie
   `npm run validate` laufen lassen und kurz berichten, was fertig ist.
-- **Neue Aufgabe anlegen:** Abschnitt in der Lerngrundlage lesen → MDX aus dem Template füllen →
+- **Neue Aufgabe anlegen:** Eintrag in `reference/neetcode150.json` lesen (Statement, Beispiele,
+  Constraints, Referenzlösung) **und** den Abschnitt in der Lerngrundlage (Kernidee, Fallstricke) →
+  MDX aus dem Template füllen →
   Muster in `patterns` eintragen → falls sinnvoll ein Visualizer-Preset ergänzen → validieren.
 - **Gold-Standard:** `arrays-hashing/03-two-sum.mdx`, `sliding-window/02-longest-substring-without-repeating-characters.mdx`
   und `stack/05-daily-temperatures.mdx` sind die Referenzdateien. Bei Unsicherheit über Tonfall,
@@ -445,8 +480,23 @@ npm run tauri:dev
 npm run validate
 ```
 
+```bash
+npm run reference:diff
+```
+
 `validate` = `tsc --noEmit` + `scripts/validate-content.ts` + `vitest run`.
 `tauri:build` erzeugt Installer unter `src-tauri/target/release/bundle/`.
+
+Die drei Referenz-Befehle laufen nicht bei jedem Slice, sondern wenn an Roster, Kategorien oder
+Metadaten etwas hängt:
+
+- `reference:fetch` — holt alles neu und schreibt `reference/neetcode150.json`. Dauert ein paar
+  Minuten (150 Netzabrufe) und braucht Internet. Nur nötig, wenn NeetCode seine Liste ändert.
+- `reference:diff` — Lerngrundlage gegen die Grundwahrheit. **Muss sauber sein**, sonst driften
+  Quelle und App auseinander.
+- `reference:smoke` — führt alle 150 Referenzlösungen gegen LeetCodes eigene Beispiele aus.
+  Braucht Python. Erwartung: 105 verifiziert, 43 nicht abdeckbar (Design-, Baum- und
+  In-place-Aufgaben), 2 upstream kaputt, 0 falsch.
 
 ### Tauri-Regeln
 
@@ -457,6 +507,9 @@ npm run validate
 - **localStorage ist origin-gebunden.** Browser und Fenster teilen sich den Speicher **nicht**.
   Das ist der Grund, warum die Hülle vor M4 kam: sonst wäre der Lernfortschritt beim Umstieg weg.
   Wer zwischen beiden wechseln will, nutzt den JSON-Export.
+- **`cargo` liegt nicht im PATH der Shell.** Es steckt in `%USERPROFILE%\.cargo\bin`.
+  `npm run tauri:build` scheitert sonst mit „failed to run 'cargo metadata' … program not found".
+  In PowerShell davor: `$env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"`.
 - **CSP** steht in `tauri.conf.json` und erlaubt ausschließlich lokale Quellen. Wer eine externe
   Ressource einbauen will, hat die Offline-Regel schon gebrochen — nicht die CSP aufweichen.
 
