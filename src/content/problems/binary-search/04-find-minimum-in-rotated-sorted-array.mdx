@@ -1,0 +1,146 @@
+---
+id: "5.4"
+slug: find-minimum-in-rotated-sorted-array
+title: Find Minimum in Rotated Sorted Array
+leetcode: 153
+url: https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/
+difficulty: Medium
+premium: false
+category: binary-search
+patterns: [binary-search]
+prerequisites: ["Binary Search", "What a rotation does to sortedness"]
+targetComplexity: { time: "O(log n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+A sorted array of **unique** values has been rotated some number of times — `[1,2,3,4,5]` might arrive
+as `[3,4,5,1,2]`. Return its minimum, in `O(log n)`.
+
+<Examples>
+  <Example input={`nums = [3, 4, 5, 1, 2]`} output="1">
+    The array falls once, between 5 and 1. The minimum sits at that break.
+  </Example>
+  <Example input={`nums = [4, 5, 6, 7, 0, 1, 2]`} output="0">
+    The break is between 7 and 0.
+  </Example>
+  <Example input={`nums = [11, 13, 15, 17]`} output="11">
+    Rotated by a full turn, so there is no break at all and the first value wins.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= n <= 5000`
+- `-5000 <= nums[i] <= 5000`
+- All values are **unique**
+- Must run in `O(log n)`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- A rotated sorted array is **two sorted runs**, and the minimum is exactly the first value of the
+  second one. Finding the break point is the same thing as finding the minimum.
+- The array is not sorted, so there is no target to compare against — but there is still a question
+  with a yes/no answer for every index: *"is the break at or before me?"* That is enough to bisect.
+- The comparison that works is against the **right end**, not against a neighbour. `nums[mid]` being
+  larger than `nums[high]` proves the break lies strictly to the right of `mid`.
+
+</Signals>
+
+<BruteForce>
+
+Scan the array and keep the smallest value.
+
+**O(n) time, O(1) space.** It is one line and it is correct, and the statement rules it out on
+purpose. The bottleneck is that it never uses the structure: a single comparison against the right
+end already decides which half of the array the break is in.
+
+</BruteForce>
+
+<Insight>
+
+If the middle value is larger than the rightmost one, the array must fall somewhere after the middle — otherwise the fall is at the middle or before it.
+
+</Insight>
+
+<Approach>
+
+1. Keep a range `[low, high]` that always contains the minimum.
+2. While `low < high`, take `mid`.
+3. If `nums[mid] > nums[high]`, everything from `low` to `mid` is above the break — the minimum is
+   strictly to the right, so `low = mid + 1`.
+4. Otherwise `nums[mid] <= nums[high]`, meaning `mid` and everything after it up to `high` is one
+   sorted run. The minimum is at `mid` **or** to its left: `high = mid`.
+5. When `low == high`, that single index is the minimum.
+
+Step 4 uses `high = mid`, not `mid - 1`, and that difference is the whole problem. `mid` might itself
+*be* the minimum, so it cannot be discarded — which is also why the loop is `low < high` rather than
+`low <= high`.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def findMin(self, nums: list[int]) -> int:
+        # O(n) time, O(1) space
+        smallest = nums[0]
+        for value in nums:
+            smallest = min(smallest, value)
+        return smallest
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def findMin(self, nums: list[int]) -> int:
+        # O(log n) time, O(1) space
+        low, high = 0, len(nums) - 1
+
+        while low < high:                        # stop when one candidate is left
+            mid = low + (high - low) // 2
+
+            if nums[mid] > nums[high]:
+                low = mid + 1                    # the fall is strictly right of mid
+            else:
+                high = mid                       # mid may be the minimum: keep it
+
+        return nums[low]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`high = mid`, never `mid - 1`.** In the second branch `mid` is still a candidate for the minimum,
+  and discarding it loses the answer on inputs like `[2, 1]`. This one line is the difference between
+  a correct solution and one that fails a third of all rotations.
+- **Because of that, the loop is `low < high`.** With `low <= high` and `high = mid` the range stops
+  shrinking once it holds one element, and the search never terminates.
+- **Compare against `nums[high]`, not `nums[low]` or `nums[0]`.** Comparing against the left end needs
+  an extra case for the not-really-rotated array; comparing against the right end handles
+  `[11, 13, 15, 17]` with no special case at all.
+- Values are unique here. With duplicates allowed — LC 154 — `nums[mid] == nums[high]` says nothing at
+  all, the only safe move is `high -= 1`, and the worst case degrades to `O(n)`.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"With duplicates."* — LC 154: add a branch for `nums[mid] == nums[high]` that does `high -= 1`.
+  Still correct, no longer logarithmic, and being able to explain why is the point of the follow-up.
+- *"How many times was it rotated?"* — The index of the minimum is the rotation count. This function
+  already computes it; return `low` instead of `nums[low]`.
+- *"Search for a target in it."* — That is the next problem, and it reuses this decision rule to work
+  out which half is the sorted one.
+
+</FollowUps>

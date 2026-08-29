@@ -1,0 +1,163 @@
+---
+id: "5.5"
+slug: search-in-rotated-sorted-array
+title: Search in Rotated Sorted Array
+leetcode: 33
+url: https://leetcode.com/problems/search-in-rotated-sorted-array/
+difficulty: Medium
+premium: false
+category: binary-search
+patterns: [binary-search]
+prerequisites: ["Find Minimum in Rotated Sorted Array", "Reasoning about which half is sorted"]
+targetComplexity: { time: "O(log n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+A sorted array of **unique** values has been rotated at an unknown index. Given the rotated array and
+a `target`, return the target's index, or `-1`. The algorithm must run in `O(log n)`.
+
+<Examples>
+  <Example input={`nums = [4, 5, 6, 7, 0, 1, 2]
+target = 0`} output="4">
+    The middle is 7. The left half 4..7 is sorted and 0 is not inside it, so the answer must be right.
+  </Example>
+  <Example input={`nums = [4, 5, 6, 7, 0, 1, 2]
+target = 3`} output="-1">
+    3 falls in the gap the rotation created and exists nowhere.
+  </Example>
+  <Example input={`nums = [1]
+target = 0`} output="-1">
+    A single element, and it is not the one.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= nums.length <= 5000`
+- `-10^4 <= nums[i], target <= 10^4`
+- All values are **unique**, and the array is a rotated ascending array
+- Must run in `O(log n)`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Cutting a rotated array in half always leaves **at least one half sorted** — the break can only be
+  on one side. That is the fact the whole solution rests on.
+- Inside a sorted half, "is the target in here?" is a plain range check against its two ends. Answer
+  it, and one half disappears exactly as in an ordinary binary search.
+- The values are unique, which is what makes `nums[low] <= nums[mid]` a reliable test for "the left
+  half is the sorted one".
+
+</Signals>
+
+<BruteForce>
+
+Scan for the value.
+
+**O(n) time, O(1) space.** Correct, and forbidden by the required complexity. The bottleneck is
+familiar: each comparison rules out one element even though the array is *almost* sorted, and almost
+is enough.
+
+</BruteForce>
+
+<Insight>
+
+Split anywhere and one half is guaranteed to be sorted — check whether the target lies inside that half, and throw away the other one either way.
+
+</Insight>
+
+<Approach>
+
+1. Ordinary binary search bounds, `[low, high]`, and the usual `mid`.
+2. If `nums[mid]` is the target, return it.
+3. Work out which half is sorted: if `nums[low] <= nums[mid]`, the **left** half is; otherwise the
+   right half is.
+4. If the left half is sorted, the target belongs there exactly when
+   `nums[low] <= target < nums[mid]`. If so, search left (`high = mid - 1`); if not, search right.
+5. If the right half is sorted, the target belongs there exactly when
+   `nums[mid] < target <= nums[high]`. Same decision, mirrored.
+6. Empty range means the target is absent.
+
+Every branch discards half the range, so the logarithm survives. The two range checks in steps 4 and 5
+must use the **sorted** half's ends — checking against the unsorted half's ends proves nothing,
+because that half spans the break.
+
+Doing it in two passes is also fine and often easier under pressure: find the rotation point with the
+previous problem, then binary search the one half that can contain the target.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def search(self, nums: list[int], target: int) -> int:
+        # O(n) time, O(1) space
+        for i, value in enumerate(nums):
+            if value == target:
+                return i
+        return -1
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def search(self, nums: list[int], target: int) -> int:
+        # O(log n) time, O(1) space
+        low, high = 0, len(nums) - 1
+
+        while low <= high:
+            mid = low + (high - low) // 2
+            if nums[mid] == target:
+                return mid
+
+            if nums[low] <= nums[mid]:                     # left half is the sorted one
+                if nums[low] <= target < nums[mid]:
+                    high = mid - 1
+                else:
+                    low = mid + 1
+            else:                                          # right half is the sorted one
+                if nums[mid] < target <= nums[high]:
+                    low = mid + 1
+                else:
+                    high = mid - 1
+
+        return -1
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Range-check against the sorted half only.** The unsorted half contains the break, so `target`
+  lying between its ends means nothing. Every wrong version of this problem tests the wrong half.
+- **`nums[low] <= nums[mid]`, with the `=`.** When the range narrows to two elements, `low == mid`,
+  and a strict `<` sends a correct answer down the wrong branch.
+- The bounds in the two checks are **not symmetric**: `nums[low] <= target < nums[mid]` on the left,
+  `nums[mid] < target <= nums[high]` on the right. `nums[mid]` was already tested and excluded, so it
+  is open on both; the outer ends are still candidates and stay closed.
+- The two-pass version — find the minimum, then search one side — is genuinely easier to get right.
+  Say it, and say that it is the same complexity. There are no marks for cramming it into one loop.
+- Uniqueness matters. With duplicates (LC 81) `nums[low] == nums[mid]` no longer identifies the sorted
+  half and the worst case becomes `O(n)`.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"With duplicates."* — LC 81: when `nums[low] == nums[mid]` you cannot tell which half is sorted;
+  step `low` forward by one and accept `O(n)` in the worst case.
+- *"Do it in two passes instead."* — Find the rotation index with the previous problem, then binary
+  search `[0, k-1]` or `[k, n-1]`. Two clean loops beat one clever one.
+- *"Rotated to the right instead of the left."* — Nothing changes. The array is still two sorted runs,
+  and every argument above is about that shape, not about the direction.
+
+</FollowUps>

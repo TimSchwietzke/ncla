@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSteps } from "./steps";
+import { buildAnswerSearch, buildSteps } from "./steps";
 
 const SORTED = [2, 3, 5, 8, 11, 15, 17, 20, 24, 29];
 
@@ -41,5 +41,49 @@ describe("binary-search buildSteps", () => {
     const steps = buildSteps({ values: [], target: 1 });
     expect(steps).toHaveLength(1);
     expect(steps[0]?.readout).toBe("not found");
+  });
+});
+
+describe("buildAnswerSearch", () => {
+  // Koko Eating Bananas, example 1: piles [3, 6, 7, 11] in 8 hours needs speed 4.
+  const piles = [3, 6, 7, 11];
+  const hours = (speed: number) =>
+    piles.reduce((total, pile) => total + Math.ceil(pile / speed), 0);
+  const koko = () =>
+    buildAnswerSearch({ low: 1, high: 11, feasible: (speed) => hours(speed) <= 8, noun: "speed" });
+
+  it("lands on the smallest feasible candidate", () => {
+    expect(koko().at(-1)?.readout).toBe("answer 4");
+  });
+
+  it("never tests a candidate outside the range still in play", () => {
+    for (const step of koko()) {
+      const mid = step.markers.find((marker) => marker.label === "mid");
+      const span = step.span;
+      if (!mid || !span) continue;
+      expect(mid.index).toBeGreaterThanOrEqual(span.start);
+      expect(mid.index).toBeLessThanOrEqual(span.end);
+    }
+  });
+
+  it("halves the range every frame, so it is logarithmic and not a scan", () => {
+    const widths = koko()
+      .map((step) => step.span?.end !== undefined && step.span?.start !== undefined
+        ? step.span.end - step.span.start + 1
+        : null)
+      .filter((width): width is number => width !== null);
+    expect(widths.length).toBeLessThan(11);
+    for (let i = 1; i < widths.length; i += 1) {
+      expect(widths[i]!).toBeLessThan(widths[i - 1]!);
+    }
+  });
+
+  it("says so when nothing in the range works", () => {
+    const steps = buildAnswerSearch({ low: 1, high: 4, feasible: () => false });
+    expect(steps.at(-1)?.readout).toBe("no answer");
+  });
+
+  it("has nothing to show for an empty range", () => {
+    expect(buildAnswerSearch({ low: 5, high: 1, feasible: () => true })).toEqual([]);
   });
 });
