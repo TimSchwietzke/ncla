@@ -1,7 +1,7 @@
 import type { Pattern } from "./types.ts";
 
 /**
- * The 21 patterns. Eighteen of them are the 17 rows of the source document's pattern
+ * The 22 patterns. Eighteen of them are the 17 rows of the source document's pattern
  * index, with "DP bottom-up" split into 1-D and 2-D because the table fill looks too
  * different for one shared visualizer.
  *
@@ -10,7 +10,8 @@ import type { Pattern } from "./types.ts";
  * Product of Array Except Self is prefix/suffix accumulation (LeetCode tags it "Prefix
  * Sum" itself), Encode and Decode Strings has no hash map, no pointer and no search, and
  * Valid Parentheses, Min Stack and Evaluate RPN use a plain LIFO stack with nothing
- * monotonic about it — "next greater element" is the wrong trigger to learn for them.
+ * monotonic about it — "next greater element" is the wrong trigger to learn for them, and
+ * eight of the eleven linked-list problems relink nodes rather than chase a cycle.
  *
  * `hasVisualizer` flips to true as the visualizers land (milestone M3).
  * The slug is also the visualizer directory name under `src/visualizers/`.
@@ -54,7 +55,7 @@ export const PATTERNS: readonly Pattern[] = [
   {
     slug: "fast-slow-pointer",
     title: "Fast / Slow Pointer",
-    signal: "Cycle detection, or the middle of a list without knowing its length.",
+    signal: "Cycle detection, or the middle or nth-from-last node of a list whose length you never measure.",
     categories: ["linked-list"],
     hasVisualizer: false,
   },
@@ -161,6 +162,13 @@ export const PATTERNS: readonly Pattern[] = [
     title: "Stack (LIFO)",
     signal: "Whatever was opened last must be settled first — matching, undoing, or evaluating.",
     categories: ["stack"],
+    hasVisualizer: false,
+  },
+  {
+    slug: "linked-list-surgery",
+    title: "Linked List Pointer Surgery",
+    signal: "Relinking nodes instead of moving values — dummy heads, three-pointer reversal, splicing.",
+    categories: ["linked-list"],
     hasVisualizer: false,
   },
 ] as const;

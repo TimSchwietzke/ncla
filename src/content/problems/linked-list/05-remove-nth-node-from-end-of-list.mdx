@@ -1,0 +1,156 @@
+---
+id: "6.5"
+slug: remove-nth-node-from-end-of-list
+title: Remove Nth Node From End of List
+leetcode: 19
+url: https://leetcode.com/problems/remove-nth-node-from-end-of-list/
+difficulty: Medium
+premium: false
+category: linked-list
+patterns: [fast-slow-pointer, linked-list-surgery]
+prerequisites: ["Dummy heads", "Two pointers at a fixed distance"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Given the head of a linked list, remove the `n`-th node **from the end** and return the head.
+
+<Examples>
+  <Example input={`head = [1, 2, 3, 4, 5]
+n = 2`} output={`[1, 2, 3, 5]`}>
+    The second from the end is the 4.
+  </Example>
+  <Example input={`head = [1]
+n = 1`} output={`[]`}>
+    Removing the only node leaves an empty list — the head itself changes.
+  </Example>
+  <Example input={`head = [1, 2]
+n = 2`} output={`[2]`}>
+    Removing the head. The one case a naive solution forgets.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- The list holds `sz` nodes with `1 <= sz <= 30`
+- `0 <= Node.val <= 100`
+- `1 <= n <= sz` — the node always exists
+- **Follow-up:** do it in one pass
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- "From the end" in a singly linked list means a position you cannot address directly. Either measure
+  the length first, or arrange for something to *arrive* at the end while something else trails.
+- Two pointers held exactly `n` apart turn "n from the end" into "the front one fell off" — no length
+  ever gets measured. That is the same trick as finding the middle, with a fixed gap instead of a
+  ratio.
+- Removing a node needs its **predecessor**, and the head has none. Something has to stand in for it.
+
+</Signals>
+
+<BruteForce>
+
+Walk once to count the nodes, then walk again to position `length - n` and unlink.
+
+**O(n) time in two passes, O(1) space.** Completely correct, and it is the answer to give before the
+follow-up is asked. The bottleneck is only the second pass: the first walk already visited the node
+you want, it just did not know it at the time.
+
+</BruteForce>
+
+<Insight>
+
+Start one pointer n nodes ahead — when it runs off the end, the trailing pointer is standing exactly in front of the node to remove.
+
+</Insight>
+
+<Approach>
+
+1. Put a `dummy` node in front of the head, and start `left` at the dummy.
+2. Start `right` at the head and advance it `n` times.
+3. Move both one step at a time until `right` is `None`.
+4. `left` is now the node **before** the target: `left.next = left.next.next`.
+5. Return `dummy.next`, which is the head — possibly a different one than you were given.
+
+Starting `left` at the dummy rather than at the head is what makes step 4 uniform. Deleting the head
+becomes `dummy.next = dummy.next.next`, and there is no `if` anywhere in the function.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def removeNthFromEnd(self, head: Optional[ListNode], n: int) -> Optional[ListNode]:
+        # O(n) time in two passes, O(1) space
+        length = 0
+        node = head
+        while node:
+            length += 1
+            node = node.next
+
+        dummy = ListNode(0, head)
+        before = dummy
+        for _ in range(length - n):
+            before = before.next
+
+        before.next = before.next.next
+        return dummy.next
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def removeNthFromEnd(self, head: Optional[ListNode], n: int) -> Optional[ListNode]:
+        # O(n) time in one pass, O(1) space
+        dummy = ListNode(0, head)
+        left, right = dummy, head
+
+        for _ in range(n):            # open a gap of exactly n
+            right = right.next
+
+        while right:                  # right falls off the end, left stops one short
+            left = left.next
+            right = right.next
+
+        left.next = left.next.next    # dummy makes deleting the head uniform
+        return dummy.next
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Return `dummy.next`, not `head`.** When the head is the node removed, the original `head` variable
+  still points at a node that is no longer in the list. `[1]` with `n = 1` returns `[1]` instead of
+  `[]` without this.
+- **`left` starts at the dummy, `right` at the head.** That one-node offset is what leaves `left` in
+  front of the target rather than on it. Starting both at the dummy leaves `left` one too far back;
+  starting both at the head leaves it one too far forward.
+- Advance `right` exactly `n` times, not `n + 1` or `n - 1`. Check it against `[1, 2]` with `n = 2`:
+  `right` ends at `None` immediately, the `while` never runs, and `left` is still the dummy — which is
+  correct.
+- The two-pass version is a fine answer. Say it first, then say "and it can be done in one" — the
+  follow-up is asking whether you *see* the gap trick, not whether you jumped straight to it.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Remove the n-th from the **start** instead."* — No gap needed; walk `n - 1` steps from the dummy.
+  Worth noticing how much the "from the end" phrasing was doing.
+- *"Remove all nodes with a given value."* — LC 203: same dummy, one pass, and skip rather than count.
+  The dummy earns its keep for exactly the same reason.
+- *"What if `n` could exceed the length?"* — The advance loop would hit `None` and crash. Guard it and
+  return the head unchanged; the constraints promise it cannot happen, and saying that is the point.
+
+</FollowUps>

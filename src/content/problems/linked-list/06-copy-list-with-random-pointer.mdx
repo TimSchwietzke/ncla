@@ -1,0 +1,174 @@
+---
+id: "6.6"
+slug: copy-list-with-random-pointer
+title: Copy List with Random Pointer
+leetcode: 138
+url: https://leetcode.com/problems/copy-list-with-random-pointer/
+difficulty: Medium
+premium: false
+category: linked-list
+patterns: [hashing-complement, linked-list-surgery]
+prerequisites: ["Hash map keyed by object identity", "Deep versus shallow copy"]
+targetComplexity: { time: "O(n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Each node of a linked list has a `next` pointer **and** a `random` pointer, which may point at any
+node in the list or at null. Build a **deep copy**: `n` brand-new nodes whose `next` and `random`
+pointers mirror the original ones, with no pointer into the original list.
+
+<Examples>
+  <Example input={`[[7, null], [13, 0], [11, 4], [10, 2], [1, 0]]`} output={`[[7, null], [13, 0], [11, 4], [10, 2], [1, 0]]`}>
+    Each pair is `[value, index the random points at]`. The copy must reproduce the same shape with
+    new nodes.
+  </Example>
+  <Example input={`[[1, 1], [2, 1]]`} output={`[[1, 1], [2, 1]]`}>
+    Both randoms point at the second node — including one pointing forwards, at a node that does not
+    exist yet when you first reach it.
+  </Example>
+  <Example input={`[]`} output={`[]`}>
+    An empty list copies to an empty list.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `0 <= n <= 1000`
+- `-10^4 <= Node.val <= 10^4`
+- `random` is null or points at some node **in the list**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- A `random` pointer can point **forwards**, at a node you have not created yet. Any single-pass copy
+  therefore has to invent a way to refer to a node before it exists.
+- What you actually need is a translation from **old node to new node**. Once that exists, wiring
+  both pointer kinds is mechanical.
+- Splitting into "create everything, then wire everything" removes the ordering problem completely —
+  by the second pass, every counterpart already exists.
+
+</Signals>
+
+<BruteForce>
+
+For each node, walk the list from the start to find the index its `random` points at, then walk the
+copy from its start to reach the same index.
+
+**O(n²) time, O(n) space.** It is correct and it makes the structure obvious. The bottleneck is the
+repeated walking: it recomputes "which node is this?" from scratch every time, when a single map from
+old node to new node answers it in `O(1)`.
+
+</BruteForce>
+
+<Insight>
+
+Clone every node first with no pointers at all, then use a map from old node to new node to wire both pointers in a second pass.
+
+</Insight>
+
+<Approach>
+
+1. **Pass one:** walk the list and create a bare copy of each node. Store `old → new` in a dictionary.
+2. Seed that dictionary with `None → None`. That single entry removes every null check in pass two.
+3. **Pass two:** walk again and, for each old node, set
+   `copy[old].next = copy[old.next]` and `copy[old].random = copy[old.random]`.
+4. Return `copy[head]`.
+
+The dictionary is keyed by the **node object**, not by its value — values repeat, identities do not.
+In Python that works directly, because objects without `__hash__` overridden hash by identity.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def copyRandomList(self, head: "Optional[Node]") -> "Optional[Node]":
+        # O(n^2) time, O(n) space
+        if not head:
+            return None
+
+        # A parallel copy with next pointers only.
+        copy_head = Node(head.val)
+        old, new = head, copy_head
+        while old.next:
+            new.next = Node(old.next.val)
+            old, new = old.next, new.next
+
+        def index_of(target: "Optional[Node]") -> int:
+            position, node = 0, head
+            while node is not target:
+                position += 1
+                node = node.next
+            return position
+
+        old = head
+        new = copy_head
+        while old:
+            if old.random:
+                step = index_of(old.random)
+                node = copy_head
+                for _ in range(step):
+                    node = node.next
+                new.random = node
+            old, new = old.next, new.next
+
+        return copy_head
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def copyRandomList(self, head: "Optional[Node]") -> "Optional[Node]":
+        # O(n) time, O(n) space
+        copies = {None: None}         # this one entry removes every null check below
+
+        node = head
+        while node:                   # pass 1: nodes only, no pointers yet
+            copies[node] = Node(node.val)
+            node = node.next
+
+        node = head
+        while node:                   # pass 2: everything exists, so wire it up
+            copies[node].next = copies[node.next]
+            copies[node].random = copies[node.random]
+            node = node.next
+
+        return copies[head]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Seed the map with `None → None`.** Without it, `copies[node.random]` raises `KeyError` the first
+  time a random pointer is null — which is almost always the first node.
+- **Key the map by the node, not by its value.** Values repeat freely; two nodes holding `1` are
+  different nodes and must get different copies.
+- Two passes are not a weakness, they are the solution. Trying to wire `random` during the first pass
+  means referring to nodes that do not exist yet, and every attempt to patch that up is worse than
+  just walking twice.
+- The copy must share **nothing** with the original. If any `next` or `random` in the result still
+  points at an original node, it is not a deep copy — and the tests check exactly that.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Do it in `O(1)` extra space."* — Weave the copies into the original list as `A → A' → B → B' → …`,
+  set each `A'.random = A.random.next`, then unzip the two lists apart. Three passes, no map, and
+  fiddly enough that it is worth knowing but not worth leading with.
+- *"What if `random` could point outside the list?"* — The map approach still works and returns
+  `None` for unknown nodes if you use `.get`; the weaving approach breaks entirely.
+- *"Copy an arbitrary graph, not a list."* — LC 133 Clone Graph: the same map from old to new, with a
+  DFS or BFS instead of a walk. The technique generalises, the traversal does not.
+
+</FollowUps>

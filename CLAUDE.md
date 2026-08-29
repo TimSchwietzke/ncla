@@ -330,7 +330,7 @@ Schublade. Timer und Reveal-Steuerung aus M2 gehören in die Meta-Rail.
 
 ## 9. Visualizer-Architektur
 
-Ein Visualizer pro Muster, **21 insgesamt** (Slugs aus `data/patterns.ts`). Achtzehn davon sind die
+Ein Visualizer pro Muster, **22 insgesamt** (Slugs aus `data/patterns.ts`). Achtzehn davon sind die
 17 Zeilen des Muster-Index der Quelle, wobei „DP bottom-up“ in `dp-1d` und `dp-2d` aufgeteilt ist —
 die Tabellenfüllung sieht in beiden Fällen zu unterschiedlich aus für einen gemeinsamen Visualizer:
 
@@ -346,7 +346,9 @@ sie in die Tabelle zu schreiben:
 `prefix-suffix` (Product of Array Except Self; LeetCode taggt die Aufgabe selbst mit „Prefix Sum“) ·
 `length-prefix` (Encode and Decode Strings — kein Hashing, kein Zeiger, keine Suche) ·
 `stack-lifo` (Valid Parentheses, Min Stack, Evaluate RPN — ein gewöhnlicher Stack; „nächstes
-größeres Element“ ist dort der falsche Auslöser)
+größeres Element“ ist dort der falsche Auslöser) ·
+`linked-list-surgery` (acht der elf Linked-List-Aufgaben hängen Knoten um, statt einen Zyklus zu
+suchen — Dummy Head, Drei-Zeiger-Umkehr, Splicing)
 
 Ein weiteres Muster kommt nur dazu, wenn es in mindestens zwei der 150 Aufgaben trägt. „Bucket Sort“
 etwa taucht genau einmal auf (Top K Frequent) und bekommt deshalb keins — dort stehen
@@ -382,12 +384,12 @@ Verbindliches Muster für jeden Visualizer:
 6. `steps.test.ts` prüft mindestens: erster Frame = Ausgangszustand, letzter Frame = korrektes
    Ergebnis, Frame-Anzahl plausibel.
 
-**Stand:** Fünf der einundzwanzig Muster laufen — `hashing-complement`, `sliding-window`,
+**Stand:** Fünf der zweiundzwanzig Muster laufen — `hashing-complement`, `sliding-window`,
 `monotonic-stack`, `two-pointer`, `binary-search`. `core/` enthält `types.ts`, den zustandslosen
 `ArrayTrack.tsx`, `layout.ts` (kollidierende Marker) und `StepPlayer.tsx`. Eingebunden sind sie über
 `registry.ts` in `<Viz>` und auf `PatternDetail`.
 
-Die restlichen sechzehn kommen **mit ihrem Content**, nicht auf Vorrat. Baum, Graph, Gitter und Heap
+Die restlichen siebzehn kommen **mit ihrem Content**, nicht auf Vorrat. Baum, Graph, Gitter und Heap
 brauchen je einen eigenen Renderer neben `ArrayTrack`; der Player und das Preset-System sind schon
 darauf ausgelegt, weil `StepPlayer` nur `steps` und eine `render`-Funktion kennt.
 **Nicht neu erfinden, was in `core/` schon steht.**

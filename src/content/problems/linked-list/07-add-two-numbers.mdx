@@ -1,0 +1,175 @@
+---
+id: "6.7"
+slug: add-two-numbers
+title: Add Two Numbers
+leetcode: 2
+url: https://leetcode.com/problems/add-two-numbers/
+difficulty: Medium
+premium: false
+category: linked-list
+patterns: [linked-list-surgery]
+prerequisites: ["Dummy heads", "Long addition with a carry"]
+targetComplexity: { time: "O(max(m, n))", space: "O(max(m, n))" }
+status: complete
+---
+
+<Statement>
+
+Two non-empty linked lists represent non-negative integers with their digits stored in **reverse
+order**, one digit per node. Add the numbers and return the sum as a linked list in the same form.
+
+<Examples>
+  <Example input={`l1 = [2, 4, 3]
+l2 = [5, 6, 4]`} output={`[7, 0, 8]`}>
+    342 + 465 = 807. Reversed, the lists read as the numbers and the answer reads back as 807.
+  </Example>
+  <Example input={`l1 = [9, 9, 9]
+l2 = [1]`} output={`[0, 0, 0, 1]`}>
+    999 + 1 = 1000. The answer is **longer** than either input — that is the carry falling out of the
+    end.
+  </Example>
+  <Example input={`l1 = [0]
+l2 = [0]`} output={`[0]`}>
+    Zero plus zero, and the single node must survive.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- Each list holds between `1` and `100` nodes
+- `0 <= Node.val <= 9`
+- No leading zeros, except the number `0` itself
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The digits are stored **least significant first**, which is exactly the order you add them by hand.
+  The reversal in the statement is a gift, not an obstacle.
+- Each output digit depends only on the two input digits and one carry bit, so the whole thing is one
+  left-to-right pass with a single extra variable.
+- The lists may differ in length and the answer may be longer than both. Whatever drives the loop has
+  to account for all three.
+
+</Signals>
+
+<BruteForce>
+
+Read both lists into integers, add them, and build a list from the digits of the result.
+
+**O(m + n) time and space.** In Python it even works, because integers are unbounded. It is still the
+wrong answer, and saying *why* is the point: in any language with fixed-width integers, 100 digits
+overflows long before you get to add anything. The bottleneck is not speed, it is that the approach
+does not survive the language changing.
+
+</BruteForce>
+
+<Insight>
+
+Add the lists the way you add on paper — digit by digit with a carry — and never build a number at all.
+
+</Insight>
+
+<Approach>
+
+1. Create a `dummy` node and a `tail` pointer, plus `carry = 0`.
+2. Loop **while `l1` or `l2` or `carry`** — all three, so the final carry cannot be dropped.
+3. Take `v1 = l1.val if l1 else 0` and likewise `v2`, so a shorter list simply contributes zeros.
+4. `total = v1 + v2 + carry`; append a node holding `total % 10`; set `carry = total // 10`.
+5. Advance whichever lists still have nodes.
+6. Return `dummy.next`.
+
+The loop condition in step 2 is the whole problem. `999 + 1` ends with both lists exhausted and a
+carry of 1 still pending, and only the `or carry` term produces the leading `1`.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def addTwoNumbers(self, l1: Optional[ListNode], l2: Optional[ListNode]) -> Optional[ListNode]:
+        # O(m + n) time and space — relies on Python's unbounded integers
+        def to_int(node: Optional[ListNode]) -> int:
+            value, place = 0, 1
+            while node:
+                value += node.val * place
+                place *= 10
+                node = node.next
+            return value
+
+        total = to_int(l1) + to_int(l2)
+
+        dummy = ListNode()
+        tail = dummy
+        while True:
+            tail.next = ListNode(total % 10)
+            tail = tail.next
+            total //= 10
+            if total == 0:
+                break
+
+        return dummy.next
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def addTwoNumbers(self, l1: Optional[ListNode], l2: Optional[ListNode]) -> Optional[ListNode]:
+        # O(max(m, n)) time and space
+        dummy = ListNode()
+        tail = dummy
+        carry = 0
+
+        while l1 or l2 or carry:          # the carry keeps the loop alive for 999 + 1
+            v1 = l1.val if l1 else 0
+            v2 = l2.val if l2 else 0
+            total = v1 + v2 + carry
+
+            tail.next = ListNode(total % 10)
+            tail = tail.next
+            carry = total // 10
+
+            l1 = l1.next if l1 else None
+            l2 = l2.next if l2 else None
+
+        return dummy.next
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`or carry` in the loop condition.** Without it, `[9,9,9] + [1]` returns `[0,0,0]` and silently
+  loses the thousand. This is the single most common failure here.
+- **A missing node contributes 0, it does not end the loop.** Treating unequal lengths as a special
+  case after the main loop works but doubles the code; the `if l1 else 0` form is shorter and has one
+  fewer place to slip.
+- Advance the lists **conditionally**. `l1 = l1.next` crashes once `l1` is `None`, which happens on
+  every input where the lists differ in length.
+- Do not convert to integers, even though Python lets you. Say the overflow argument out loud — it is
+  the reason the problem is phrased with lists at all.
+- **The two versions are not actually equivalent**, and the "no leading zeros" guarantee is what hides
+  it. Given `[8, 0, 9, 7, 5, 3, 0]` — which reads as 0357908 and is therefore an illegal input — the
+  integer version drops the leading zero and returns a shorter list, while the digit-by-digit version
+  keeps the position. On legal inputs they agree; the constraint is load-bearing, not decoration.
+- `total // 10` is always 0 or 1 here, since the largest sum is `9 + 9 + 1 = 19`. Knowing that is why
+  a single carry variable suffices.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"What if the digits were stored most significant first?"* — LC 445: reverse both lists first, or
+  push the digits onto two stacks and pop them. The reversal in this problem was doing real work.
+- *"Add k numbers instead of two."* — Same loop with a sum over k heads; the carry can now exceed 1,
+  so `carry = total // 10` still holds but is no longer a single bit.
+- *"Multiply instead of add."* — LC 43: no longer one pass, because each digit of one number touches
+  every digit of the other. Worth naming as the point where the structure stops helping.
+
+</FollowUps>

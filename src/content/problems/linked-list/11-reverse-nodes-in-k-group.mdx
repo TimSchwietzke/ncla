@@ -1,0 +1,181 @@
+---
+id: "6.11"
+slug: reverse-nodes-in-k-group
+title: Reverse Nodes in k-Group
+leetcode: 25
+url: https://leetcode.com/problems/reverse-nodes-in-k-group/
+difficulty: Hard
+premium: false
+category: linked-list
+patterns: [linked-list-surgery]
+prerequisites: ["Reverse Linked List", "Dummy heads", "Keeping track of a seam"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Reverse the nodes of a linked list **`k` at a time** and return the modified list. If the last group
+holds fewer than `k` nodes, leave it as it is. You may not change the values — only the links.
+
+<Examples>
+  <Example input={`head = [1, 2, 3, 4, 5]
+k = 2`} output={`[2, 1, 4, 3, 5]`}>
+    Two full groups get reversed. The lone 5 stays put.
+  </Example>
+  <Example input={`head = [1, 2, 3, 4, 5]
+k = 3`} output={`[3, 2, 1, 4, 5]`}>
+    One full group; the remaining two nodes are fewer than `k`, so they keep their order.
+  </Example>
+  <Example input={`head = [1, 2, 3]
+k = 1`} output={`[1, 2, 3]`}>
+    Groups of one. Reversing a single node changes nothing, and the code must not loop forever.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- The list holds `n` nodes with `1 <= k <= n <= 5000`
+- `0 <= Node.val <= 1000`
+- **Follow-up:** do it in `O(1)` extra space
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The inner operation is Reverse Linked List, bounded to `k` nodes. Nothing about the reversal itself
+  is new — the difficulty is entirely in the **seams** between groups.
+- A group may only be reversed once you know it is **complete**, so you have to look ahead `k` nodes
+  before touching anything.
+- After reversing, the node that used to start the group now ends it, and it is the one the next
+  group must attach to. Naming that node before the reversal is what keeps the list intact.
+
+</Signals>
+
+<BruteForce>
+
+Walk the list collecting values into an array, reverse each complete block of `k` in the array, then
+write the values back into the nodes.
+
+**O(n) time, O(n) space.** It is correct, it is far easier to get right, and it **violates the
+statement**, which says the values may not be modified. Say it as a description of the shape, then
+say why it is disqualified — the restriction exists precisely to force the pointer work.
+
+</BruteForce>
+
+<Insight>
+
+Before reversing a group, name the node in front of it and the node after it — those two seams are the only things the reversal can destroy.
+
+</Insight>
+
+<Approach>
+
+1. Put a `dummy` in front of the head and let `group_prev = dummy`.
+2. **Look ahead** `k` nodes from `group_prev`. If there are fewer than `k`, stop: the rest stays as it
+   is.
+3. Call that `k`-th node `kth`, and remember `group_next = kth.next` — the first node of the next
+   group.
+4. Reverse the group, but start `prev` at `group_next` rather than at `None`. The group's last node
+   then already points into the rest of the list, with no extra step.
+5. The old first node of the group is `group_prev.next`; after the reversal it is the group's **last**
+   node. Save it, point `group_prev.next` at `kth` (the new first), and move `group_prev` to that
+   saved node.
+6. Repeat.
+
+Step 4 is the trick worth remembering: seeding `prev` with `group_next` instead of `None` makes the
+reversal stitch itself back into the list. Step 5 is the one that gets miswritten — `group_prev` must
+advance to the node that *was* first, because after reversing, that is where the next group begins.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def reverseKGroup(self, head: Optional[ListNode], k: int) -> Optional[ListNode]:
+        # O(n) time, O(n) space — and it rewrites values, which the statement forbids
+        values = []
+        node = head
+        while node:
+            values.append(node.val)
+            node = node.next
+
+        for start in range(0, len(values) - k + 1, k):
+            values[start:start + k] = reversed(values[start:start + k])
+
+        node = head
+        for value in values:
+            node.val = value
+            node = node.next
+
+        return head
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def reverseKGroup(self, head: Optional[ListNode], k: int) -> Optional[ListNode]:
+        # O(n) time, O(1) space
+        dummy = ListNode(0, head)
+        group_prev = dummy
+
+        while True:
+            # Look ahead: only a complete group is reversed.
+            kth = group_prev
+            for _ in range(k):
+                kth = kth.next
+                if not kth:
+                    return dummy.next
+
+            group_next = kth.next
+
+            # Reverse the group, seeded with group_next so the tail is already attached.
+            prev, cur = group_next, group_prev.next
+            while cur is not group_next:
+                nxt = cur.next
+                cur.next = prev
+                prev = cur
+                cur = nxt
+
+            # group_prev.next was the group's first node; it is now its last.
+            new_group_prev = group_prev.next
+            group_prev.next = kth
+            group_prev = new_group_prev
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Check for a complete group before touching anything.** Reversing first and repairing afterwards is
+  far harder than looking ahead `k` nodes and returning early. The tail with fewer than `k` nodes must
+  come out completely unchanged.
+- **Seed `prev` with `group_next`, not `None`.** With `None` the reversed group is cut off from the
+  rest of the list and everything after it is lost.
+- **Save `group_prev.next` before overwriting it.** After the reversal that node is the group's tail
+  and the anchor for the next round; overwriting `group_prev.next` first loses it, and the loop then
+  reverses the same group forever.
+- `k = 1` must terminate. It does — each round reverses a group of one, which changes nothing, and
+  `group_prev` still advances — but it is the case worth checking, because a loop that fails to
+  advance hangs rather than answering wrongly.
+- Draw it. Five nodes, `k = 2`, four named pointers on paper. This problem is not clever, it is
+  careful, and the only reliable way through it is to have drawn it once.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Reverse the leftover group too."* — Drop the look-ahead and reverse whatever remains. Simpler, and
+  a different problem — worth checking which one is being asked for.
+- *"Do it recursively."* — Reverse the first group, then set its tail's `next` to the recursive call on
+  the rest. Much shorter to write, `O(n / k)` stack, which is what the `O(1)` follow-up rules out.
+- *"Swap nodes in pairs."* — LC 24 is this problem with `k = 2`, and it is worth solving separately
+  first if the general version is not coming.
+
+</FollowUps>
