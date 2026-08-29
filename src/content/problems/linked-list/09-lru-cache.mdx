@@ -1,0 +1,206 @@
+---
+id: "6.9"
+slug: lru-cache
+title: LRU Cache
+leetcode: 146
+url: https://leetcode.com/problems/lru-cache/
+difficulty: Medium
+premium: false
+category: linked-list
+patterns: [hashing-complement, linked-list-surgery]
+prerequisites: ["Doubly linked lists", "Why one structure cannot do both jobs"]
+targetComplexity: { time: "O(1)", space: "O(capacity)" }
+status: complete
+---
+
+<Statement>
+
+Design a **least-recently-used** cache with a fixed `capacity`.
+
+`get(key)` returns the value or `-1`. `put(key, value)` inserts or updates. When an insert exceeds the
+capacity, the **least recently used** entry is evicted. Both operations must be `O(1)` on average, and
+both `get` and `put` count as a use.
+
+<Examples>
+  <Example input={`LRUCache(2)
+put(1, 1), put(2, 2)
+get(1)`} output="1">
+    Returns 1, and doing so makes key 1 the most recently used.
+  </Example>
+  <Example input={`… then put(3, 3)
+get(2)`} output="-1">
+    Capacity 2 is exceeded, and key 2 is evicted — because the `get(1)` above rescued key 1.
+  </Example>
+  <Example input={`… then get(3), put(4, 4)
+get(1)`} output="-1">
+    Key 1 has now become the oldest in turn and is evicted.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= capacity <= 3000`
+- `0 <= key <= 10^4`, `0 <= value <= 10^5`
+- At most `2 * 10^5` calls
+- `get` and `put` must both be `O(1)` on average
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Two different lookups, both required in `O(1)`: **"where is this key"** and **"what is the oldest
+  entry"**. No single structure answers both, and noticing that is the whole design.
+- A hash map answers the first in `O(1)` but has no order. A list has order but finding an entry in it
+  is `O(n)`. Combining them — map from key to *node* — gives both.
+- Reordering must be `O(1)` too, which forces the list to be **doubly** linked: unlinking a node needs
+  its predecessor, and a singly linked list makes you go find it.
+
+</Signals>
+
+<BruteForce>
+
+Keep a dictionary plus a list of keys in use order. On every access, remove the key from the list and
+append it.
+
+**`get` and `put` are `O(n)`**, because removing a key from a Python list is a linear scan and shift.
+Correct, and easy to write. The bottleneck is precisely that removal: the position is known, but the
+data structure charges `O(n)` to splice it out. A doubly linked node splices in `O(1)`.
+
+</BruteForce>
+
+<Insight>
+
+A hash map finds the node in O(1) and a doubly linked list moves it in O(1) — neither structure can do both, so keep both.
+
+</Insight>
+
+<Approach>
+
+1. A doubly linked list holds the entries in use order, with two **sentinel** nodes: `left` marking
+   the least-recently-used end and `right` the most-recently-used end. They are never removed, which
+   removes every null check.
+2. A dictionary maps `key → node`.
+3. `get(key)`: miss returns `-1`. On a hit, unlink the node and reinsert it just before `right`, then
+   return its value.
+4. `put(key, value)`: if the key exists, unlink its node. Create a node, insert before `right`, and
+   record it in the map.
+5. If the map now exceeds `capacity`, remove the node just after `left` and delete its key from the
+   map — **both structures**, or the map leaks.
+
+Two helpers — `remove(node)` and `insert(node)` — keep every case down to a couple of lines, and
+the sentinels mean neither helper ever tests for `None`.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class LRUCache:
+    def __init__(self, capacity: int) -> None:
+        # get and put are O(n): list.remove is a scan
+        self.capacity = capacity
+        self.values: dict[int, int] = {}
+        self.order: list[int] = []          # least recent first
+
+    def get(self, key: int) -> int:
+        if key not in self.values:
+            return -1
+        self.order.remove(key)
+        self.order.append(key)
+        return self.values[key]
+
+    def put(self, key: int, value: int) -> None:
+        if key in self.values:
+            self.order.remove(key)
+        self.values[key] = value
+        self.order.append(key)
+
+        if len(self.values) > self.capacity:
+            oldest = self.order.pop(0)
+            del self.values[oldest]
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Node:
+    def __init__(self, key: int, value: int) -> None:
+        self.key, self.value = key, value
+        self.prev: "Node | None" = None
+        self.next: "Node | None" = None
+
+
+class LRUCache:
+    def __init__(self, capacity: int) -> None:
+        # every operation O(1), O(capacity) space
+        self.capacity = capacity
+        self.nodes: dict[int, Node] = {}
+
+        # Sentinels: left is the LRU end, right is the MRU end. Neither is ever removed,
+        # so no insert or unlink ever has to check for None.
+        self.left, self.right = Node(0, 0), Node(0, 0)
+        self.left.next, self.right.prev = self.right, self.left
+
+    def _remove(self, node: Node) -> None:
+        node.prev.next, node.next.prev = node.next, node.prev
+
+    def _insert(self, node: Node) -> None:
+        before, end = self.right.prev, self.right
+        before.next = end.prev = node
+        node.prev, node.next = before, end
+
+    def get(self, key: int) -> int:
+        if key not in self.nodes:
+            return -1
+        node = self.nodes[key]
+        self._remove(node)              # a read counts as a use
+        self._insert(node)
+        return node.value
+
+    def put(self, key: int, value: int) -> None:
+        if key in self.nodes:
+            self._remove(self.nodes[key])
+
+        self.nodes[key] = Node(key, value)
+        self._insert(self.nodes[key])
+
+        if len(self.nodes) > self.capacity:
+            oldest = self.left.next
+            self._remove(oldest)
+            del self.nodes[oldest.key]   # both structures, or the map grows forever
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Evict from both structures.** Unlinking the node but leaving its key in the dictionary makes the
+  map grow without bound and, worse, makes `get` return a value for an entry that is no longer in the
+  list. This is the defining bug of the problem.
+- **The node must store its key.** Eviction starts from the list and needs to know which dictionary
+  entry to delete. A node holding only a value gives you no way back.
+- **`get` counts as a use.** Forgetting to move the node on a read produces a cache that evicts by
+  insertion order rather than by use — which is a FIFO cache, not an LRU one, and the worked example
+  in the statement catches it immediately.
+- The two sentinels are worth the four lines. Without them, every insert and remove needs to ask
+  whether it is at the head or tail, and that is where this problem usually falls apart.
+- Python's `OrderedDict` with `move_to_end` and `popitem(last=False)` solves this in about six lines.
+  Mention it — then write the manual version, because the manual version is what is being asked for.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Least **frequently** used instead."* — LC 460: a frequency map plus one list per frequency, and a
+  running minimum frequency. Considerably harder, and the same two-structures idea.
+- *"Make it thread-safe."* — One lock around both structures, since they must change together; the
+  interesting part is that the invariant spans two objects, which is exactly what the eviction bug
+  above is about.
+- *"Add a time-to-live."* — Store an expiry on each node and check it on `get`. Eviction stays LRU;
+  expiry is a separate concern layered on top.
+
+</FollowUps>

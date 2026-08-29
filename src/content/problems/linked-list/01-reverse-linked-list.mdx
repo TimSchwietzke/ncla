@@ -1,0 +1,150 @@
+---
+id: "6.1"
+slug: reverse-linked-list
+title: Reverse Linked List
+leetcode: 206
+url: https://leetcode.com/problems/reverse-linked-list/
+difficulty: Easy
+premium: false
+category: linked-list
+patterns: [linked-list-surgery]
+prerequisites: ["What a next pointer is", "Holding three references at once"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Given the `head` of a singly linked list, reverse it and return the new head.
+
+<Examples>
+  <Example input={`head = [1, 2, 3, 4, 5]`} output={`[5, 4, 3, 2, 1]`}>
+    Every arrow flips. The old head becomes the tail.
+  </Example>
+  <Example input={`head = [1, 2]`} output={`[2, 1]`}>
+    The shortest case where anything actually moves.
+  </Example>
+  <Example input={`head = []`} output={`[]`}>
+    An empty list is a legal input and must not crash.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- The list holds between `0` and `5000` nodes
+- `-5000 <= Node.val <= 5000`
+- **Follow-up:** do it both iteratively and recursively
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Reversing means **relinking**, not rewriting. The values stay where they are; only the arrows
+  change direction.
+- Flipping `cur.next` destroys the only way forward, so the next node must be saved **before** the
+  flip. That single ordering constraint is the entire problem.
+- This is the building block for Reorder List and Reverse Nodes in k-Group. It has to come out
+  without thinking, because those two spend their whole difficulty budget elsewhere.
+
+</Signals>
+
+<BruteForce>
+
+Walk the list collecting values into an array, then walk it again writing them back in reverse.
+
+**O(n) time, O(n) space.** It works and it is a legitimate thing to say — but it reverses the
+*values*, not the list, and the extra array is exactly what the `O(1)` version exists to avoid.
+The bottleneck is that a list already stores its order in its links; copying it out to reorder it
+ignores the structure you were handed.
+
+</BruteForce>
+
+<Insight>
+
+Save the next node, point the current one backwards, and shuffle all three references forward one step.
+
+</Insight>
+
+<Approach>
+
+1. Keep `prev = None` and `cur = head`.
+2. While `cur` is not `None`:
+3. Save `nxt = cur.next` — after the next line it is unreachable.
+4. Flip: `cur.next = prev`.
+5. Step both forward: `prev = cur`, `cur = nxt`.
+6. When `cur` runs off the end, `prev` is the new head.
+
+`prev` starting at `None` is what turns the old head into the new tail, with no special case.
+The recursive version reverses the rest of the list first and then flips one link — elegant, and
+`O(n)` stack, which is the trade to name.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:
+        # O(n) time, O(n) space — rewrites values rather than relinking
+        values = []
+        node = head
+        while node:
+            values.append(node.val)
+            node = node.next
+
+        node = head
+        for value in reversed(values):
+            node.val = value
+            node = node.next
+
+        return head
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:
+        # O(n) time, O(1) space
+        prev, cur = None, head
+
+        while cur:
+            nxt = cur.next        # save it: the next line makes it unreachable
+            cur.next = prev
+            prev = cur
+            cur = nxt
+
+        return prev               # cur is None here, prev is the last node visited
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Save `cur.next` before flipping it.** Writing `cur.next = prev` first throws away the rest of the
+  list, and the loop ends after one node. This is the only real way to get this wrong, and it is
+  worth saying aloud as you type the line.
+- **Return `prev`, not `cur`.** When the loop ends `cur` is `None`; `prev` is the last node visited,
+  which is the new head.
+- `prev` must start at `None`, not at `head`. Starting at `head` makes the first node point to
+  itself and the list becomes a cycle.
+- The empty list needs no special case — the loop simply never runs and `None` is returned, which is
+  correct.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Do it recursively."* — LeetCode's own follow-up: reverse `head.next`, then set
+  `head.next.next = head` and `head.next = None`. Same `O(n)` time, but `O(n)` stack, so it can blow
+  up on 5000 nodes in languages without tail calls.
+- *"Reverse only between positions m and n."* — LC 92: same three-pointer loop, run for `n - m + 1`
+  steps, with a dummy head so that reversing from position 1 needs no special case.
+- *"Reverse in groups of k."* — That is problem 6.11 in this category, and it is this loop bounded by
+  a group and stitched back together.
+
+</FollowUps>

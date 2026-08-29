@@ -1,0 +1,149 @@
+---
+id: "6.3"
+slug: linked-list-cycle
+title: Linked List Cycle
+leetcode: 141
+url: https://leetcode.com/problems/linked-list-cycle/
+difficulty: Easy
+premium: false
+category: linked-list
+patterns: [fast-slow-pointer]
+prerequisites: ["Reverse Linked List", "Why two speeds must meet inside a loop"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Given the `head` of a linked list, return `true` if it contains a **cycle** — some node reachable
+again by following `next` repeatedly — and `false` otherwise.
+
+<Examples>
+  <Example input={`head = [3, 2, 0, -4], tail connects to index 1`} output="true">
+    Following `next` from the last node lands back on the 2, and the walk never ends.
+  </Example>
+  <Example input={`head = [1, 2], tail connects to index 0`} output="true">
+    The shortest real cycle: two nodes pointing at each other.
+  </Example>
+  <Example input={`head = [1], no connection`} output="false">
+    A single node whose `next` is null terminates immediately.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- The list holds between `0` and `10^4` nodes
+- `-10^5 <= Node.val <= 10^5`
+- **Follow-up:** solve it in `O(1)` memory
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The values are irrelevant. Nothing about the answer depends on what the nodes contain — only on
+  where they point, which is what makes this a pure structure question.
+- Without a cycle the walk **ends**. With one it never does. So the question is really *"does this
+  walk terminate?"*, and the way to answer it without remembering where you have been is to send a
+  second, faster walker.
+- The follow-up asks for `O(1)` memory outright, which is the statement telling you that the obvious
+  set-based answer is not the one being marked.
+
+</Signals>
+
+<BruteForce>
+
+Walk the list, putting every node in a set. If a node turns up that is already in the set, there is
+a cycle; if the walk ends, there is not.
+
+**O(n) time, O(n) space.** Perfectly correct and the right first answer. The bottleneck is the
+memory: remembering every node visited is `O(n)`, and the follow-up rules it out. Something has to
+detect the loop without a record of the past.
+
+</BruteForce>
+
+<Insight>
+
+Two walkers at different speeds inside a loop must eventually meet, because the gap between them closes by one every step.
+
+</Insight>
+
+<Approach>
+
+1. Start `slow` and `fast` at the head.
+2. Each step, move `slow` one node and `fast` two.
+3. If `fast` or `fast.next` is `None`, the walk reached the end — no cycle.
+4. If `slow` and `fast` ever land on the same node, there is a cycle.
+
+Why they must meet: once both are inside the loop, `fast` gains exactly one node on `slow` per step.
+A gap that shrinks by one every step and cannot skip past — because the gain is exactly one — must
+reach zero. That sentence is what an interviewer is listening for; the four lines of code are not.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def hasCycle(self, head: Optional[ListNode]) -> bool:
+        # O(n) time, O(n) space
+        seen = set()
+        node = head
+
+        while node:
+            if id(node) in seen:
+                return True
+            seen.add(id(node))
+            node = node.next
+
+        return False
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def hasCycle(self, head: Optional[ListNode]) -> bool:
+        # O(n) time, O(1) space
+        slow, fast = head, head
+
+        while fast and fast.next:      # both checks: fast takes two steps
+            slow = slow.next
+            fast = fast.next.next
+            if slow is fast:
+                return True
+
+        return False
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Check `fast` *and* `fast.next` before stepping.** `fast` moves two nodes, so both must exist.
+  Testing only `fast` raises `AttributeError` on any even-length list without a cycle.
+- **Compare with `is`, not `==`.** Two distinct nodes can hold the same value; identity is the
+  question. In Python `==` on a plain `ListNode` falls back to identity anyway, but writing `is` says
+  what you mean and stays correct if the class ever gains an `__eq__`.
+- Do the comparison **after** stepping. Both pointers start at the head, so checking first reports a
+  cycle on every non-empty list.
+- The set version must key on node **identity** (`id(node)`), not on `node.val`. Keying on the value
+  reports a cycle for any list with a repeated number.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Return the node where the cycle starts."* — LC 142: after the meeting, reset one pointer to the
+  head and advance both one step at a time; they meet at the entrance. That second phase is exactly
+  what Find the Duplicate Number needs.
+- *"How long is the cycle?"* — Keep one pointer at the meeting point and walk it until it returns,
+  counting the steps.
+- *"Why not move `fast` three at a time?"* — It still works, but the gap now closes by two per step
+  and can jump over zero in an odd-length loop, so the argument needs a modular one instead of a
+  one-liner. Two is the speed with the simple proof.
+
+</FollowUps>

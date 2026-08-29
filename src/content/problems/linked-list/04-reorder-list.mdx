@@ -1,0 +1,174 @@
+---
+id: "6.4"
+slug: reorder-list
+title: Reorder List
+leetcode: 143
+url: https://leetcode.com/problems/reorder-list/
+difficulty: Medium
+premium: false
+category: linked-list
+patterns: [fast-slow-pointer, linked-list-surgery]
+prerequisites: ["Reverse Linked List", "Linked List Cycle", "Finding the middle"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Given the head of a list `L0 → L1 → … → Ln`, reorder it in place to
+`L0 → Ln → L1 → Ln-1 → L2 → …`. You may **not** change the values — only the links.
+
+<Examples>
+  <Example input={`head = [1, 2, 3, 4]`} output={`[1, 4, 2, 3]`}>
+    Front, back, front, back. An even length ends on a back node.
+  </Example>
+  <Example input={`head = [1, 2, 3, 4, 5]`} output={`[1, 5, 2, 4, 3]`}>
+    An odd length leaves the middle node alone at the end.
+  </Example>
+  <Example input={`head = [1]`} output={`[1]`}>
+    One node is already in the required order.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- The list holds between `1` and `5 * 10^4` nodes
+- `1 <= Node.val <= 1000`
+- The **values** may not be modified — only the nodes
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The output alternates between the **front** and the **back** of the list. A singly linked list can
+  only walk forwards, so the back has to be made reachable — by reversing it.
+- The interleaving takes one node from each side at a time, which is the merge step you already know,
+  just alternating instead of comparing.
+- Nothing here is new. This problem is three problems you have already solved, in sequence — which is
+  the actual lesson: hard list problems decompose.
+
+</Signals>
+
+<BruteForce>
+
+Walk the list once collecting the nodes into an array, then relink them by index: `0, n-1, 1, n-2, …`.
+
+**O(n) time, O(n) space.** It is correct, it is easy to get right under pressure, and it is worth
+saying. The bottleneck is the array: it exists only to give random access to a structure that has
+none. Reversing the second half buys the same access for free.
+
+</BruteForce>
+
+<Insight>
+
+Split the list at the middle, reverse the second half, and the two halves can then be zipped together front to front.
+
+</Insight>
+
+<Approach>
+
+1. **Find the middle** with `slow` and `fast`, exactly as in Linked List Cycle.
+2. **Cut** the list: `second = slow.next`, then `slow.next = None`. Forgetting this is what creates a
+   cycle later.
+3. **Reverse** the second half with the three-pointer loop from Reverse Linked List.
+4. **Zip**: take one node from the first half, one from the reversed second half, and relink
+   alternately until the second half is exhausted.
+5. Because the cut leaves the first half **the same length or one longer**, the first half always has
+   a node to contribute, so the loop condition can hang on the second half alone.
+
+Step 5 is why `slow` ends where it does. With `slow` and `fast` both starting at the head and `fast`
+checked as `fast.next and fast.next.next`, an odd-length list keeps its extra node in the first
+half — precisely what the interleaving needs.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def reorderList(self, head: Optional[ListNode]) -> None:
+        # O(n) time, O(n) space
+        nodes = []
+        node = head
+        while node:
+            nodes.append(node)
+            node = node.next
+
+        left, right = 0, len(nodes) - 1
+        while left < right:
+            nodes[left].next = nodes[right]
+            left += 1
+            if left == right:
+                break
+            nodes[right].next = nodes[left]
+            right -= 1
+
+        nodes[left].next = None
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def reorderList(self, head: Optional[ListNode]) -> None:
+        # O(n) time, O(1) space
+        # 1. middle: the first half keeps the extra node on an odd length
+        slow, fast = head, head
+        while fast.next and fast.next.next:
+            slow = slow.next
+            fast = fast.next.next
+
+        # 2. cut, or the zip below builds a cycle
+        second = slow.next
+        slow.next = None
+
+        # 3. reverse the second half
+        prev = None
+        while second:
+            nxt = second.next
+            second.next = prev
+            prev = second
+            second = nxt
+
+        # 4. zip the two halves together
+        first, second = head, prev
+        while second:
+            first_next, second_next = first.next, second.next
+            first.next = second
+            second.next = first_next
+            first, second = first_next, second_next
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Cut the list at the middle.** Without `slow.next = None` the first half still points into the
+  second, the zip closes a loop, and printing the result hangs forever. This is the defining bug of
+  this problem.
+- **The middle must favour the first half.** Using `while fast and fast.next` puts `slow` one node
+  further along, the second half becomes the longer one, and the zip drops a node. The condition
+  `fast.next and fast.next.next` is what keeps the halves right.
+- Loop on `while second`, not `while first`. The second half is the shorter one; looping on the first
+  runs past the end.
+- Save **both** `next` pointers before relinking. Overwriting `first.next` first loses the rest of
+  the first half — the same lesson as Reverse Linked List, one level up.
+- The function returns nothing. It reorders **in place**, and returning a new head instead is a
+  misread of the signature.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Why is this not O(n log n)?"* — Each of the three phases is a single linear pass, and they run one
+  after another rather than nested. Three passes are still `O(n)`.
+- *"Do it with a deque instead."* — Push every node into a deque and pop alternately from both ends.
+  Much easier to write, `O(n)` space — the same trade as the brute force, dressed differently.
+- *"Undo the reorder."* — Not possible in one pass without knowing the original length; the mapping
+  is easy to invert only if you rebuild the array. Worth noticing that reversibility is not free.
+
+</FollowUps>
