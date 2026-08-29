@@ -1,0 +1,180 @@
+---
+id: "12.5"
+slug: alien-dictionary
+title: Alien Dictionary
+leetcode: 269
+url: https://leetcode.com/problems/alien-dictionary/
+difficulty: Hard
+premium: true
+category: advanced-graphs
+patterns: [topological-sort]
+prerequisites: ["Course Schedule II", "Deriving edges from data"]
+targetComplexity: { time: "O(total characters)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+A new language uses the English alphabet in an unknown order. Given `words` sorted lexicographically
+**by that language's rules**, return its letters in increasing order. Return `""` if the ordering is
+impossible; if several are valid, return any.
+
+<Examples>
+  <Example input={`words = ["z", "o"]`} output={`"zo"`}>
+    `z` sorts before `o`, and both letters must appear in the answer.
+  </Example>
+  <Example input={`words = ["hrn","hrf","er","enn","rfnn"]`} output={`"hernf"`}>
+    Four relations: `n < f`, `h < e`, `r < n`, `e < r`. Chaining them gives the order.
+  </Example>
+  <Example input={`words = ["abc", "ab"]`} output={`""`}>
+    A word cannot come **before** its own prefix. This input is contradictory, whatever the letters.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= words.length <= 100` and `1 <= words[i].length <= 100`
+- Lowercase English letters only
+- Return `""` when no valid order exists
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The output is an ordering constrained by pairwise relations — that is a **topological sort**, and
+  Course Schedule II already solves the sorting half.
+- The real work is **building the graph**. Two adjacent words give exactly **one** relation: their
+  first differing character. Everything after that difference says nothing at all.
+- There are two ways to fail, and they are different: a **cycle** in the relations, and the **prefix
+  violation** where a longer word precedes its own prefix. The second is not a graph property and has
+  to be checked separately.
+
+</Signals>
+
+<BruteForce>
+
+Try every permutation of the letters that appear, and keep the first under which the word list is
+sorted.
+
+**O(k! · total characters)** for `k` distinct letters — up to 26 factorial. It is correct and it makes
+plain what the question is asking. The bottleneck is that it treats the ordering as a search when the
+input already dictates it: each adjacent pair of words *tells* you one relation directly.
+
+</BruteForce>
+
+<Insight>
+
+Each adjacent pair of words reveals exactly one relation — its first differing character — and the answer is the topological order of those.
+
+</Insight>
+
+<Approach>
+
+1. Put **every** letter that appears anywhere into the graph, even letters with no relations. They must
+   still appear in the answer.
+2. For each adjacent pair of words, walk them together to the first differing character. That gives one
+   edge, and you **stop** — later characters carry no information.
+3. If no difference is found and the first word is **longer**, the input is contradictory: return `""`.
+4. Run Kahn's algorithm over the letters.
+5. If the resulting order is shorter than the number of distinct letters, a cycle exists: return `""`.
+
+Step 2's `break` is easy to forget. Emitting a relation for every differing position adds edges the
+input never implied, and those spurious edges create cycles that are not there.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+from itertools import permutations
+
+
+class Solution:
+    def alienOrder(self, words: list[str]) -> str:
+        # O(k! * total characters) — tries every alphabet
+        letters = sorted({ch for word in words for ch in word})
+
+        def sorted_under(order: str) -> bool:
+            rank = {ch: i for i, ch in enumerate(order)}
+            keys = [[rank[ch] for ch in word] for word in words]
+            return all(keys[i] <= keys[i + 1] for i in range(len(keys) - 1))
+
+        for candidate in permutations(letters):
+            order = "".join(candidate)
+            if sorted_under(order):
+                return order
+
+        return ""
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+from collections import defaultdict, deque
+
+
+class Solution:
+    def alienOrder(self, words: list[str]) -> str:
+        # O(total characters) time, O(1) space — at most 26 letters
+        successors: dict[str, set[str]] = {ch: set() for word in words for ch in word}
+        indegree: dict[str, int] = {ch: 0 for ch in successors}
+
+        for first, second in zip(words, words[1:]):
+            for a, b in zip(first, second):
+                if a != b:
+                    if b not in successors[a]:
+                        successors[a].add(b)
+                        indegree[b] += 1
+                    break                         # only the FIRST difference counts
+            else:
+                if len(first) > len(second):      # "abc" before "ab" is impossible
+                    return ""
+
+        queue = deque(ch for ch in successors if indegree[ch] == 0)
+        order: list[str] = []
+
+        while queue:
+            ch = queue.popleft()
+            order.append(ch)
+            for nxt in successors[ch]:
+                indegree[nxt] -= 1
+                if indegree[nxt] == 0:
+                    queue.append(nxt)
+
+        return "".join(order) if len(order) == len(successors) else ""   # short means a cycle
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`break` after the first difference.** `["hrn", "hrf"]` says only `n < f`; it says nothing about
+  `h` and `r`, which are equal. Adding relations past the first difference invents constraints and
+  manufactures cycles.
+- **The prefix case is a separate failure.** `["abc", "ab"]` has no differing character at all, and it
+  is invalid because the longer word came first. A pure topological sort never notices — the `for/else`
+  above is what catches it.
+- **Include letters with no relations.** A letter appearing in only one word still belongs in the
+  output. Seeding the graph from every character rather than from the edges is what guarantees it.
+- **Guard against duplicate edges.** Adding the same relation twice inflates the in-degree and the
+  letter never reaches zero, so a valid input reports a cycle. The `if b not in successors[a]` check is
+  what prevents it.
+- Any valid order is accepted, so do not compare against one expected string. Verify instead that every
+  derived relation holds in the returned order.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Is the order unique?"* — Exactly when the queue never holds more than one letter at a time, the same
+  check as in Course Schedule II.
+- *"Detect which letters are in the cycle."* — The letters missing from the output are precisely those
+  never freed, which is the cycle plus everything downstream of it.
+- *"Why is the space O(1)?"* — At most 26 letters and 26² relations, both constants. The time is linear
+  in the input because each adjacent pair contributes one comparison walk.
+
+</FollowUps>

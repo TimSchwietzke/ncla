@@ -1,0 +1,183 @@
+---
+id: "12.4"
+slug: swim-in-rising-water
+title: Swim in Rising Water
+leetcode: 778
+url: https://leetcode.com/problems/swim-in-rising-water/
+difficulty: Hard
+premium: false
+category: advanced-graphs
+patterns: [dijkstra-prim, binary-search]
+prerequisites: ["Network Delay Time", "Koko Eating Bananas", "Path cost that is a maximum, not a sum"]
+targetComplexity: { time: "O(n^2 log n)", space: "O(n^2)" }
+status: complete
+---
+
+<Statement>
+
+An `n x n` grid holds distinct elevations. At time `t` every cell with elevation `<= t` is swimmable.
+Starting at `(0, 0)`, you may move to a 4-directionally adjacent cell if **both** cells are swimmable.
+Return the earliest time you can reach `(n-1, n-1)`.
+
+<Examples>
+  <Example input={`grid = [[0,2],[1,3]]`} output="3">
+    The target itself has elevation 3, so no route can finish earlier.
+  </Example>
+  <Example input={`grid = [[0,1,2,3,4],
+        [24,23,22,21,5],
+        [12,13,14,15,16],
+        [11,17,18,19,20],
+        [10,9,8,7,6]]`} output="16">
+    The snaking route peaks at 16. A shorter path exists but crosses higher ground.
+  </Example>
+  <Example input={`grid = [[0]]`} output="0">
+    Already at the target, at time 0.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= n <= 50`
+- `0 <= grid[i][j] < n²`, and every value is **distinct**
+- Movement is 4-directional
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The cost of a route is **not the sum** of its cells — it is the **maximum** elevation on it, because
+  you wait until the water covers the highest point. That one change is the whole problem.
+- Everything else is Dijkstra: expand the cheapest frontier cell first, where "cheapest" now means
+  "lowest peak so far". Replacing `+` with `max` is the entire code change.
+- There is a second, completely different reading: *"can I reach the target by time t"* is monotone in
+  `t`, so the answer can be **binary searched** with a plain flood fill as the test. Same problem, the
+  Koko technique.
+
+</Signals>
+
+<BruteForce>
+
+Binary search the answer: for each candidate `t`, flood-fill from `(0, 0)` through cells with elevation
+`<= t` and check whether the target is reached.
+
+**O(n² log(n²)) time.** Correct, and genuinely competitive — it is the same complexity as the heap
+version. It is also the easier one to get right, because the flood fill has no cost arithmetic at all.
+The bottleneck is only that it re-floods the grid for every candidate, where one Dijkstra sweep
+answers it directly.
+
+</BruteForce>
+
+<Insight>
+
+The cost of a path is the highest cell on it, so run Dijkstra with max instead of plus.
+
+</Insight>
+
+<Approach>
+
+1. Min-heap seeded with `(grid[0][0], 0, 0)` — the starting cell counts towards the peak.
+2. Keep a `visited` set.
+3. Pop the smallest `(peak, r, c)`. Skip it if already visited.
+4. If it is the target, `peak` is the answer.
+5. Otherwise mark it and push each unvisited neighbour as `(max(peak, grid[nr][nc]), nr, nc)`.
+
+Step 5's `max` is the only line that differs from Network Delay Time. Writing `peak + grid[nr][nc]`
+there produces a well-formed number that is silently wrong, and no example in the statement catches it
+— which is why it is worth saying while typing.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def swimInWater(self, grid: list[list[int]]) -> int:
+        # O(n^2 log(n^2)) time, O(n^2) space — binary search on the answer
+        n = len(grid)
+
+        def reachable(t: int) -> bool:
+            if grid[0][0] > t:
+                return False
+            seen = {(0, 0)}
+            stack = [(0, 0)]
+            while stack:
+                r, c = stack.pop()
+                if (r, c) == (n - 1, n - 1):
+                    return True
+                for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                    if (0 <= nr < n and 0 <= nc < n and (nr, nc) not in seen
+                            and grid[nr][nc] <= t):
+                        seen.add((nr, nc))
+                        stack.append((nr, nc))
+            return False
+
+        low, high = grid[0][0], n * n - 1
+        while low < high:
+            mid = low + (high - low) // 2
+            if reachable(mid):
+                high = mid                        # mid may be the answer: keep it
+            else:
+                low = mid + 1
+
+        return low
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+import heapq
+
+
+class Solution:
+    def swimInWater(self, grid: list[list[int]]) -> int:
+        # O(n^2 log n) time, O(n^2) space — Dijkstra with max instead of +
+        n = len(grid)
+        heap = [(grid[0][0], 0, 0)]               # the starting cell counts
+        visited = {(0, 0)}
+
+        while heap:
+            peak, r, c = heapq.heappop(heap)
+            if (r, c) == (n - 1, n - 1):
+                return peak
+
+            for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                if 0 <= nr < n and 0 <= nc < n and (nr, nc) not in visited:
+                    visited.add((nr, nc))
+                    heapq.heappush(heap, (max(peak, grid[nr][nc]), nr, nc))
+
+            # unreachable in this problem: the grid is always fully connected
+        return -1
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`max`, not `+`.** Summing the elevations gives a larger number that behaves like a valid cost, and
+  every example still produces *an* answer. This is the defining silent failure of the problem.
+- **The starting cell counts.** Seeding the heap with `0` instead of `grid[0][0]` under-reports
+  whenever the start is the highest cell on the route.
+- **A single cell answers `grid[0][0]`**, not 0 — unless that cell is 0, as in the third example. The
+  loop handles it by popping the start and finding it is the target.
+- The binary search version must use `high = mid`, not `mid - 1`, because `mid` may itself be the
+  answer — the same trap as Find Minimum in Rotated Sorted Array.
+- Mark cells visited **on push**, not on pop. Otherwise the same cell enters the heap from several
+  neighbours.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Use union-find instead."* — Add cells in increasing elevation order and stop when `(0,0)` and
+  `(n-1,n-1)` join the same component. That elevation is the answer, and it is arguably the neatest of
+  the three solutions.
+- *"Minimise the sum of elevations instead."* — Ordinary Dijkstra with `+`. Worth doing once, to feel
+  how little the code differs and how much the answer does.
+- *"Why is binary search valid here?"* — Reachability is monotone in `t`: if the target is reachable at
+  `t`, it is reachable at every larger `t`. That is the same argument Koko Eating Bananas rests on.
+
+</FollowUps>

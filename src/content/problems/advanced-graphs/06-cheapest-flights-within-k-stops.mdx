@@ -1,0 +1,179 @@
+---
+id: "12.6"
+slug: cheapest-flights-within-k-stops
+title: Cheapest Flights Within K Stops
+leetcode: 787
+url: https://leetcode.com/problems/cheapest-flights-within-k-stops/
+difficulty: Medium
+premium: false
+category: advanced-graphs
+patterns: [dijkstra-prim]
+prerequisites: ["Network Delay Time", "Why Dijkstra breaks under a second constraint"]
+targetComplexity: { time: "O(k * E)", space: "O(V)" }
+status: complete
+---
+
+<Statement>
+
+Given `n` cities and directed `flights` as `[from, to, price]`, return the cheapest price from `src` to
+`dst` using **at most `k` stops**, or `-1` if no such route exists. A "stop" is an intermediate city,
+so `k` stops means at most `k + 1` flights.
+
+<Examples>
+  <Example input={`n = 4
+flights = [[0,1,100],[1,2,100],[2,0,100],[1,3,600],[2,3,200]]
+src = 0, dst = 3, k = 1`} output="700">
+    `0 → 1 → 3` costs 700 with one stop. The cheaper `0 → 1 → 2 → 3` at 400 needs two.
+  </Example>
+  <Example input={`n = 3
+flights = [[0,1,100],[1,2,100],[0,2,500]]
+src = 0, dst = 2, k = 1`} output="200">
+    One stop is allowed, so the two-flight route wins over the direct one.
+  </Example>
+  <Example input={`n = 3
+flights = [[0,1,100],[1,2,100],[0,2,500]]
+src = 0, dst = 2, k = 0`} output="500">
+    No stops at all, so only the direct flight qualifies.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `2 <= n <= 100`, `0 <= flights.length <= n(n-1)/2`
+- `1 <= price <= 10^4`, no duplicate routes between two cities
+- `0 <= k < n`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- There are **two** things to optimise against: price and hop count. Plain Dijkstra tracks only one,
+  and the first example is built to break it — the cheapest route to city 2 uses too many stops, and
+  finalising it discards the answer.
+- "At most `k` stops" is a bound on the **number of edges**, which maps exactly onto rounds of
+  Bellman-Ford: after `i` rounds, every path of at most `i` edges has been considered.
+- `k + 1` rounds, because `k` stops means `k + 1` flights. Off by one here is the most common failure,
+  and the third example — `k = 0` — pins it.
+
+</Signals>
+
+<BruteForce>
+
+Depth-first from `src`, carrying the cost and the number of stops used, and keep the cheapest arrival
+at `dst`.
+
+**Exponential in the worst case.** It is correct and it makes the two constraints obvious. The
+bottleneck is that the same city is reached repeatedly with the same stop count through different
+paths, and each is explored again — the information "cheapest way to reach city `v` in `i` flights" is
+being recomputed instead of stored.
+
+</BruteForce>
+
+<Insight>
+
+Limit the number of edges rather than the cost — after i rounds of relaxation, exactly the paths of at most i flights have been seen.
+
+</Insight>
+
+<Approach>
+
+1. `cost[src] = 0`, everything else infinite.
+2. Repeat `k + 1` times:
+3. **Copy** the cost array at the start of each round.
+4. For each flight `(u, v, w)`, if `cost[u] + w` beats the **copy's** entry for `v`, write it into the
+   copy.
+5. Replace `cost` with the copy.
+6. Return `cost[dst]`, or `-1` if it is still infinite.
+
+Step 3 is the whole algorithm. Relaxing in place lets a single round chain several flights together —
+`src → a` and then `a → b` in the *same* round — which silently exceeds the stop limit. Reading from
+the previous round's values and writing into a fresh copy is what makes "one round, one flight" true.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+from collections import defaultdict
+
+
+class Solution:
+    def findCheapestPrice(self, n: int, flights: list[list[int]],
+                          src: int, dst: int, k: int) -> int:
+        # Exponential — re-explores the same city at the same depth
+        graph: dict[int, list[tuple[int, int]]] = defaultdict(list)
+        for u, v, w in flights:
+            graph[u].append((v, w))
+
+        best = float("inf")
+
+        def walk(city: int, cost: int, stops_left: int) -> None:
+            nonlocal best
+            if city == dst:
+                best = min(best, cost)
+                return
+            if stops_left < 0 or cost >= best:
+                return
+            for nxt, price in graph[city]:
+                walk(nxt, cost + price, stops_left - 1)
+
+        walk(src, 0, k)
+        return -1 if best == float("inf") else int(best)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def findCheapestPrice(self, n: int, flights: list[list[int]],
+                          src: int, dst: int, k: int) -> int:
+        # O(k * E) time, O(V) space — Bellman-Ford, k + 1 rounds
+        cost = [float("inf")] * n
+        cost[src] = 0
+
+        for _ in range(k + 1):                    # k stops means k + 1 flights
+            nxt = cost[:]                         # the copy is the whole trick
+
+            for u, v, price in flights:
+                if cost[u] != float("inf") and cost[u] + price < nxt[v]:
+                    nxt[v] = cost[u] + price      # read from the PREVIOUS round
+
+            cost = nxt
+
+        return -1 if cost[dst] == float("inf") else int(cost[dst])
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Copy the cost array each round.** Relaxing in place chains several flights within one round, and
+  the answer comes out cheaper than the stop limit permits. This is the defining bug, and the first
+  example catches it: without the copy it returns 400 instead of 700.
+- **`k + 1` rounds, not `k`.** `k` stops means `k + 1` flights. The third example with `k = 0` needs
+  exactly one round, and running zero rounds returns `-1`.
+- **Plain Dijkstra is wrong here.** It finalises a city at its cheapest cost, which may use too many
+  stops, and then never reconsiders it. A Dijkstra variant that carries `(cost, stops)` and allows
+  revisiting works, but it is no longer plain Dijkstra — say which one you mean.
+- Read from the previous round's array and write into the copy. Reading from the copy is the same bug
+  as relaxing in place, written differently.
+- Guard `cost[u] != inf` before adding. `inf + price` is still `inf` in Python so it happens to be
+  harmless, but in a fixed-width language it overflows.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"No stop limit."* — Plain Dijkstra, because the second constraint disappears. Worth doing once to see
+  that the limit is the only reason the harder algorithm is needed.
+- *"Return the route, not the price."* — Store a predecessor per city **per round**, since a city's best
+  predecessor depends on how many flights were used to reach it.
+- *"Why does the copy fix it?"* — Round `i` reads only values that were final after round `i - 1`, so
+  every value it writes uses exactly one more edge. Without the copy a value written earlier in the
+  same round can be read again, adding a second edge for free.
+
+</FollowUps>

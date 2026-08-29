@@ -1,0 +1,179 @@
+---
+id: "12.2"
+slug: reconstruct-itinerary
+title: Reconstruct Itinerary
+leetcode: 332
+url: https://leetcode.com/problems/reconstruct-itinerary/
+difficulty: Hard
+premium: false
+category: advanced-graphs
+patterns: [tree-dfs, backtracking]
+prerequisites: ["Depth-first search", "Appending after the recursion rather than before"]
+targetComplexity: { time: "O(E log E)", space: "O(E)" }
+status: complete
+---
+
+<Statement>
+
+Given airline `tickets` as `[from, to]` pairs, reconstruct the itinerary that uses **every ticket
+exactly once**, starting at `"JFK"`. If several are possible, return the one that is **smallest in
+lexical order** when read as a single list. A valid itinerary is guaranteed to exist.
+
+<Examples>
+  <Example input={`tickets = [["MUC","LHR"],["JFK","MUC"],["SFO","SJC"],["LHR","SFO"]]`} output={`["JFK","MUC","LHR","SFO","SJC"]`}>
+    Only one order uses all four tickets.
+  </Example>
+  <Example input={`tickets = [["JFK","SFO"],["JFK","ATL"],["SFO","ATL"],["ATL","JFK"],["ATL","SFO"]]`} output={`["JFK","ATL","JFK","SFO","ATL","SFO"]`}>
+    Two itineraries exist; `ATL` before `SFO` wins on lexical order.
+  </Example>
+  <Example input={`tickets = [["JFK","A"],["A","JFK"],["JFK","B"]]`} output={`["JFK","A","JFK","B"]`}>
+    Taking `B` first would strand the traveller with the `A` tickets unused.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= tickets.length <= 300`
+- Airport codes are three uppercase letters
+- **All** tickets must be used, and a valid itinerary is guaranteed
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Every **ticket** is used exactly once — that is an **Eulerian path**, not a node traversal. Airports
+  are revisited freely; edges are not.
+- Greedily taking the alphabetically smallest destination is *almost* right, and the third example
+  shows why it is not: it can strand you in a dead end with tickets left over.
+- The fix is to decide a node's position **after** exploring it. A dead end is not a failure to undo,
+  it is the **end** of the itinerary — so it belongs at the back of the list.
+
+</Signals>
+
+<BruteForce>
+
+Backtracking: try each destination in sorted order, recurse, and undo if the branch fails to use every
+ticket. The first complete itinerary found is the lexically smallest.
+
+**Exponential in the worst case.** It is correct, it follows directly from the statement, and on
+adversarial inputs with many parallel tickets it times out. The bottleneck is that it *retries* dead
+ends, when the structure of an Eulerian path means a dead end can simply be recorded and never
+revisited.
+
+</BruteForce>
+
+<Insight>
+
+Append an airport only once its tickets are exhausted — the dead end is the end of the journey, so building the list backwards gets the order right by construction.
+
+</Insight>
+
+<Approach>
+
+1. Group destinations by origin and **sort each list**, so the smallest is always taken first.
+2. Depth-first from `"JFK"`. Repeatedly take the smallest unused destination and recurse into it.
+3. When an airport has no tickets left, **append it** to the route.
+4. Reverse the route at the end.
+
+This is **Hierholzer's algorithm**, and step 3 is the whole trick. Appending *before* recursing is the
+naive greedy version that gets stranded; appending *after* means every airport is placed only once
+everything reachable from it has been consumed, so the stranding case lands where it belongs — at the
+end.
+
+Popping from the end of a reverse-sorted list makes "take the smallest" an `O(1)` operation and
+removes the ticket at the same time.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+from collections import defaultdict
+
+
+class Solution:
+    def findItinerary(self, tickets: list[list[str]]) -> list[str]:
+        # Exponential in the worst case — retries dead ends
+        graph: dict[str, list[str]] = defaultdict(list)
+        for start, end in sorted(tickets):
+            graph[start].append(end)
+
+        total = len(tickets)
+        route = ["JFK"]
+
+        def visit(airport: str) -> bool:
+            if len(route) == total + 1:
+                return True
+            for i, destination in enumerate(graph[airport]):
+                if destination is None:
+                    continue
+                graph[airport][i] = None          # take the ticket
+                route.append(destination)
+                if visit(destination):
+                    return True
+                route.pop()                       # undo and try the next one
+                graph[airport][i] = destination
+            return False
+
+        visit("JFK")
+        return route
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+from collections import defaultdict
+
+
+class Solution:
+    def findItinerary(self, tickets: list[list[str]]) -> list[str]:
+        # O(E log E) time, O(E) space — Hierholzer
+        graph: dict[str, list[str]] = defaultdict(list)
+        for start, end in sorted(tickets, reverse=True):
+            graph[start].append(end)              # reverse-sorted: pop() gives the smallest
+
+        route: list[str] = []
+
+        def visit(airport: str) -> None:
+            while graph[airport]:
+                visit(graph[airport].pop())       # take the smallest, use the ticket
+            route.append(airport)                 # only once nothing is left
+
+        visit("JFK")
+        return route[::-1]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Append after the recursion, not before.** Appending first is the greedy version that strands
+  itself; the third example is built to catch it. This single line placement is the difference between
+  the exponential solution and the linear one.
+- **Reverse the result.** Airports are recorded from the dead end backwards, so the list comes out in
+  the opposite order.
+- **Sort descending and `pop()` from the end.** Sorting ascending and popping index 0 also works but is
+  `O(n)` per removal. Either way, the *removal* is what consumes the ticket — leaving it in place
+  reuses it.
+- Duplicate tickets between the same two airports are legal and must each be used. Storing
+  destinations in a set instead of a list silently drops them.
+- The route always starts at `"JFK"` and the itinerary is guaranteed to exist, so no validity check is
+  needed. Adding one is harmless; relying on backtracking to find validity is not.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Why does appending after the recursion give the right order?"* — In an Eulerian path only the final
+  airport can run out of tickets while others remain. Recording it first and reversing puts it last,
+  and the argument recurses.
+- *"An Eulerian **circuit** instead."* — The same algorithm; a circuit exists when every node has equal
+  in- and out-degree, and any starting node then works.
+- *"Detect that no itinerary exists."* — Compare the route's length against `len(tickets) + 1`. The
+  guarantee removes the need here, and a general implementation would want it.
+
+</FollowUps>

@@ -1,0 +1,183 @@
+---
+id: "12.3"
+slug: min-cost-to-connect-all-points
+title: Min Cost to Connect All Points
+leetcode: 1584
+url: https://leetcode.com/problems/min-cost-to-connect-all-points/
+difficulty: Medium
+premium: false
+category: advanced-graphs
+patterns: [dijkstra-prim, union-find]
+prerequisites: ["Heaps", "Union-find", "What a minimum spanning tree is"]
+targetComplexity: { time: "O(n^2 log n)", space: "O(n^2)" }
+status: complete
+---
+
+<Statement>
+
+Given `points` on a plane, connect them all at minimum total cost, where connecting two points costs
+their **Manhattan distance** `|x1 - x2| + |y1 - y2|`. Return that minimum cost.
+
+<Examples>
+  <Example input={`points = [[0,0],[2,2],[3,10],[5,2],[7,0]]`} output="20">
+    Five points, four connections, total cost 20.
+  </Example>
+  <Example input={`points = [[3,12],[-2,5],[-4,1]]`} output="18">
+    A chain: 12 from the first to the second, 6 from the second to the third.
+  </Example>
+  <Example input={`points = [[0,0]]`} output="0">
+    A single point needs no connections at all.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= points.length <= 1000`
+- `-10^6 <= xi, yi <= 10^6`, all points distinct
+- Cost is **Manhattan** distance, not Euclidean
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- "Connect everything at minimum cost, with exactly one path between any two points" is the definition
+  of a **minimum spanning tree**. The phrase in the statement is the giveaway.
+- The graph is **complete** — every pair of points has an edge — so it is never written down. With
+  `n = 1000` that is half a million implicit edges, which is fine to iterate but wasteful to store.
+- Any spanning tree has exactly `n - 1` edges, so the algorithm terminates on a count rather than on
+  running out of candidates.
+
+</Signals>
+
+<BruteForce>
+
+Build all `n(n-1)/2` edges, sort them, and run **Kruskal**: take each edge in increasing cost unless
+its endpoints are already connected.
+
+**O(n² log n) time, O(n²) space.** This is genuinely correct and it is the same complexity as the
+optimal below — the difference is memory. At `n = 1000` it materialises 500 000 edges. Prim's version
+never stores them, which is the practical reason to prefer it on a dense graph.
+
+</BruteForce>
+
+<Insight>
+
+Grow one tree outward, always taking the cheapest edge that reaches a point not yet in it.
+
+</Insight>
+
+<Approach>
+
+1. Start with point 0 in the tree and a min-heap seeded with `(0, 0)` — cost 0 to reach point 0.
+2. Pop the cheapest `(cost, point)`. If that point is already in the tree, discard the entry — it is
+   stale.
+3. Otherwise add it, add `cost` to the total, and push `(distance(point, other), other)` for every
+   point not yet in the tree.
+4. Stop once all `n` points are in.
+
+This is **Prim's algorithm**. The stale-entry check in step 2 is the same one Dijkstra needs, and for
+the same reason: improving a point's cheapest connection pushes a new entry rather than updating the
+old one.
+
+Kruskal with union-find is equally valid and equally fast here. On a **sparse** graph Kruskal wins; on
+a **dense** one like this, Prim avoids building the edge list at all.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def minCostConnectPoints(self, points: list[list[int]]) -> int:
+        # O(n^2 log n) time, O(n^2) space — Kruskal over every edge
+        n = len(points)
+        edges = []
+        for i in range(n):
+            for j in range(i + 1, n):
+                cost = abs(points[i][0] - points[j][0]) + abs(points[i][1] - points[j][1])
+                edges.append((cost, i, j))
+        edges.sort()
+
+        parent = list(range(n))
+
+        def find(x: int) -> int:
+            while parent[x] != x:
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            return x
+
+        total, used = 0, 0
+        for cost, a, b in edges:
+            root_a, root_b = find(a), find(b)
+            if root_a == root_b:
+                continue                          # already connected
+            parent[root_b] = root_a
+            total += cost
+            used += 1
+            if used == n - 1:                     # a spanning tree has n - 1 edges
+                break
+
+        return total
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+import heapq
+
+
+class Solution:
+    def minCostConnectPoints(self, points: list[list[int]]) -> int:
+        # O(n^2 log n) time, O(n) space for the visited set — Prim, no edge list
+        n = len(points)
+        in_tree: set[int] = set()
+        heap = [(0, 0)]                           # (cost to reach, point index)
+        total = 0
+
+        while len(in_tree) < n:
+            cost, i = heapq.heappop(heap)
+            if i in in_tree:
+                continue                          # stale entry, superseded by a cheaper one
+
+            in_tree.add(i)
+            total += cost
+
+            for j in range(n):
+                if j not in in_tree:
+                    distance = (abs(points[i][0] - points[j][0])
+                                + abs(points[i][1] - points[j][1]))
+                    heapq.heappush(heap, (distance, j))
+
+        return total
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Manhattan, not Euclidean.** `|dx| + |dy|`, with no squares and no square root. Using Euclidean
+  distance produces a different tree and a wrong total, and it looks entirely reasonable.
+- **Check for already-visited on pop.** A point can sit in the heap several times at different costs.
+  Without the check it is added twice and its cost double-counted.
+- Seed the heap with cost `0`, so the first point contributes nothing. Starting the total at the first
+  edge instead is an off-by-one that is easy to miss on symmetric inputs.
+- A single point answers `0`. The loop runs once, pops `(0, 0)`, and stops — no special case needed.
+- Both algorithms are `O(n² log n)` here. The choice is about **space**: Kruskal builds 500 000 edges,
+  Prim builds none. Saying which and why is the point of knowing both.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Euclidean distance instead."* — Only the cost function changes. Compare squared distances to stay
+  in integers, exactly as in K Closest Points to Origin.
+- *"Some connections already exist."* — Union those pairs first at cost 0, then run Kruskal on the
+  rest. Prim would need the same points pre-seeded into the tree.
+- *"The most expensive edge in the MST."* — Track the maximum instead of the sum. That is the
+  bottleneck-path problem, and it connects directly to the next problem in this category.
+
+</FollowUps>
