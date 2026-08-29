@@ -1,0 +1,164 @@
+---
+id: "8.4"
+slug: kth-largest-element-in-an-array
+title: Kth Largest Element in an Array
+leetcode: 215
+url: https://leetcode.com/problems/kth-largest-element-in-an-array/
+difficulty: Medium
+premium: false
+category: heap-priority-queue
+patterns: [heap-topk]
+prerequisites: ["Partitioning around a pivot", "Kth Largest Element in a Stream"]
+targetComplexity: { time: "O(n) average", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Given an array `nums` and an integer `k`, return the `k`-th **largest** element — by position in
+sorted order, **not** the `k`-th distinct value. The statement asks whether you can do it without
+sorting.
+
+<Examples>
+  <Example input={`nums = [3, 2, 1, 5, 6, 4]
+k = 2`} output="5">
+    Sorted descending: 6, 5, 4, 3, 2, 1. The second is 5.
+  </Example>
+  <Example input={`nums = [3, 2, 3, 1, 2, 4, 5, 5, 6]
+k = 4`} output="4">
+    Duplicates occupy positions of their own — the fourth largest is 4, not 3.
+  </Example>
+  <Example input={`nums = [1]
+k = 1`} output="1">
+    A single element is its own answer.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= k <= nums.length <= 10^5`
+- `-10^4 <= nums[i] <= 10^4`
+- "Can you solve it without sorting?"
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Only **one position** in the sorted order is being asked for. A full sort computes `n` answers to
+  deliver one, which is the waste to attack.
+- "Not the k-th distinct element" makes duplicates ordinary values. Any solution that deduplicates
+  answers a different question.
+- Partitioning around a pivot places **one element** where it belongs and tells you which side the
+  target is on. Repeating that on only the relevant side is the whole idea.
+
+</Signals>
+
+<BruteForce>
+
+Sort and index: `sorted(nums)[-k]`.
+
+**O(n log n) time, O(n) space.** It is one line, it is correct, and it is what the statement is
+politely asking you to beat. The bottleneck is the `n log n`: the array is fully ordered so that one
+position can be read.
+
+The safe middle answer is a **min-heap of size k**, at `O(n log k)` time and `O(k)` space. That is the
+one to give if quickselect will not come out cleanly — it is genuinely good, and it is the same
+technique as problem 8.1.
+
+</BruteForce>
+
+<Insight>
+
+Partitioning places one element in its final position, so recurse only into the side that still contains position n − k.
+
+</Insight>
+
+<Approach>
+
+1. The `k`-th largest in descending order is the element at index `n - k` in **ascending** order. Fix
+   that target index once and forget about `k`.
+2. Pick a pivot at random and partition the current range: values `<= pivot` on the left, larger on
+   the right, and the pivot lands at some index `p`.
+3. If `p == target`, that value is the answer.
+4. If `p < target`, the answer lies to the right — recurse there. Otherwise recurse left.
+5. Each partition discards a side, so the expected work is `n + n/2 + n/4 + … = O(n)`.
+
+The random pivot in step 2 is not decoration. With a fixed pivot, an already-sorted input degrades to
+`O(n²)`, and sorted inputs are exactly what test suites contain.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def findKthLargest(self, nums: list[int], k: int) -> int:
+        # O(n log n) time, O(n) space
+        return sorted(nums)[len(nums) - k]
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+import random
+
+
+class Solution:
+    def findKthLargest(self, nums: list[int], k: int) -> int:
+        # O(n) expected time, O(1) extra space — quickselect
+        values = list(nums)
+        target = len(values) - k          # k-th largest == this index when ascending
+        low, high = 0, len(values) - 1
+
+        while True:
+            pivot_index = random.randint(low, high)      # random: sorted input would be O(n^2)
+            values[pivot_index], values[high] = values[high], values[pivot_index]
+            pivot = values[high]
+
+            store = low
+            for i in range(low, high):
+                if values[i] <= pivot:
+                    values[i], values[store] = values[store], values[i]
+                    store += 1
+            values[store], values[high] = values[high], values[store]
+
+            if store == target:
+                return values[store]
+            if store < target:
+                low = store + 1           # the answer is to the right
+            else:
+                high = store - 1
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`n - k`, not `k`.** The `k`-th largest sits at index `n - k` once the array is ascending. Getting
+  this backwards returns the `k`-th smallest, which matches on a palindromic test array.
+- **Randomise the pivot.** Taking `nums[high]` on an already-sorted array makes every partition
+  discard one element, and `10^5` elements become `10^10` operations. This is the single most common
+  way a correct quickselect times out.
+- Do not deduplicate. The second example returns 4 with duplicates kept and something else without
+  them.
+- Quickselect **mutates** the array. Copying first — as above — keeps the caller's data intact; if you
+  skip the copy, say that you are doing so deliberately.
+- The heap version is a completely respectable answer. Offer it, name its `O(n log k)`, and only then
+  reach for quickselect. Getting a broken quickselect on the board is worse than a clean heap.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Guarantee O(n) worst case."* — Median of medians picks a provably good pivot. The constant is bad
+  enough that nobody uses it in practice, and knowing that is part of the answer.
+- *"The k-th smallest instead."* — Target index `k - 1`. The whole point of fixing the index up front
+  is that this becomes a one-character change.
+- *"The stream version."* — Problem 8.1: quickselect needs the whole array in hand, so a size-`k` heap
+  is the only one of the three that survives values arriving over time.
+
+</FollowUps>

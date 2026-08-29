@@ -1,0 +1,152 @@
+---
+id: "8.2"
+slug: last-stone-weight
+title: Last Stone Weight
+leetcode: 1046
+url: https://leetcode.com/problems/last-stone-weight/
+difficulty: Easy
+premium: false
+category: heap-priority-queue
+patterns: [heap-topk]
+prerequisites: ["heapq is a min-heap", "Negating values to fake a max-heap"]
+targetComplexity: { time: "O(n log n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Repeatedly take the **two heaviest** stones `x <= y` and smash them: if `x == y` both are destroyed,
+otherwise a stone of weight `y - x` remains. Return the weight of the last stone, or `0` if none is
+left.
+
+<Examples>
+  <Example input={`stones = [2, 7, 4, 1, 8, 1]`} output="1">
+    8 and 7 leave 1; then 4 and 2 leave 2; then 2 and 1 leave 1; then 1 and 1 destroy each other,
+    leaving the last 1.
+  </Example>
+  <Example input={`stones = [1]`} output="1">
+    A single stone is never smashed.
+  </Example>
+  <Example input={`stones = [2, 2]`} output="0">
+    Equal stones destroy each other and nothing is left.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= stones.length <= 30`
+- `1 <= stones[i] <= 1000`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Each round needs the **two largest** values, and the collection changes after every round. Repeated
+  "give me the extreme" with insertions in between is the definition of a priority queue.
+- Nothing about the earlier order matters, and the result of a smash rejoins the pool as an ordinary
+  stone. So the structure only has to answer one question, over and over.
+- With only 30 stones, sorting each round would pass easily — which is worth saying, because it shows
+  the heap is chosen for the right reason rather than out of habit.
+
+</Signals>
+
+<BruteForce>
+
+Sort the list each round, take the last two, and reinsert the difference.
+
+**O(n² log n) time, O(n) space.** For `n = 30` that is nothing, and it is an entirely acceptable
+answer here. The bottleneck is conceptual rather than practical: a full sort is produced to read two
+values, and it is redone from scratch after a change that affects at most one element.
+
+</BruteForce>
+
+<Insight>
+
+Only the two heaviest stones ever matter, so keep the pile in a heap and let it hand them over.
+
+</Insight>
+
+<Approach>
+
+1. Python's `heapq` is a **min**-heap, so negate every weight on the way in. The largest stone is then
+   the smallest number.
+2. Heapify the list.
+3. While more than one stone remains, pop twice — those are the two heaviest.
+4. If they differ, push the difference back (negated).
+5. Return the remaining stone's weight, or `0` when the heap is empty.
+
+The negation is the only fiddly part, and it is worth doing consistently: negate on push, negate on
+pop, never mix the two conventions in one expression.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def lastStoneWeight(self, stones: list[int]) -> int:
+        # O(n^2 log n) time, O(n) space
+        pile = list(stones)
+
+        while len(pile) > 1:
+            pile.sort()
+            y, x = pile.pop(), pile.pop()      # the two heaviest
+            if y != x:
+                pile.append(y - x)
+
+        return pile[0] if pile else 0
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+import heapq
+
+
+class Solution:
+    def lastStoneWeight(self, stones: list[int]) -> int:
+        # O(n log n) time, O(n) space
+        heap = [-weight for weight in stones]   # negated: heapq only does min-heaps
+        heapq.heapify(heap)
+
+        while len(heap) > 1:
+            y = -heapq.heappop(heap)            # heaviest
+            x = -heapq.heappop(heap)            # second heaviest
+            if y != x:
+                heapq.heappush(heap, -(y - x))
+
+        return -heap[0] if heap else 0
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`heapq` has no max-heap.** Negating on the way in and out is the standard workaround, and mixing
+  the conventions — pushing negated but comparing un-negated — produces a solution that smashes the
+  *lightest* stones and quietly returns a plausible number.
+- The heap can end up **empty**, so `heap[0]` needs a guard. `[2, 2]` is the shortest input that hits
+  it.
+- `y >= x` after two pops, so `y - x` is never negative. Relying on that is fine; computing
+  `abs(y - x)` instead is harmless but signals you were not sure, which is worth avoiding.
+- With `n <= 30` the sorting version passes. Say that, then give the heap — the reason to prefer it is
+  that it is the right structure, not that the constraints force it.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Can the answer be predicted without simulating?"* — No. This is a variant of partitioning the
+  stones into two piles with minimal difference, which is NP-hard in general; the greedy simulation is
+  the problem's actual definition, not an approximation of something else.
+- *"Last Stone Weight II."* — LC 1049 is that partition problem, and it is a subset-sum dynamic
+  program. Same story, completely different technique — a good example of a small wording change
+  moving a problem across categories.
+- *"Smash the two **lightest** instead."* — Drop the negation entirely. A one-character change that
+  makes clear what the negation was doing.
+
+</FollowUps>

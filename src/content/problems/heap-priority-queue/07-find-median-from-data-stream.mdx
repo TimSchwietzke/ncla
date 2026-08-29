@@ -1,0 +1,171 @@
+---
+id: "8.7"
+slug: find-median-from-data-stream
+title: Find Median from Data Stream
+leetcode: 295
+url: https://leetcode.com/problems/find-median-from-data-stream/
+difficulty: Hard
+premium: false
+category: heap-priority-queue
+patterns: [heap-topk]
+prerequisites: ["Kth Largest Element in a Stream", "Holding an invariant across calls"]
+targetComplexity: { time: "O(log n) add, O(1) median", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Design a structure over a stream of numbers.
+
+`addNum(num)` inserts a value. `findMedian()` returns the median of everything inserted so far — the
+middle value for an odd count, the mean of the two middle values for an even one.
+
+<Examples>
+  <Example input={`addNum(1), addNum(2)
+findMedian()`} output="1.5">
+    Two values, so the mean of both.
+  </Example>
+  <Example input={`… then addNum(3)
+findMedian()`} output="2.0">
+    Three values, so the middle one.
+  </Example>
+  <Example input={`addNum(-1), addNum(-2), addNum(-3)
+findMedian()`} output="-2.0">
+    Negative values behave no differently — nothing here depends on sign.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `-10^5 <= num <= 10^5`
+- `findMedian` is only called after at least one `addNum`
+- At most `5 * 10^4` calls in total
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The median is a **positional** question, and the position moves with every insert. Nothing can be
+  precomputed once.
+- The median only ever needs the values on the **boundary between the two halves** — never the rest.
+  So the structure has to expose exactly those two, and may keep everything else unordered.
+- A heap exposes one extreme in `O(1)`. Two heaps facing each other expose both sides of a split,
+  which is precisely the boundary the median lives on.
+
+</Signals>
+
+<BruteForce>
+
+Keep a sorted list and insert each value in place with a binary search.
+
+**O(n) per add** — the binary search is `O(log n)` but the insertion shifts the tail — **and `O(1)` for
+the median.** Correct, simple, and with `5 * 10^4` calls it is around a billion element moves in the
+worst case. The bottleneck is maintaining a *total* order to answer a question about one position.
+
+</BruteForce>
+
+<Insight>
+
+Split the values into a low half and a high half — the median sits at the two heaps' tops, and nothing else has to be ordered.
+
+</Insight>
+
+<Approach>
+
+1. Keep `low`, a **max**-heap of the smaller half (in Python: negated values), and `high`, a
+   **min**-heap of the larger half.
+2. Fix one convention and never deviate: `low` may hold **one more** element than `high`, never fewer.
+3. `addNum`: push onto `low` first, then move `low`'s top over to `high`. That single move guarantees
+   every value in `low` is at most every value in `high`.
+4. If `high` is now larger than `low`, move its top back. That restores the size rule.
+5. `findMedian`: if the halves are unequal, `low`'s top is the answer; otherwise the mean of the two
+   tops.
+
+Steps 3 and 4 always run, in that order, on every insert. Doing the ordering move only "when needed"
+is where this problem goes wrong — the push-then-move-then-rebalance sequence is what keeps both
+invariants true without any case analysis.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+import bisect
+
+
+class MedianFinder:
+    def __init__(self) -> None:
+        # O(n) per add, O(1) per median
+        self.values: list[int] = []
+
+    def addNum(self, num: int) -> None:
+        bisect.insort(self.values, num)
+
+    def findMedian(self) -> float:
+        n = len(self.values)
+        middle = n // 2
+        if n % 2:
+            return float(self.values[middle])
+        return (self.values[middle - 1] + self.values[middle]) / 2
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+import heapq
+
+
+class MedianFinder:
+    def __init__(self) -> None:
+        # O(log n) per add, O(1) per median, O(n) space
+        self.low: list[int] = []     # max-heap of the smaller half, stored negated
+        self.high: list[int] = []    # min-heap of the larger half
+
+    def addNum(self, num: int) -> None:
+        # Always the same three steps, in this order — no case analysis needed.
+        heapq.heappush(self.low, -num)
+        heapq.heappush(self.high, -heapq.heappop(self.low))   # keep low <= high
+
+        if len(self.high) > len(self.low):                    # low may hold one more
+            heapq.heappush(self.low, -heapq.heappop(self.high))
+
+    def findMedian(self) -> float:
+        if len(self.low) > len(self.high):
+            return float(-self.low[0])
+        return (-self.low[0] + self.high[0]) / 2
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Run both moves on every insert.** Pushing straight onto whichever heap "looks right" and
+  rebalancing afterwards seems equivalent and is not: a value can land in the wrong half and stay
+  there, because the size check never inspects the values.
+- **Pick a convention and stick to it.** Here `low` may hold one extra, so the odd case reads
+  `-low[0]`. Letting whichever heap happens to be bigger hold the extra makes `findMedian` need two
+  branches, and they will disagree.
+- **The negation is only for `low`.** `heapq` has no max-heap, so `low` stores negated values — which
+  means negating on push, on pop and when reading `low[0]`. Missing one of the three is the usual bug.
+- `findMedian` must return a **float**. `(1 + 2) / 2` is 1.5 in Python 3, but the odd case returns an
+  int unless cast, and the judge compares floats.
+- `bisect.insort` is `O(n)` despite the binary search, because the list still has to shift. Saying
+  "binary search, so `O(log n)`" is wrong and worth catching in yourself.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"All values are in [0, 100]."* — LeetCode's own follow-up: a bucket count of 101 slots, and the
+  median is found by walking the counts. `O(1)` amortised, and it beats the heaps outright when the
+  range is small.
+- *"99% of values are in [0, 100]."* — Buckets for the common range plus two lists for the outliers.
+  The point of the follow-up is that knowing the distribution beats a general structure.
+- *"A median over a sliding window."* — LC 480: the same two heaps plus lazy deletion, because a value
+  leaving the window may sit anywhere inside a heap. Considerably harder, and the natural next step.
+
+</FollowUps>

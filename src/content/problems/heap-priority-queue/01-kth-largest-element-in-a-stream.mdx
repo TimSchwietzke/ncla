@@ -1,0 +1,153 @@
+---
+id: "8.1"
+slug: kth-largest-element-in-a-stream
+title: Kth Largest Element in a Stream
+leetcode: 703
+url: https://leetcode.com/problems/kth-largest-element-in-a-stream/
+difficulty: Easy
+premium: false
+category: heap-priority-queue
+patterns: [heap-topk]
+prerequisites: ["heapq is a min-heap", "Why a min-heap answers a max question"]
+targetComplexity: { time: "O(log k) per add", space: "O(k)" }
+status: complete
+---
+
+<Statement>
+
+Design a class that tracks the **`k`-th largest** value in a growing stream.
+
+`KthLargest(k, nums)` initialises with a starting list. `add(val)` inserts a value and returns the
+`k`-th largest seen so far — counting duplicates, not distinct values.
+
+<Examples>
+  <Example input={`KthLargest(3, [4, 5, 8, 2])
+add(3)`} output="4">
+    The values are 2, 3, 4, 5, 8; the third largest is 4.
+  </Example>
+  <Example input={`… then add(5), add(10)`} output="5">
+    After the 5 the answer is 5; the 10 pushes it to 5 again, since the top three become 10, 8, 5.
+  </Example>
+  <Example input={`KthLargest(1, [])
+add(-3)`} output="-3">
+    `k = 1` is the running maximum, and the starting list may be empty.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `0 <= nums.length <= 10^4` and `1 <= k <= nums.length + 1`
+- `-10^4 <= nums[i], val <= 10^4`
+- At most `10^4` calls to `add`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The question is asked **after every insert**, so nothing can be recomputed from scratch. Whatever
+  structure holds the answer has to survive between calls.
+- Only the top `k` values can ever matter. Everything smaller is permanently irrelevant, which caps
+  the memory at `k` rather than at the length of the stream.
+- Of those `k`, the one being asked for is the **smallest**. That is what makes a min-heap the right
+  container despite the question saying "largest".
+
+</Signals>
+
+<BruteForce>
+
+Keep every value in a list and sort it on each `add`.
+
+**O(n log n) per call, O(n) space.** Correct and obvious. The bottleneck is that a full ordering is
+produced to read a single position, and the list keeps growing even though values below the top `k`
+can never come back.
+
+</BruteForce>
+
+<Insight>
+
+Keep only the k largest values in a min-heap — its smallest element is the k-th largest, sitting right at the top.
+
+</Insight>
+
+<Approach>
+
+1. Push the whole starting list into a heap.
+2. While the heap holds more than `k` values, pop the smallest. What remains is exactly the top `k`.
+3. `add(val)`: push it, then pop once if the heap now holds `k + 1`.
+4. Return `heap[0]` — the smallest of the `k` largest.
+
+Step 3 is `O(log k)`, not `O(log n)`, because the heap never grows past `k + 1`. That is the whole
+gain, and it is why the answer is "min-heap of size k" rather than "heap of everything".
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class KthLargest:
+    def __init__(self, k: int, nums: list[int]) -> None:
+        # O(n log n) per add, O(n) space
+        self.k = k
+        self.values = list(nums)
+
+    def add(self, val: int) -> int:
+        self.values.append(val)
+        self.values.sort(reverse=True)
+        return self.values[self.k - 1]
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+import heapq
+
+
+class KthLargest:
+    def __init__(self, k: int, nums: list[int]) -> None:
+        # O(log k) per add, O(k) space
+        self.k = k
+        self.heap = list(nums)
+        heapq.heapify(self.heap)
+        while len(self.heap) > k:          # keep only the k largest
+            heapq.heappop(self.heap)
+
+    def add(self, val: int) -> int:
+        heapq.heappush(self.heap, val)
+        if len(self.heap) > self.k:
+            heapq.heappop(self.heap)       # the smallest falls out of the top k
+        return self.heap[0]                # smallest of the k largest
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **A min-heap for a "largest" question looks backwards, and explaining why it is not is the point of
+  this problem.** You are keeping the `k` biggest values; among those, the one you want is the
+  smallest, which is exactly what a min-heap puts on top.
+- Pop **after** pushing, not before. Pushing into a full heap and then popping keeps the right `k`
+  values; popping first can discard the value that should have stayed.
+- `k` may exceed the initial list length — the constraints allow `k == len(nums) + 1`. The heap is
+  then short until the first `add`, and `heap[0]` would be wrong before that. LeetCode never asks
+  before the first `add`, and saying so is better than assuming it.
+- Duplicates count. `[7, 7]` with `k = 2` answers 7; a version deduplicating into a set answers
+  something else.
+- `heapq.nlargest(k, values)[-1]` gives the same answer in one line and is `O(n log k)` **per call**,
+  which defeats the purpose. It is a fine tool elsewhere, not here.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"The k-th **smallest** in a stream."* — Mirror it: a max-heap of size `k`, which in Python means
+  storing negated values. The asymmetry of `heapq` is worth naming out loud.
+- *"A running median instead."* — Problem 8.7 in this category: two heaps facing each other. Same
+  family, one structure more.
+- *"What if k changes over time?"* — The heap is sized to `k`, so growing `k` needs values you already
+  threw away. That is the cost of the `O(k)` memory, and it is worth stating as a real limitation.
+
+</FollowUps>

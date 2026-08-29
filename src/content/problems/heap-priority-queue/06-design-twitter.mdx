@@ -1,0 +1,200 @@
+---
+id: "8.6"
+slug: design-twitter
+title: Design Twitter
+leetcode: 355
+url: https://leetcode.com/problems/design-twitter/
+difficulty: Medium
+premium: false
+category: heap-priority-queue
+patterns: [heap-topk, hashing-complement]
+prerequisites: ["Merge k Sorted Lists", "Hash map of lists"]
+targetComplexity: { time: "O(k log f) per feed", space: "O(tweets + follows)" }
+status: complete
+---
+
+<Statement>
+
+Design a simplified Twitter.
+
+`postTweet(userId, tweetId)` posts a tweet. `getNewsFeed(userId)` returns the **10 most recent** tweet
+ids from the user and everyone they follow, newest first. `follow(followerId, followeeId)` and
+`unfollow(followerId, followeeId)` manage the graph.
+
+<Examples>
+  <Example input={`postTweet(1, 5)
+getNewsFeed(1)`} output={`[5]`}>
+    A user always sees their own tweets, without following themselves.
+  </Example>
+  <Example input={`follow(1, 2), postTweet(2, 6)
+getNewsFeed(1)`} output={`[6, 5]`}>
+    Newest first, merged across everyone followed.
+  </Example>
+  <Example input={`unfollow(1, 2)
+getNewsFeed(1)`} output={`[5]`}>
+    Unfollowing removes their tweets from the feed but not from the system.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= userId, followerId, followeeId <= 500`, `0 <= tweetId <= 10^4`
+- All tweet ids are unique
+- At most `3 * 10^4` calls in total
+- A user cannot follow themselves
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Each user's own tweets arrive **in order**, so every per-user list is already sorted by recency.
+  The feed is therefore a **merge of sorted lists** — the same shape as Merge k Sorted Lists.
+- Only **ten** results are wanted, so nothing needs a full merge. Take the newest from each followed
+  user, pop the winner, and pull that user's next one in.
+- Tweet ids say nothing about time, so recency needs its own counter. That counter is the sort key,
+  and forgetting it is the design mistake this problem is really about.
+
+</Signals>
+
+<BruteForce>
+
+Gather every tweet from the user and everyone they follow, sort by timestamp, and take ten.
+
+**O(T log T) per feed** for `T` tweets in scope. Correct and easy to get right, and with `3 * 10^4`
+calls it passes. The bottleneck is that a full ordering of possibly thousands of tweets is produced to
+read the top ten — and the per-user lists were already sorted before the sort started.
+
+</BruteForce>
+
+<Insight>
+
+Every user's tweets are already in order, so the feed is a k-way merge that can stop after ten.
+
+</Insight>
+
+<Approach>
+
+1. Keep a global `time` counter that **decreases** on every post. Storing `-time` makes Python's
+   min-heap hand back the newest first.
+2. `tweets[userId]` is a list of `(time, tweetId)`, appended in order.
+3. `following[userId]` is a set. `follow` adds, `unfollow` discards — `discard`, not `remove`, so
+   unfollowing someone you never followed does not raise.
+4. `getNewsFeed`: seed a heap with the **last** tweet of the user and of everyone followed, carrying
+   the index of that tweet in its list.
+5. Pop the newest, append its id, and push that user's **previous** tweet if there is one.
+6. Stop after ten.
+
+Step 4 must include the user themselves. The examples check it, and adding `self.following[userId].add(userId)`
+in `follow` does not help, because a user who never followed anyone would still be missing.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+from collections import defaultdict
+
+
+class Twitter:
+    def __init__(self) -> None:
+        # O(T log T) per feed
+        self.time = 0
+        self.tweets: dict[int, list[tuple[int, int]]] = defaultdict(list)
+        self.following: dict[int, set[int]] = defaultdict(set)
+
+    def postTweet(self, userId: int, tweetId: int) -> None:
+        self.time += 1
+        self.tweets[userId].append((self.time, tweetId))
+
+    def getNewsFeed(self, userId: int) -> list[int]:
+        everyone = self.following[userId] | {userId}
+        pool = [entry for who in everyone for entry in self.tweets[who]]
+        pool.sort(reverse=True)
+        return [tweetId for _, tweetId in pool[:10]]
+
+    def follow(self, followerId: int, followeeId: int) -> None:
+        self.following[followerId].add(followeeId)
+
+    def unfollow(self, followerId: int, followeeId: int) -> None:
+        self.following[followerId].discard(followeeId)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+import heapq
+from collections import defaultdict
+
+
+class Twitter:
+    def __init__(self) -> None:
+        # O(f + k log f) per feed for f followed users
+        self.time = 0
+        self.tweets: dict[int, list[tuple[int, int]]] = defaultdict(list)
+        self.following: dict[int, set[int]] = defaultdict(set)
+
+    def postTweet(self, userId: int, tweetId: int) -> None:
+        self.time -= 1                       # decreasing: newest is smallest
+        self.tweets[userId].append((self.time, tweetId))
+
+    def getNewsFeed(self, userId: int) -> list[int]:
+        heap: list[tuple[int, int, int, int]] = []   # (time, tweetId, owner, index)
+
+        for who in self.following[userId] | {userId}:   # always include yourself
+            owned = self.tweets[who]
+            if owned:
+                last = len(owned) - 1
+                time, tweetId = owned[last]
+                heapq.heappush(heap, (time, tweetId, who, last - 1))
+
+        feed: list[int] = []
+        while heap and len(feed) < 10:
+            _, tweetId, who, index = heapq.heappop(heap)
+            feed.append(tweetId)
+            if index >= 0:                    # pull that user's previous tweet in
+                time, previous = self.tweets[who][index]
+                heapq.heappush(heap, (time, previous, who, index - 1))
+
+        return feed
+
+    def follow(self, followerId: int, followeeId: int) -> None:
+        self.following[followerId].add(followeeId)
+
+    def unfollow(self, followerId: int, followeeId: int) -> None:
+        self.following[followerId].discard(followeeId)   # discard: never raises
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **A user sees their own tweets without following themselves.** The union with `{userId}` at feed
+  time is the fix; doing it inside `follow` misses everyone who has never followed anybody.
+- **`discard`, not `remove`.** Unfollowing someone you do not follow is a legal call and must not
+  raise. `defaultdict` covers the other half — an unknown user has an empty set rather than a
+  `KeyError`.
+- **Tweet ids are not timestamps.** They are unique but unordered, so sorting by id gives a plausible
+  wrong feed. The counter is the only source of recency.
+- Counting **down** rather than up is what lets Python's min-heap act as a max-heap without negating
+  at every use. Either works; mixing them does not.
+- Seed the heap with each user's **last** tweet and walk backwards. Seeding with the first tweet
+  merges the feed oldest-first and then needs a reversal that only works if you took everything.
+- Stop at ten. The `while` bound is what keeps this `O(k log f)` rather than a full merge.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Why is this Merge k Sorted Lists?"* — Each user's tweet list is sorted by recency, and the feed is
+  the merge of `f` of them truncated at 10. Recognising that is worth more than the code.
+- *"Millions of followers."* — The pull model here reads every followed user's list at feed time. Real
+  systems push instead: a post fans out into each follower's precomputed timeline. The trade is write
+  cost against read cost, and celebrities are why neither side wins outright.
+- *"Delete a tweet."* — The per-user list is ordered by time, so a binary search finds it; the heap
+  logic is untouched. Worth noting that the design survives the change.
+
+</FollowUps>

@@ -1,0 +1,172 @@
+---
+id: "8.5"
+slug: task-scheduler
+title: Task Scheduler
+leetcode: 621
+url: https://leetcode.com/problems/task-scheduler/
+difficulty: Medium
+premium: false
+category: heap-priority-queue
+patterns: [greedy-scan, hashing-complement]
+prerequisites: ["Counting with a fixed alphabet", "Arguing that a layout is forced"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Given CPU `tasks` labelled `A`–`Z` and a cooldown `n`, each interval runs one task or idles. Two
+intervals running the **same** label must be at least `n` apart. Return the minimum number of
+intervals needed.
+
+<Examples>
+  <Example input={`tasks = ["A", "A", "A", "B", "B", "B"]
+n = 2`} output="8">
+    `A B _ A B _ A B` — the three A's force two gaps of size 3, and the B's fill two of the four
+    slots.
+  </Example>
+  <Example input={`tasks = ["A", "C", "A", "B", "D", "B"]
+n = 1`} output="6">
+    Enough distinct tasks to fill every gap, so nothing idles and the answer is just the task count.
+  </Example>
+  <Example input={`tasks = ["A", "A", "A"]
+n = 2`} output="7">
+    `A _ _ A _ _ A` — nothing else exists to fill the gaps, so they stay idle.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= tasks.length <= 10^4`
+- `tasks[i]` is an uppercase English letter
+- `0 <= n <= 100`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The identity of the tasks never matters, only **how often each occurs**. That collapses the input to
+  26 counts before any thinking starts.
+- The **most frequent** task is the binding constraint: its copies must be spread out, and everything
+  else has to fit into the gaps that creates.
+- The answer is either "the forced skeleton" or "no idling at all". Those are the only two regimes,
+  which is why a formula works and no simulation is needed.
+
+</Signals>
+
+<BruteForce>
+
+Simulate with a max-heap: each round, take up to `n + 1` distinct tasks with the highest remaining
+counts, run them, and put the survivors back.
+
+**O(total intervals · log 26) time, O(1) space.** It is correct, it mirrors the problem statement
+directly, and it is the answer to give if the formula does not come. The bottleneck is that it walks
+every interval one at a time — including the idle ones — when the shape of the schedule is completely
+determined by two numbers.
+
+</BruteForce>
+
+<Insight>
+
+The most frequent task lays out a fixed skeleton of gaps, and the answer is either that skeleton or the task count when there is nothing to idle for.
+
+</Insight>
+
+<Approach>
+
+1. Count the tasks. Let `most` be the highest count and `ties` be how many labels reach it.
+2. Those `most` copies create `most - 1` gaps, each needing `n + 1` intervals from one copy to the
+   next: `(most - 1) * (n + 1)`.
+3. The final block holds one copy of every label tied at `most`: add `ties`.
+4. That skeleton is a **lower bound**. If there are enough other tasks, they fill the gaps entirely and
+   nothing idles — then the answer is simply `len(tasks)`.
+5. Return `max(len(tasks), (most - 1) * (n + 1) + ties)`.
+
+Step 4 is what the `max` is for, and skipping it is the classic error. With many distinct tasks the
+skeleton underestimates, because the extra tasks have to go somewhere and lengthen the schedule
+instead of fitting into it.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+import heapq
+from collections import Counter, deque
+
+
+class Solution:
+    def leastInterval(self, tasks: list[str], n: int) -> int:
+        # O(total intervals) time, O(1) space — simulates every interval, idle ones included
+        heap = [-count for count in Counter(tasks).values()]
+        heapq.heapify(heap)
+
+        time = 0
+        cooling: deque[tuple[int, int]] = deque()      # (remaining count, free again at)
+
+        while heap or cooling:
+            time += 1
+
+            if heap:
+                remaining = heapq.heappop(heap) + 1    # negated, so + 1 is one fewer
+                if remaining:
+                    cooling.append((remaining, time + n))
+
+            if cooling and cooling[0][1] == time:
+                heapq.heappush(heap, cooling.popleft()[0])
+
+        return time
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+from collections import Counter
+
+
+class Solution:
+    def leastInterval(self, tasks: list[str], n: int) -> int:
+        # O(n) time, O(1) space — 26 counters
+        counts = Counter(tasks)
+        most = max(counts.values())
+        ties = sum(1 for count in counts.values() if count == most)
+
+        skeleton = (most - 1) * (n + 1) + ties
+
+        # With enough distinct tasks the gaps fill up and nothing idles.
+        return max(len(tasks), skeleton)
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **The `max(len(tasks), …)` is not a safety net, it is half the answer.** The second example has
+  `most = 2`, `ties = 2` and `n = 1`, giving a skeleton of 4 — but there are 6 tasks, and all 6 must
+  run. Without the `max` the answer is too small.
+- **Count the ties.** With `["A","A","B","B"]` and `n = 2` the skeleton is `(2-1)*3 + 2 = 5`, and
+  dropping `ties` gives 4, which cannot hold both final tasks.
+- `n = 0` means no cooldown at all. The formula gives `(most-1)*1 + ties`, which is at most
+  `len(tasks)`, so the `max` returns the task count — correct, and worth checking rather than
+  special-casing.
+- The simulation must let cooling tasks **return** to the heap at the right interval. A version that
+  forgets them terminates early with a plausible number.
+- The formula is a greedy claim and deserves one sentence of justification: the most frequent task
+  cannot be compressed, and everything else is interchangeable filler.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Return an actual valid schedule, not just its length."* — The formula gives no ordering; the heap
+  simulation does. That is exactly when the slower version is the right one to reach for.
+- *"Tasks have different durations."* — The skeleton argument collapses, because gaps are no longer
+  interchangeable. It becomes a scheduling problem with no neat closed form.
+- *"Why does the greedy work?"* — Running the most frequent remaining task first is never worse: it is
+  the one with the least freedom, and delaying it can only push the finish later.
+
+</FollowUps>

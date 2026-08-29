@@ -1,0 +1,149 @@
+---
+id: "8.3"
+slug: k-closest-points-to-origin
+title: K Closest Points to Origin
+leetcode: 973
+url: https://leetcode.com/problems/k-closest-points-to-origin/
+difficulty: Medium
+premium: false
+category: heap-priority-queue
+patterns: [heap-topk]
+prerequisites: ["Kth Largest Element in a Stream", "Why the square root is optional"]
+targetComplexity: { time: "O(n log k)", space: "O(k)" }
+status: complete
+---
+
+<Statement>
+
+Given `points` on the plane and an integer `k`, return the `k` points closest to the origin, measured
+by Euclidean distance. The answer may be returned in **any order** and is unique apart from that
+order.
+
+<Examples>
+  <Example input={`points = [[1, 3], [-2, 2]]
+k = 1`} output={`[[-2, 2]]`}>
+    Squared distances 10 and 8 — the second point wins, and no square root was needed to see it.
+  </Example>
+  <Example input={`points = [[3, 3], [5, -1], [-2, 4]]
+k = 2`} output={`[[3, 3], [-2, 4]]`}>
+    Squared distances 18, 26 and 20. The 5, -1 is the one left out.
+  </Example>
+  <Example input={`points = [[0, 1], [1, 0]]
+k = 2`} output={`[[0, 1], [1, 0]]`}>
+    Ties are fine when `k` covers both, and the order does not matter.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= k <= points.length <= 10^4`
+- `-10^4 <= xi, yi <= 10^4`
+- The answer may be returned **in any order**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **"The k closest"** is the top-k sentence, with "closest" instead of "largest". The distance is just
+  the key you sort on.
+- The square root is **monotone**, so it never changes which point is nearer. Comparing `x² + y²`
+  gives the same ordering, avoids floating point entirely, and is faster.
+- The answer may be in any order, which is a hint: the full sorted order is not being asked for, so
+  producing it is doing more work than the question wants.
+
+</Signals>
+
+<BruteForce>
+
+Sort every point by squared distance and take the first `k`.
+
+**O(n log n) time, O(n) space.** Short, correct, and genuinely a fine submission at `n = 10^4`. The
+bottleneck is that it orders all `10^4` points to report `k` of them — when `k` is small, almost all
+of that ordering is thrown away.
+
+</BruteForce>
+
+<Insight>
+
+Compare squared distances — the square root is monotone — and keep only k candidates in a max-heap so the worst one can be evicted.
+
+</Insight>
+
+<Approach>
+
+1. For each point compute `x*x + y*y`. Never take the square root.
+2. Keep a heap of at most `k` points, ordered so the **farthest** is on top — in Python, push
+   `(-distance, point)` into the min-heap.
+3. Push each point; if the heap exceeds `k`, pop. The one popped is the farthest, which is exactly the
+   one that cannot belong to the answer.
+4. Return whatever remains.
+
+This is the mirror image of the previous problem: there a min-heap held the `k` largest, here a
+max-heap holds the `k` smallest. Same structure, opposite orientation — being able to say which way
+round and why is the actual skill.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def kClosest(self, points: list[list[int]], k: int) -> list[list[int]]:
+        # O(n log n) time, O(n) space
+        return sorted(points, key=lambda p: p[0] * p[0] + p[1] * p[1])[:k]
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+import heapq
+
+
+class Solution:
+    def kClosest(self, points: list[list[int]], k: int) -> list[list[int]]:
+        # O(n log k) time, O(k) space
+        heap: list[tuple[int, int, int]] = []      # (-distance, x, y): farthest on top
+
+        for x, y in points:
+            heapq.heappush(heap, (-(x * x + y * y), x, y))
+            if len(heap) > k:
+                heapq.heappop(heap)                # evict the farthest candidate
+
+        return [[x, y] for _, x, y in heap]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Do not take the square root.** It cannot change the ordering, it costs time, and it introduces
+  floating point where the inputs are integers. Say the monotonicity argument — it is the one piece of
+  reasoning this problem is really testing.
+- **A max-heap for "closest".** The heap holds the `k` best so far, so the thing to evict is the
+  *worst* of them — the farthest. Getting the orientation backwards keeps the `k` farthest points and
+  looks correct on a symmetric test.
+- **Push the coordinates, not the list.** `(-distance, point)` with `point` a list raises `TypeError`
+  on a tie, because Python then compares the lists. Unpacking into `(-distance, x, y)` gives the
+  comparison something ordered to fall back on.
+- Sorting is `O(n log n)` and heaping is `O(n log k)`. When `k` is close to `n` there is nothing to
+  gain — say which regime you are in rather than claiming the heap is always better.
+- `heapq.nsmallest(k, points, key=…)` does exactly this in one line. Knowing that is good; being able
+  to write the heap is what is being asked.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Do it in O(n) on average."* — Quickselect on the squared distances: partition around a pivot and
+  recurse only into the side holding position `k`. `O(n)` expected, `O(n²)` worst case, and the
+  partition leaves the answer in the first `k` slots.
+- *"Closest to an arbitrary point, not the origin."* — Subtract that point's coordinates first;
+  nothing else changes.
+- *"The points arrive as a stream."* — The heap version already handles it: it only ever holds `k`
+  points and never revisits one. Sorting and quickselect both need the whole array.
+
+</FollowUps>
