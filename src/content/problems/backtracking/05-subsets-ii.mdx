@@ -1,0 +1,161 @@
+---
+id: "9.5"
+slug: subsets-ii
+title: Subsets II
+leetcode: 90
+url: https://leetcode.com/problems/subsets-ii/
+difficulty: Medium
+premium: false
+category: backtracking
+patterns: [backtracking]
+prerequisites: ["Subsets", "Combination Sum II", "Skipping duplicates at the same level"]
+targetComplexity: { time: "O(n * 2^n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Given an array `nums` that **may contain duplicates**, return the power set with **no duplicate
+subsets**, in any order.
+
+<Examples>
+  <Example input={`nums = [1, 2, 2]`} output={`[[], [1], [1,2], [1,2,2], [2], [2,2]]`}>
+    Six subsets, not eight. `[1,2]` can be formed with either 2 and appears once.
+  </Example>
+  <Example input={`nums = [0]`} output={`[[], [0]]`}>
+    No duplicates, so this behaves exactly like Subsets.
+  </Example>
+  <Example input={`nums = [2, 2, 2]`} output={`[[], [2], [2,2], [2,2,2]]`}>
+    Three identical elements give four subsets — one per *count*, not `2^3`.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= nums.length <= 10`
+- `-10 <= nums[i] <= 10`
+- Duplicates are allowed and the result must contain none
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Subsets with one twist: the input repeats, so the plain take-or-skip recursion produces the same
+  subset by different routes.
+- The duplicates come from **choosing equal values at the same position** in the subset. Choosing the
+  first 2 or the second 2 as "the first 2 in my subset" leads to identical subtrees.
+- Sorting makes equal values adjacent, which turns "have I already tried this value here?" into a
+  comparison with the immediate predecessor.
+
+</Signals>
+
+<BruteForce>
+
+Generate the full power set as in Subsets, sort each one, and deduplicate through a set.
+
+**O(n · 2^n) time and space.** It is correct and short, and at `n <= 10` it passes easily. The
+bottleneck is conceptual rather than practical: the same subset is constructed several times and
+discarded, and the number of duplicates grows with the number of repeats.
+
+</BruteForce>
+
+<Insight>
+
+Sort, then at each position try each distinct value once — the first of an equal run already covers every subset the others would produce.
+
+</Insight>
+
+<Approach>
+
+1. **Sort** `nums`.
+2. Recurse with a `start` index. **Record the path immediately on entry** — every prefix is a valid
+   subset, so there is no separate base case.
+3. For `j` from `start` upwards:
+4. Skip when `j > start` and `nums[j] == nums[j - 1]`.
+5. Append, recurse with `j + 1`, pop.
+
+Note the shape change from Subsets: instead of a binary take-or-skip at index `i`, this loops over
+"which element comes next". Both generate the power set; the loop form is the one where the
+duplicate skip has somewhere natural to live.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def subsetsWithDup(self, nums: list[int]) -> list[list[int]]:
+        # O(n * 2^n) time and space — generates duplicates, then removes them
+        found: set[tuple[int, ...]] = set()
+        path: list[int] = []
+
+        def build(i: int) -> None:
+            if i == len(nums):
+                found.add(tuple(sorted(path)))
+                return
+            path.append(nums[i])
+            build(i + 1)
+            path.pop()
+            build(i + 1)
+
+        build(0)
+        return [list(subset) for subset in found]
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def subsetsWithDup(self, nums: list[int]) -> list[list[int]]:
+        # O(n * 2^n) time, O(n) space beyond the output
+        nums.sort()                             # equal values become adjacent
+        result: list[list[int]] = []
+        path: list[int] = []
+
+        def build(start: int) -> None:
+            result.append(path[:])              # every prefix is a valid subset
+
+            for j in range(start, len(nums)):
+                if j > start and nums[j] == nums[j - 1]:
+                    continue                    # this position already tried this value
+
+                path.append(nums[j])
+                build(j + 1)
+                path.pop()
+
+        build(0)
+        return result
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`j > start`, not `j > 0`.** With `j > 0` the skip fires at every depth and `[2, 2]` never gets
+  built. Exactly the same condition, and the same failure, as Combination Sum II — which is why the
+  two problems belong next to each other.
+- **Sort before recursing.** The comparison is against the immediate predecessor, so equal values must
+  be adjacent for it to mean anything.
+- **Record on entry, not at a base case.** Every prefix of the path is itself a subset, so appending at
+  the top of `build` is what emits all `2^n` of them — including the empty one, on the very first call.
+- Copy the path. Still the same trap.
+- The output for `[2,2,2]` has four entries, not eight. If your answer has `2^n` entries whenever the
+  input repeats, the skip is not firing.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Count the distinct subsets without listing them."* — Multiply `(count + 1)` over the distinct
+  values: `[2,2,2]` gives 4, `[1,2,2]` gives `2 · 3 = 6`. It matches the examples, and it is a good
+  check that you have understood where the duplicates come from.
+- *"Permutations with duplicates."* — LC 47, and the skip condition gains a `not used[i-1]` term,
+  because permutations revisit indices in a different order.
+- *"Subsets of a multiset given as value-and-count pairs."* — The recursion becomes "how many of this
+  value do I take, 0 to count", which is the counting formula above made explicit.
+
+</FollowUps>

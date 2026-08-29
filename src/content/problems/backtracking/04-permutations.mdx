@@ -1,0 +1,170 @@
+---
+id: "9.4"
+slug: permutations
+title: Permutations
+leetcode: 46
+url: https://leetcode.com/problems/permutations/
+difficulty: Medium
+premium: false
+category: backtracking
+patterns: [backtracking]
+prerequisites: ["Subsets", "Tracking which elements are still available"]
+targetComplexity: { time: "O(n * n!)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Given an array `nums` of **distinct** integers, return all possible **permutations**, in any order.
+
+<Examples>
+  <Example input={`nums = [1, 2, 3]`} output={`[[1,2,3], [1,3,2], [2,1,3], [2,3,1], [3,1,2], [3,2,1]]`}>
+    Six permutations — `3! = 6`.
+  </Example>
+  <Example input={`nums = [0, 1]`} output={`[[0,1], [1,0]]`}>
+    Order is the entire content of the answer.
+  </Example>
+  <Example input={`nums = [1]`} output={`[[1]]`}>
+    One element has one permutation, not zero.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= nums.length <= 6`
+- `-10 <= nums[i] <= 10`
+- All integers are **distinct**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **Order matters here**, unlike every combination problem before it. `[1,2]` and `[2,1]` are two
+  different answers, so the "never look backwards" rule from Combination Sum must **not** be applied.
+- Every permutation uses **all** the elements, so the base case is "the path is full", not "the sum is
+  right".
+- Each position may be filled by any element **not yet used**, so the recursion needs to know which
+  are still available. That bookkeeping is the only new idea.
+- `n <= 6` means `6! = 720` results. The constraint is small because the output is factorial, not
+  because the algorithm is slow.
+
+</Signals>
+
+<BruteForce>
+
+Generate every sequence of length `n` over the elements — `n^n` of them — and keep those with no
+repeats.
+
+**O(n · n^n) time.** Correct, and wasteful in a very visible way: for `n = 6` it builds 46 656
+sequences to keep 720. The bottleneck is that "has this element been used" is checked at the *end*
+rather than while choosing, so most of the tree is built only to be discarded.
+
+</BruteForce>
+
+<Insight>
+
+At each position choose any element not already in the path, and the tree only ever grows towards valid permutations.
+
+</Insight>
+
+<Approach>
+
+1. Keep a `path` and a `used` flag per index.
+2. When `len(path) == len(nums)`, record a copy.
+3. Otherwise, for each index `i`:
+4. Skip it if `used[i]`.
+5. Mark it used, append `nums[i]`, recurse, then **unmark and pop** — both undos.
+
+The loop starts at 0 every time, which is exactly the opposite of Combination Sum. That difference is
+the whole distinction between a permutation and a combination, and it is worth being able to say
+which of the two a problem is asking for from its wording alone.
+
+The alternative is **swapping**: swap `nums[i]` into position `start`, recurse on `start + 1`, and swap
+back. It avoids the `used` array entirely and is worth knowing — the undo is the swap.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def permute(self, nums: list[int]) -> list[list[int]]:
+        # O(n * n^n) time — builds every sequence, then filters
+        result: list[list[int]] = []
+        path: list[int] = []
+
+        def build() -> None:
+            if len(path) == len(nums):
+                if len(set(path)) == len(path):      # checked far too late
+                    result.append(path[:])
+                return
+            for value in nums:
+                path.append(value)
+                build()
+                path.pop()
+
+        build()
+        return result
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def permute(self, nums: list[int]) -> list[list[int]]:
+        # O(n * n!) time, O(n) space beyond the output
+        result: list[list[int]] = []
+        path: list[int] = []
+        used = [False] * len(nums)
+
+        def build() -> None:
+            if len(path) == len(nums):
+                result.append(path[:])
+                return
+
+            for i in range(len(nums)):           # from 0 every time: order matters
+                if used[i]:
+                    continue
+
+                used[i] = True
+                path.append(nums[i])
+                build()
+                path.pop()                       # undo both
+                used[i] = False
+
+        build()
+        return result
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Undo both the path and the flag.** Popping the value but leaving `used[i]` set makes every later
+  branch believe the element is gone, and the output collapses to a single permutation.
+- **Start the loop at 0, not at a `start` index.** Carrying over the combination habit produces
+  exactly one "permutation" — the input itself.
+- Track usage **by index**, not by value. The values are distinct here so `value in path` also works,
+  but it is `O(n)` per check and it breaks the moment duplicates are allowed (LC 47).
+- Copy the path when recording. Third problem in a row; it is the same trap every time.
+- The output is `n!` entries of `n` elements, so `O(n · n!)` is the floor. There is no faster
+  algorithm, only a smaller output.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"With duplicates in the input."* — LC 47: sort, then skip `nums[i] == nums[i-1] and not used[i-1]`.
+  The condition is subtle and it is the same "skip siblings, not descendants" idea as Combination
+  Sum II.
+- *"Do it by swapping instead."* — Swap `nums[i]` into position `start`, recurse, swap back. No `used`
+  array, and the undo is the second swap. It produces the permutations in a different order.
+- *"Just the next permutation."* — LC 31: `O(n)`, no recursion at all — find the rightmost ascent,
+  swap with the smallest larger value to its right, reverse the tail. Completely different technique
+  for a superficially similar question.
+
+</FollowUps>

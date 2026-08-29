@@ -1,0 +1,174 @@
+---
+id: "9.2"
+slug: combination-sum
+title: Combination Sum
+leetcode: 39
+url: https://leetcode.com/problems/combination-sum/
+difficulty: Medium
+premium: false
+category: backtracking
+patterns: [backtracking]
+prerequisites: ["Subsets", "Pruning a branch that cannot succeed"]
+targetComplexity: { time: "O(n^(target/min))", space: "O(target/min)" }
+status: complete
+---
+
+<Statement>
+
+Given **distinct** integers `candidates` and a `target`, return every unique combination summing to
+`target`. The **same number may be reused any number of times**. Two combinations are different only
+if the multiset of numbers differs, and the answer may be in any order.
+
+<Examples>
+  <Example input={`candidates = [2, 3, 6, 7]
+target = 7`} output={`[[2, 2, 3], [7]]`}>
+    The 2 is used twice. `[3, 2, 2]` is the same combination and appears only once.
+  </Example>
+  <Example input={`candidates = [2, 3, 5]
+target = 8`} output={`[[2, 2, 2, 2], [2, 3, 3], [3, 5]]`}>
+    Reuse without limit, so a single candidate can fill the whole target.
+  </Example>
+  <Example input={`candidates = [2]
+target = 1`} output={`[]`}>
+    No combination reaches the target, and the empty result is correct.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= candidates.length <= 30` and all elements are **distinct**
+- `2 <= candidates[i] <= 40` — every candidate is at least 2
+- `1 <= target <= 40`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **"All unique combinations"** is backtracking again, but the decision is no longer binary — at each
+  step you pick *which* candidate to add.
+- **Unlimited reuse** means recursing on the **same** index after taking a candidate, not the next
+  one. That single choice is what separates this from Combination Sum II.
+- Order within a combination does not matter, so the search must never go **backwards** in the array.
+  Allowing that is what produces `[2,3]` and `[3,2]` as separate answers.
+
+</Signals>
+
+<BruteForce>
+
+Generate every sequence of candidates up to the target length, keep those summing to `target`, then
+deduplicate by sorting each one and pushing it through a set.
+
+**Exponential, with a large constant.** It is correct and it is the version that makes the duplication
+problem obvious: `[2,2,3]`, `[2,3,2]` and `[3,2,2]` are all produced and two of them are thrown away.
+The bottleneck is generating them at all — restricting the search to non-decreasing choices removes
+them before they exist.
+
+</BruteForce>
+
+<Insight>
+
+Never look back in the array — from index i you may reuse i or move forward, and permutations of the same multiset can no longer arise.
+
+</Insight>
+
+<Approach>
+
+1. Keep a `path`, a running `total`, and a start index `i`.
+2. If `total == target`, record a copy of the path.
+3. If `total > target` or `i` has run off the end, this branch is dead — return.
+4. Otherwise, for each index `j >= i`:
+5. Append `candidates[j]`, recurse with start `j` (**not** `j + 1`, so it can be reused), then pop.
+
+The `j >= i` rule in step 4 is what enforces non-decreasing choices, and recursing with `j` rather
+than `j + 1` is what permits reuse. Those two decisions together define the problem — and swapping
+either one turns it into a different LeetCode question.
+
+Sorting the candidates first buys a real prune: once `candidates[j]` alone overshoots the remaining
+target, every later candidate does too, so the loop can `break` instead of `continue`.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def combinationSum(self, candidates: list[int], target: int) -> list[list[int]]:
+        # Exponential, and it generates every ordering before discarding most of them
+        found: set[tuple[int, ...]] = set()
+        path: list[int] = []
+
+        def build(total: int) -> None:
+            if total == target:
+                found.add(tuple(sorted(path)))     # dedupe after the fact
+                return
+            if total > target:
+                return
+            for value in candidates:               # every index, every time
+                path.append(value)
+                build(total + value)
+                path.pop()
+
+        build(0)
+        return [list(combination) for combination in found]
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def combinationSum(self, candidates: list[int], target: int) -> list[list[int]]:
+        # O(n^(target/min)) time, O(target/min) space beyond the output
+        candidates.sort()                          # enables the break below
+        result: list[list[int]] = []
+        path: list[int] = []
+
+        def build(start: int, remaining: int) -> None:
+            if remaining == 0:
+                result.append(path[:])
+                return
+
+            for j in range(start, len(candidates)):
+                if candidates[j] > remaining:
+                    break                          # sorted: everything after is worse too
+
+                path.append(candidates[j])
+                build(j, remaining - candidates[j])   # j, not j + 1: reuse is allowed
+                path.pop()
+
+        build(0, target)
+        return result
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Recurse with `j`, not `j + 1`.** Passing `j + 1` forbids reuse and turns this into a different
+  problem — `[2,2,3]` disappears from the first example.
+- **Start the loop at `start`, never at 0.** Restarting from the beginning produces every permutation
+  of every combination, and no amount of deduplication afterwards is as good as not generating them.
+- **Copy the path when recording.** Same trap as Subsets: `result.append(path)` stores a reference
+  that is empty by the time you look at it.
+- Sorting is not required for correctness, only for the `break`. Without the sort you must use
+  `continue`, which still works and prunes far less.
+- Candidates are at least 2, so the recursion depth is bounded by `target / 2 = 20`. With candidates
+  allowed to be 1 the search would not terminate on this structure — worth noticing that the
+  constraint is doing real work.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Each candidate at most once, and the input may contain duplicates."* — Problem 9.3: recurse with
+  `j + 1`, and skip a candidate equal to its predecessor at the same level.
+- *"Only count the combinations."* — That is a dynamic program, `O(n · target)`, and it is much faster
+  because it never builds the combinations. A good demonstration that "how many" and "which ones" are
+  different problems.
+- *"Combinations of exactly k numbers."* — LC 216: add a length check to the base case and prune when
+  the path is already too long.
+
+</FollowUps>

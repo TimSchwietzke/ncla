@@ -1,0 +1,170 @@
+---
+id: "9.8"
+slug: palindrome-partitioning
+title: Palindrome Partitioning
+leetcode: 131
+url: https://leetcode.com/problems/palindrome-partitioning/
+difficulty: Medium
+premium: false
+category: backtracking
+patterns: [backtracking]
+prerequisites: ["Subsets", "Choosing where to cut rather than what to take"]
+targetComplexity: { time: "O(n * 2^n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Given a string `s`, partition it so that **every** piece is a palindrome, and return all such
+partitions.
+
+<Examples>
+  <Example input={`s = "aab"`} output={`[["a", "a", "b"], ["aa", "b"]]`}>
+    Two ways. `["a", "ab"]` fails because `ab` is not a palindrome.
+  </Example>
+  <Example input={`s = "a"`} output={`[["a"]]`}>
+    A single character is a palindrome, so there is exactly one partition.
+  </Example>
+  <Example input={`s = "aba"`} output={`[["a", "b", "a"], ["aba"]]`}>
+    The whole string is a palindrome, which gives a partition of size one.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= s.length <= 16`
+- `s` contains only lowercase English letters
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The choice at each step is **where to cut**, not which element to take. A string of length `n` has
+  `n - 1` gaps and each is independently a cut or not — `2^(n-1)` partitions, which `n <= 16` confirms
+  is the intended scale.
+- Every piece must be valid, so a cut that produces a non-palindrome can be **rejected immediately**.
+  That prune is what keeps this from being generate-then-filter.
+- Cutting off a valid prefix leaves a smaller instance of the same problem. That is the recursion.
+
+</Signals>
+
+<BruteForce>
+
+Enumerate all `2^(n-1)` cut patterns, split the string accordingly, and keep the partitions whose
+pieces are all palindromes.
+
+**O(n · 2^n) time.** Correct and easy to state. The bottleneck is the late check: a pattern beginning
+with a bad first piece is completed in full — all `2^(n-2)` continuations of it — before being thrown
+away.
+
+</BruteForce>
+
+<Insight>
+
+Cut off a prefix only when it is already a palindrome, and recurse on what remains.
+
+</Insight>
+
+<Approach>
+
+1. Recurse with a `start` index into `s`.
+2. When `start == len(s)`, the whole string is consumed — record a copy of the path.
+3. For each `end` from `start` to the last index:
+4. If `s[start:end+1]` is a palindrome, append it, recurse from `end + 1`, and pop.
+5. Otherwise skip that cut entirely — no valid partition begins with it.
+
+Step 4's check is `O(n)` with a two-pointer comparison, giving `O(n)` per node. Precomputing an
+`is_palindrome[i][j]` table in `O(n²)` makes each check `O(1)`; with `n <= 16` it changes nothing in
+practice and is worth mentioning as the real optimisation.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def partition(self, s: str) -> list[list[str]]:
+        # O(n * 2^n) time — every cut pattern, validated at the end
+        result: list[list[str]] = []
+        n = len(s)
+
+        for mask in range(1 << (n - 1)):
+            pieces: list[str] = []
+            start = 0
+            for gap in range(n - 1):
+                if mask & (1 << gap):
+                    pieces.append(s[start:gap + 1])
+                    start = gap + 1
+            pieces.append(s[start:])
+
+            if all(piece == piece[::-1] for piece in pieces):
+                result.append(pieces)
+
+        return result
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def partition(self, s: str) -> list[list[str]]:
+        # O(n * 2^n) time, O(n) space beyond the output
+        result: list[list[str]] = []
+        path: list[str] = []
+
+        def is_palindrome(left: int, right: int) -> bool:
+            while left < right:
+                if s[left] != s[right]:
+                    return False
+                left += 1
+                right -= 1
+            return True
+
+        def build(start: int) -> None:
+            if start == len(s):
+                result.append(path[:])
+                return
+
+            for end in range(start, len(s)):
+                if not is_palindrome(start, end):
+                    continue                     # no partition can begin with this cut
+
+                path.append(s[start:end + 1])
+                build(end + 1)
+                path.pop()
+
+        build(0)
+        return result
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Recurse from `end + 1`, not from `end`.** Passing `end` re-consumes the last character and the
+  recursion never terminates — or, worse, produces partitions that overlap.
+- **The base case is `start == len(s)`**, meaning the string is fully consumed. Recording whenever the
+  path is non-empty produces partial partitions that do not cover the string.
+- Check the palindrome **before** recursing, not inside the base case. Filtering at the end is the
+  brute force, and the prune is the entire improvement.
+- Copy the path. Same trap as everywhere in this category.
+- `s[start:end+1]` is inclusive at both ends; `is_palindrome(start, end)` uses the same convention.
+  Mixing an inclusive index with an exclusive slice is the off-by-one that produces almost-right
+  output.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Precompute the palindrome table."* — `is_palindrome[i][j]` filled by expanding around centres, or
+  by the recurrence `s[i] == s[j] and is_palindrome[i+1][j-1]`. Each check becomes `O(1)`.
+- *"The **minimum** number of cuts."* — LC 132: a dynamic program, not backtracking. Counting the best
+  partition is polynomial; listing them all is exponential, and the difference is worth internalising.
+- *"Partition into pieces satisfying some other property."* — The structure is unchanged; only
+  `is_palindrome` is replaced. That is a good sign the decomposition is the right one.
+
+</FollowUps>

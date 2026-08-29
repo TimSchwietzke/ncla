@@ -1,0 +1,182 @@
+---
+id: "9.10"
+slug: n-queens
+title: N-Queens
+leetcode: 51
+url: https://leetcode.com/problems/n-queens/
+difficulty: Hard
+premium: false
+category: backtracking
+patterns: [backtracking]
+prerequisites: ["Word Search", "Encoding a constraint so it is O(1) to check"]
+targetComplexity: { time: "O(n!)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Place `n` queens on an `n x n` board so that no two attack each other — no shared row, column or
+diagonal — and return **all** distinct solutions as boards of `Q` and `.`.
+
+<Examples>
+  <Example input={`n = 4`} output={`[[".Q..", "...Q", "Q...", "..Q."], ["..Q.", "Q...", "...Q", ".Q.."]]`}>
+    Two solutions, and they are mirror images of each other.
+  </Example>
+  <Example input={`n = 1`} output={`[["Q"]]`}>
+    One square, one queen, no conflicts.
+  </Example>
+  <Example input={`n = 3`} output={`[]`}>
+    No arrangement exists. The empty result is the answer, not a failure.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= n <= 9`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Exactly one queen per **row** — two in a row would attack each other. So the search is "for each
+  row, which column?", which is `n` levels deep with at most `n` choices each.
+- A placement is rejected by three conditions, and all three can be made `O(1)`: a column set, and two
+  diagonal sets.
+- The diagonals have a closed form. On a **descending** diagonal (`↘`) `row - col` is constant; on an
+  **ascending** one (`↗`) `row + col` is constant. Those two numbers are the whole trick.
+
+</Signals>
+
+<BruteForce>
+
+Place queens row by row and, before each placement, scan the board for a conflicting queen along the
+column and both diagonals.
+
+**O(n! · n) time.** Correct, and the natural first version. The bottleneck is the scan: each check
+walks up to `n` cells, when membership in three sets answers the same question in constant time. With
+`n <= 9` both pass, and the sets are what make the solution worth writing.
+
+</BruteForce>
+
+<Insight>
+
+Place one queen per row and identify each diagonal by row − col and row + col, so every conflict check is a set lookup.
+
+</Insight>
+
+<Approach>
+
+1. Keep three sets: `columns`, `descending` (holding `row - col`) and `ascending` (holding `row + col`).
+2. Recurse over rows. When `row == n`, every row has a queen — render and record the board.
+3. For each column in that row:
+4. Skip it when `col`, `row - col` or `row + col` is already claimed.
+5. Otherwise add all three, place the queen, recurse on `row + 1`, then **remove all three and lift the
+   queen**.
+
+Step 5's undo has four parts and every one of them matters. This is the problem where a forgotten undo
+is hardest to spot, because the answer is not obviously wrong — it is merely incomplete.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def solveNQueens(self, n: int) -> list[list[str]]:
+        # O(n! * n) time — scans the board for conflicts instead of looking them up
+        result: list[list[str]] = []
+        board = [["."] * n for _ in range(n)]
+
+        def safe(row: int, col: int) -> bool:
+            for r in range(row):                     # only rows above hold queens
+                for c in range(n):
+                    if board[r][c] == "Q" and (c == col or abs(row - r) == abs(col - c)):
+                        return False
+            return True
+
+        def place(row: int) -> None:
+            if row == n:
+                result.append(["".join(line) for line in board])
+                return
+            for col in range(n):
+                if not safe(row, col):
+                    continue
+                board[row][col] = "Q"
+                place(row + 1)
+                board[row][col] = "."
+
+        place(0)
+        return result
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def solveNQueens(self, n: int) -> list[list[str]]:
+        # O(n!) time, O(n) space beyond the output
+        result: list[list[str]] = []
+        board = [["."] * n for _ in range(n)]
+
+        columns: set[int] = set()
+        descending: set[int] = set()      # row - col is constant along a diagonal
+        ascending: set[int] = set()       # row + col is constant along the other
+
+        def place(row: int) -> None:
+            if row == n:
+                result.append(["".join(line) for line in board])
+                return
+
+            for col in range(n):
+                if col in columns or (row - col) in descending or (row + col) in ascending:
+                    continue
+
+                columns.add(col)
+                descending.add(row - col)
+                ascending.add(row + col)
+                board[row][col] = "Q"
+
+                place(row + 1)
+
+                columns.remove(col)       # undo all four, every time
+                descending.remove(row - col)
+                ascending.remove(row + col)
+                board[row][col] = "."
+
+        place(0)
+        return result
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Undo all four things.** Three sets and the board cell. Forgetting one produces *fewer* solutions
+  rather than wrong ones, which is much harder to notice — `n = 4` still returns something, just not
+  both boards.
+- **`row - col` and `row + col`, not the other way round.** Both are needed and they are different
+  diagonals; using `row + col` twice silently allows half the attacks. Check it on a `2 x 2` corner if
+  you are unsure.
+- No row check is needed, because the recursion places exactly one queen per row by construction.
+  Adding a row set is harmless and signals you have not seen why it is unnecessary.
+- `n = 3` returns `[]`, and `n = 2` as well. An empty result is a correct answer here.
+- Render the board only at the base case. Building strings at every level is `O(n²)` work per node for
+  nothing.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Just count the solutions."* — LC 52: drop the board entirely and return a count. The sets alone are
+  enough, and it runs noticeably faster.
+- *"Larger n."* — Bitmasks instead of sets: one integer per constraint, and the available columns are
+  computed with `~(cols | diag1 | diag2)`. It is the classic demonstration of bit tricks, and it
+  reaches `n = 15` comfortably.
+- *"Only the first solution."* — Return as soon as one is found. Worth noting that "all solutions" and
+  "any solution" have very different costs here, even though the code differs by one line.
+
+</FollowUps>

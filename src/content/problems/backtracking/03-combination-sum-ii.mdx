@@ -1,0 +1,177 @@
+---
+id: "9.3"
+slug: combination-sum-ii
+title: Combination Sum II
+leetcode: 40
+url: https://leetcode.com/problems/combination-sum-ii/
+difficulty: Medium
+premium: false
+category: backtracking
+patterns: [backtracking]
+prerequisites: ["Combination Sum", "Skipping duplicates at the same decision level"]
+targetComplexity: { time: "O(2^n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Given `candidates` that **may contain duplicates** and a `target`, return every unique combination
+summing to `target`. Each **position** in the array may be used at most once, and the result must
+contain no duplicate combinations.
+
+<Examples>
+  <Example input={`candidates = [10, 1, 2, 7, 6, 1, 5]
+target = 8`} output={`[[1, 1, 6], [1, 2, 5], [1, 7], [2, 6]]`}>
+    Two separate 1s exist, so `[1, 1, 6]` is legal — but `[1, 7]` appears **once**, even though either
+    1 could have formed it.
+  </Example>
+  <Example input={`candidates = [2, 5, 2, 1, 2]
+target = 5`} output={`[[1, 2, 2], [5]]`}>
+    Three 2s, and `[1, 2, 2]` uses two of them. It still appears only once.
+  </Example>
+  <Example input={`candidates = [1, 1]
+target = 1`} output={`[[1]]`}>
+    The smallest case that separates "two positions" from "two combinations".
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= candidates.length <= 100`, `1 <= candidates[i] <= 50`
+- `1 <= target <= 30`
+- Each **position** may be used at most once; the result must have no duplicate combinations
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Two changes from Combination Sum, and they pull in opposite directions: each position is used **at
+  most once** (so recurse with `j + 1`), and the input **may repeat** (so identical values at the same
+  level must not both be explored).
+- The distinction that matters: two equal values at **different depths** of the path are fine — that is
+  `[1, 1, 6]`. Two equal values as the **first choice at the same depth** produce the identical
+  subtree twice.
+- Sorting brings equal values next to each other, which is what makes "same as my predecessor" a
+  usable test at all.
+
+</Signals>
+
+<BruteForce>
+
+Generate every subset that sums to `target`, then deduplicate by sorting each and putting them in a
+set.
+
+**O(2^n) time plus the deduplication, O(2^n) space.** It is correct, and with `n = 100` it is
+hopeless — but the reasoning is what matters: it *first* produces `[1, 7]` twice and then throws one
+away. Recognising that the duplicates can be prevented rather than removed is the whole problem.
+
+</BruteForce>
+
+<Insight>
+
+Sort first, then at each level skip a candidate equal to the one just tried — the first of the equals already explored that entire subtree.
+
+</Insight>
+
+<Approach>
+
+1. **Sort** the candidates. Equal values are now adjacent.
+2. Recurse with `path`, `start` and `remaining`.
+3. When `remaining == 0`, record a copy of the path.
+4. For `j` from `start` upwards:
+5. **Skip** when `j > start` and `candidates[j] == candidates[j - 1]`. That is "this level has already
+   tried this value".
+6. `break` when `candidates[j] > remaining` — sorted, so everything later is worse.
+7. Otherwise append, recurse with `j + 1`, and pop.
+
+Step 5's `j > start` is the entire subtlety. Without it, every equal value is skipped, including the
+*second* one at a deeper level — and `[1, 1, 6]` disappears. With it, only siblings are skipped, which
+is exactly the set of duplicate subtrees.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def combinationSum2(self, candidates: list[int], target: int) -> list[list[int]]:
+        # O(2^n) plus deduplication — generates duplicates, then discards them
+        found: set[tuple[int, ...]] = set()
+        path: list[int] = []
+
+        def build(start: int, remaining: int) -> None:
+            if remaining == 0:
+                found.add(tuple(sorted(path)))
+                return
+            if remaining < 0:
+                return
+            for j in range(start, len(candidates)):
+                path.append(candidates[j])
+                build(j + 1, remaining - candidates[j])
+                path.pop()
+
+        build(0, target)
+        return [list(combination) for combination in found]
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def combinationSum2(self, candidates: list[int], target: int) -> list[list[int]]:
+        # O(2^n) time, O(n) space beyond the output
+        candidates.sort()                       # equal values become adjacent
+        result: list[list[int]] = []
+        path: list[int] = []
+
+        def build(start: int, remaining: int) -> None:
+            if remaining == 0:
+                result.append(path[:])
+                return
+
+            for j in range(start, len(candidates)):
+                if j > start and candidates[j] == candidates[j - 1]:
+                    continue                    # this level already tried this value
+                if candidates[j] > remaining:
+                    break                       # sorted: no later candidate fits either
+
+                path.append(candidates[j])
+                build(j + 1, remaining - candidates[j])   # j + 1: each position used once
+                path.pop()
+
+        build(0, target)
+        return result
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`j > start`, not `j > 0`.** With `j > 0` the skip fires at every depth, and combinations that
+  legitimately use two equal values — `[1, 1, 6]` — never get built. This one condition is the
+  difference between the two failure modes of this problem.
+- **Sort first.** The duplicate test compares against the immediate predecessor, which only identifies
+  equals if they are adjacent. Without the sort the skip silently does nothing useful.
+- **`j + 1`, not `j`.** Reusing a position turns this back into Combination Sum, and `[1, 1]` with
+  target 2 would come from a single 1.
+- Deduplicating with a set afterwards **works** and is worth mentioning — then show the skip, because
+  with `n = 100` generating the duplicates is the thing that kills you.
+- The `break` needs the sort too. Without it, use `continue` and accept a much larger search.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Why does skipping siblings not lose answers?"* — The first candidate of an equal run explores every
+  subtree that any of them would. A later sibling at the same level starts from an identical state, so
+  its subtree is a copy.
+- *"Subsets with duplicates."* — Problem 9.5: the same skip rule, with no target to satisfy. Solving
+  one gives you the other.
+- *"Count them instead of listing them."* — A knapsack-style dynamic program, and duplicates stop
+  being special because counting does not care which position a value came from.
+
+</FollowUps>

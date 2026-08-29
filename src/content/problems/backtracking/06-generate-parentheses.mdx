@@ -1,0 +1,169 @@
+---
+id: "9.6"
+slug: generate-parentheses
+title: Generate Parentheses
+leetcode: 22
+url: https://leetcode.com/problems/generate-parentheses/
+difficulty: Medium
+premium: false
+category: backtracking
+patterns: [backtracking]
+prerequisites: ["Subsets", "Pruning with a validity invariant"]
+targetComplexity: { time: "O(4^n / sqrt(n))", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Given `n` pairs of parentheses, generate **all** combinations of well-formed parentheses.
+
+<Examples>
+  <Example input={`n = 3`} output={`["((()))", "(()())", "(())()", "()(())", "()()()"]`}>
+    Five valid strings out of the twenty different arrangements of three of each character.
+  </Example>
+  <Example input={`n = 1`} output={`["()"]`}>
+    Only one way to balance a single pair.
+  </Example>
+  <Example input={`n = 2`} output={`["(())", "()()"]`}>
+    Two ways. `)(` and `))((` use the right characters and are not well-formed.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= n <= 8`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **"Generate all combinations"** is backtracking. The new element is that most combinations are
+  **invalid**, so the search has to know what invalid looks like *while building*, not afterwards.
+- Validity has a simple running form: at every prefix, the number of closing brackets never exceeds the
+  number of opening ones. That is checkable in `O(1)` at each step.
+- This problem sits in Backtracking rather than Stack for exactly that reason. NeetCode used to file
+  it under Stack; the technique is building a valid configuration by pruning, and a stack never
+  appears in the solution.
+
+</Signals>
+
+<BruteForce>
+
+Generate every string of `2n` characters over `(` and `)`, and keep the well-formed ones.
+
+**O(2^(2n) · n) time.** For `n = 8` that is 65 536 strings, each validated in linear time — it passes,
+and it makes the shape of the problem obvious. The bottleneck is that validity is tested only at the
+end: `)))` is a dead prefix that the generator happily extends 32 more times before rejecting it.
+
+</BruteForce>
+
+<Insight>
+
+Extend a prefix only while it can still become valid — open when any remain, close only while a closing bracket has something to match.
+
+</Insight>
+
+<Approach>
+
+1. Track `opened` and `closed`, the counts used so far, and a `path`.
+2. When `opened == closed == n`, the string is complete — record it.
+3. **Open** a bracket when `opened < n`.
+4. **Close** one when `closed < opened` — strictly, since a closing bracket needs an unmatched opener.
+5. Undo after each branch.
+
+Steps 3 and 4 are the whole algorithm. Every prefix the recursion builds is *already* valid, so no
+final check exists and none is needed. That is the difference between backtracking and generate-then-filter.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def generateParenthesis(self, n: int) -> list[str]:
+        # O(2^(2n) * n) time — builds every string, validates at the end
+        result: list[str] = []
+        path: list[str] = []
+
+        def valid(text: str) -> bool:
+            depth = 0
+            for ch in text:
+                depth += 1 if ch == "(" else -1
+                if depth < 0:
+                    return False
+            return depth == 0
+
+        def build() -> None:
+            if len(path) == 2 * n:
+                text = "".join(path)
+                if valid(text):
+                    result.append(text)
+                return
+            for ch in "()":
+                path.append(ch)
+                build()
+                path.pop()
+
+        build()
+        return result
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def generateParenthesis(self, n: int) -> list[str]:
+        # O(4^n / sqrt(n)) time — the number of valid strings, O(n) space beyond the output
+        result: list[str] = []
+        path: list[str] = []
+
+        def build(opened: int, closed: int) -> None:
+            if opened == n and closed == n:
+                result.append("".join(path))
+                return
+
+            if opened < n:                      # an opener is always allowed while any remain
+                path.append("(")
+                build(opened + 1, closed)
+                path.pop()
+
+            if closed < opened:                 # a closer needs an unmatched opener
+                path.append(")")
+                build(opened, closed + 1)
+                path.pop()
+
+        build(0, 0)
+        return result
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`closed < opened`, strictly.** Using `closed <= opened` allows `)` as the very first character and
+  the output fills with malformed strings. This single comparison is the entire pruning rule.
+- **Two separate `if`s, not `if/else`.** Both branches are usually available at once, and turning them
+  into a chain silently explores only one of them.
+- Pop after **each** branch, not once at the end. With two branches in the same call, a single pop
+  leaves the first branch's character in place for the second.
+- The base case needs both counts at `n`. Checking only `len(path) == 2 * n` also works, but only
+  because the pruning already guarantees balance — say which invariant you are leaning on.
+- The number of results is the `n`-th Catalan number, so `O(4^n / sqrt(n))` is a bound on the output,
+  not on wasted work. Every path this version builds ends in a valid string.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Count them without listing them."* — The Catalan number `C(2n, n) / (n + 1)`, computable in `O(n)`.
+  Once again, "how many" and "which ones" are different problems.
+- *"Multiple bracket types."* — The single counter becomes a stack, because `([)]` must be rejected and
+  a count cannot see it. That is Valid Parentheses turned into a generator.
+- *"Remove the minimum invalid parentheses from a given string."* — LC 301: backtracking again, but
+  searching for the shortest removals rather than building from nothing.
+
+</FollowUps>

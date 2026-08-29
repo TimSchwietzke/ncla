@@ -1,0 +1,165 @@
+---
+id: "9.9"
+slug: letter-combinations-of-a-phone-number
+title: Letter Combinations of a Phone Number
+leetcode: 17
+url: https://leetcode.com/problems/letter-combinations-of-a-phone-number/
+difficulty: Medium
+premium: false
+category: backtracking
+patterns: [backtracking]
+prerequisites: ["Subsets", "A Cartesian product written as recursion"]
+targetComplexity: { time: "O(4^n * n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Given a string of digits `2`–`9`, return every letter combination the number could spell, using the
+classic telephone keypad. `1` maps to nothing. The answer may be in any order.
+
+<Examples>
+  <Example input={`digits = "23"`} output={`["ad","ae","af","bd","be","bf","cd","ce","cf"]`}>
+    Three letters on the 2, three on the 3 — nine combinations, one letter chosen per digit.
+  </Example>
+  <Example input={`digits = "2"`} output={`["a","b","c"]`}>
+    A single digit gives its own letters.
+  </Example>
+  <Example input={`digits = ""`} output={`[]`}>
+    No digits means **no** combinations — not one empty string.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `0 <= digits.length <= 4`
+- Each character is a digit in `['2', '9']`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Every digit contributes **exactly one** letter, and the choices are independent. That is a Cartesian
+  product, and the count is the product of the group sizes — 3 or 4 per digit, hence `4^n` as the
+  bound.
+- Nothing can be invalid, so there is **no pruning** here. This is the purest form of the pattern: the
+  recursion is only about enumerating, and every leaf is an answer.
+- The keypad is fixed data, not something to derive. Writing the map out is part of the solution and
+  getting `7` and `9` right — four letters each — is part of getting it correct.
+
+</Signals>
+
+<BruteForce>
+
+Build the product iteratively: start with `[""]`, and for each digit replace the list with every
+existing prefix extended by every letter of that digit.
+
+**O(4^n · n) time and space.** This is not worse than the recursion — it is the same algorithm written
+as a loop, and for a pure product it is arguably clearer. What it lacks is a place to prune, which is
+why the recursive shape is the one that carries over to the rest of this category.
+
+</BruteForce>
+
+<Insight>
+
+One digit, one letter, one level of the recursion — with nothing to reject, every path reaches an answer.
+
+</Insight>
+
+<Approach>
+
+1. Return `[]` immediately for an empty input. The empty string is **not** a valid answer.
+2. Keep the keypad as a dictionary from digit character to its letters.
+3. Recurse with an index `i` and a `path`.
+4. When `i == len(digits)`, join the path and record it.
+5. Otherwise, for each letter of `digits[i]`: append, recurse with `i + 1`, pop.
+
+Step 1 is the only special case in the whole problem, and it is the one every solution gets wrong
+first — the recursion naturally produces `[""]` for no digits, which the judge rejects.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def letterCombinations(self, digits: str) -> list[str]:
+        # O(4^n * n) time and space — the same product, built iteratively
+        if not digits:
+            return []
+
+        keypad = {"2": "abc", "3": "def", "4": "ghi", "5": "jkl",
+                  "6": "mno", "7": "pqrs", "8": "tuv", "9": "wxyz"}
+
+        combinations = [""]
+        for digit in digits:
+            combinations = [prefix + letter
+                            for prefix in combinations
+                            for letter in keypad[digit]]
+
+        return combinations
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def letterCombinations(self, digits: str) -> list[str]:
+        # O(4^n * n) time, O(n) space beyond the output
+        if not digits:
+            return []                      # no digits means no combinations, not [""]
+
+        keypad = {"2": "abc", "3": "def", "4": "ghi", "5": "jkl",
+                  "6": "mno", "7": "pqrs", "8": "tuv", "9": "wxyz"}
+
+        result: list[str] = []
+        path: list[str] = []
+
+        def build(i: int) -> None:
+            if i == len(digits):
+                result.append("".join(path))
+                return
+
+            for letter in keypad[digits[i]]:
+                path.append(letter)
+                build(i + 1)
+                path.pop()
+
+        build(0)
+        return result
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **The empty input returns `[]`, not `[""]`.** Without the guard the recursion immediately hits its
+  base case and records one empty string. It is the only edge case here and it is the one that fails.
+- **`7` is `pqrs` and `9` is `wxyz` — four letters each.** Writing three for every digit is a
+  transcription slip that produces a plausible but short answer, and it is worth double-checking
+  against a real keypad rather than from memory.
+- `1` and `0` never appear in the input, so the map needs no entries for them. Adding them is harmless;
+  relying on them is not, since the constraints exclude them.
+- Copy or join the path when recording — `"".join(path)` already produces a new string, which is why
+  this is the one problem in the category where the copying trap does not bite.
+- With `n <= 4` the output is at most `4^4 = 256` strings. There is no performance concern here at
+  all; the problem is about getting the enumeration and the edge case right.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Do it iteratively."* — The version above. For a plain product it is shorter and has no recursion
+  depth to worry about.
+- *"Only combinations that are real words."* — Filter against a dictionary, or better, walk a trie as
+  you build and prune the moment the prefix is not a word prefix. That is the same upgrade as Word
+  Search II.
+- *"Where is the backtracking, if nothing is ever rejected?"* — There is none, and saying so is the
+  point: this problem is the skeleton, and the later ones add the pruning that gives the pattern its
+  name.
+
+</FollowUps>

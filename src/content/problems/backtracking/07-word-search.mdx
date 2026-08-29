@@ -1,0 +1,189 @@
+---
+id: "9.7"
+slug: word-search
+title: Word Search
+leetcode: 79
+url: https://leetcode.com/problems/word-search/
+difficulty: Medium
+premium: false
+category: backtracking
+patterns: [backtracking]
+prerequisites: ["Grid traversal", "Marking and unmarking a visited cell"]
+targetComplexity: { time: "O(m * n * 4^L)", space: "O(L)" }
+status: complete
+---
+
+<Statement>
+
+Given an `m x n` grid of characters and a `word`, return `true` if the word can be spelled by walking
+through **horizontally or vertically adjacent** cells. The same cell may **not** be used twice in one
+path.
+
+<Examples>
+  <Example input={`board = [["A","B","C","E"],
+         ["S","F","C","S"],
+         ["A","D","E","E"]]
+word = "ABCCED"`} output="true">
+    Along the top row, then down and back along the middle.
+  </Example>
+  <Example input={`board = [["A","B","C","E"],
+         ["S","F","C","S"],
+         ["A","D","E","E"]]
+word = "ABCB"`} output="false">
+    The letters are all present, but reaching the second B means reusing the first one's cell.
+  </Example>
+  <Example input={`board = [["A"]]
+word = "A"`} output="true">
+    A single cell and a single letter.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= m, n <= 6` and `1 <= word.length <= 15`
+- The board and the word hold English letters, upper or lower case
+- A cell may not be reused **within one path**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The search is over **paths through a grid**, so it is depth-first search — and because a cell may be
+  reused by a *different* path, the visited mark has to be **undone** on the way back. That undo is
+  what makes it backtracking rather than plain DFS.
+- The word must be matched in order, so the recursion carries an index into it and fails fast the
+  moment a letter disagrees.
+- The board is at most `6 x 6` and the word at most 15 characters, which is why exponential search is
+  the intended answer.
+
+</Signals>
+
+<BruteForce>
+
+Enumerate every path of length `word.length` in the grid and compare each to the word.
+
+**O(m · n · 4^L) time** — the same bound as the real solution, and vastly worse in practice, because
+it builds whole paths before comparing. The bottleneck is that a mismatch at the first letter is not
+noticed until the fifteenth: checking as you go prunes almost the entire tree.
+
+</BruteForce>
+
+<Insight>
+
+Match one letter per step and abandon the branch the moment it disagrees — then unmark the cell so other paths may still use it.
+
+</Insight>
+
+<Approach>
+
+1. For each cell, start a search with word index 0.
+2. `search(r, c, i)` returns `True` when `i == len(word)` — every letter matched.
+3. Fail when `(r, c)` is off the board, or the cell is already on the current path, or
+   `board[r][c] != word[i]`.
+4. **Mark** the cell — overwrite it with a sentinel such as `#`.
+5. Recurse into the four neighbours with `i + 1`; succeed if any does.
+6. **Unmark** the cell — restore the original letter — and return the result.
+
+Step 6 runs whether the branch succeeded or failed. Skipping it on success leaves the board mutated,
+which is wrong on its own terms even though the answer happens to be returned already.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def exist(self, board: list[list[str]], word: str) -> bool:
+        # O(m * n * 4^L) time — builds full paths, compares at the end
+        rows, cols = len(board), len(board[0])
+        found = False
+
+        def walk(r: int, c: int, path: list[str], seen: set[tuple[int, int]]) -> None:
+            nonlocal found
+            if found:
+                return
+            if len(path) == len(word):
+                if "".join(path) == word:       # compared only once complete
+                    found = True
+                return
+            for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nr, nc = r + dr, c + dc
+                if 0 <= nr < rows and 0 <= nc < cols and (nr, nc) not in seen:
+                    seen.add((nr, nc))
+                    path.append(board[nr][nc])
+                    walk(nr, nc, path, seen)
+                    path.pop()
+                    seen.discard((nr, nc))
+
+        for r in range(rows):
+            for c in range(cols):
+                walk(r, c, [board[r][c]], {(r, c)})
+                if found:
+                    return True
+
+        return False
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def exist(self, board: list[list[str]], word: str) -> bool:
+        # O(m * n * 4^L) time, O(L) space — prunes on the first mismatching letter
+        rows, cols = len(board), len(board[0])
+
+        def search(r: int, c: int, i: int) -> bool:
+            if i == len(word):
+                return True
+            if r < 0 or r >= rows or c < 0 or c >= cols:
+                return False
+            if board[r][c] != word[i]:          # includes the "#" marker: never matches a letter
+                return False
+
+            board[r][c] = "#"                   # mark: this cell is on the current path
+            found = (search(r + 1, c, i + 1) or search(r - 1, c, i + 1)
+                     or search(r, c + 1, i + 1) or search(r, c - 1, i + 1))
+            board[r][c] = word[i]               # unmark, whatever the outcome
+
+            return found
+
+        for r in range(rows):
+            for c in range(cols):
+                if search(r, c, 0):
+                    return True
+
+        return False
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Restore the cell on the way out, always.** Leaving `#` behind blocks every later path through that
+  cell, and the second example starts returning `false` for words that do exist.
+- **Restore it to `word[i]`, which is what it was.** That is only correct because the letter matched
+  before the mark — saving the character first is the safer habit if the check order ever changes.
+- The `#` marker doubles as the visited check: it can never equal a letter of the word, so the existing
+  `board[r][c] != word[i]` test rejects it. A separate `visited` set works too and costs `O(L)` memory.
+- **Check the bounds before indexing.** Python's negative indices silently wrap around, so `r == -1`
+  reads the last row instead of failing — a bug that produces wrong answers rather than a crash.
+- Return `True` from the outer loops as soon as any start succeeds; continuing to search wastes the
+  whole point of the early exit.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Search for many words at once."* — LC 212 Word Search II: put the words in a trie and walk the
+  grid once against it, instead of restarting for every word. That is the whole reason the Tries
+  category exists.
+- *"Allow diagonal moves."* — Eight directions instead of four. The bound becomes `8^L`; nothing else
+  changes.
+- *"Return the path, not just whether it exists."* — Carry the coordinates alongside the index and copy
+  them at the base case, exactly as with `path[:]` in the other problems here.
+
+</FollowUps>

@@ -1,0 +1,151 @@
+---
+id: "9.1"
+slug: subsets
+title: Subsets
+leetcode: 78
+url: https://leetcode.com/problems/subsets/
+difficulty: Medium
+premium: false
+category: backtracking
+patterns: [backtracking]
+prerequisites: ["Recursion that undoes its own choice", "Counting 2^n"]
+targetComplexity: { time: "O(n * 2^n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Given an array `nums` of **unique** elements, return the **power set** — every possible subset. The
+result must contain no duplicates and may be returned in any order.
+
+<Examples>
+  <Example input={`nums = [1, 2, 3]`} output={`[[], [1], [2], [1,2], [3], [1,3], [2,3], [1,2,3]]`}>
+    Eight subsets for three elements — including the empty one and the whole array.
+  </Example>
+  <Example input={`nums = [0]`} output={`[[], [0]]`}>
+    One element gives two subsets.
+  </Example>
+  <Example input={`nums = [1, 2]`} output={`[[], [1], [2], [1,2]]`}>
+    Each element is independently in or out, which is where the `2^n` comes from.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= nums.length <= 10`
+- `-10 <= nums[i] <= 10`
+- All elements are **unique**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **"All possible …"** is the backtracking sentence. The answer is a collection of configurations, not
+  a single value, and the only way to produce them is to build them.
+- Each element faces one **binary** decision — in or out — independently of the others. `n` independent
+  binary choices is `2^n` outcomes, which the constraint `n <= 10` confirms is the intended size.
+- Uniqueness of the input is what makes "no duplicate subsets" free. The moment duplicates are
+  allowed, this becomes problem 9.5 and needs real work.
+
+</Signals>
+
+<BruteForce>
+
+Iterate `mask` from `0` to `2^n - 1` and, for each, collect the elements whose bit is set.
+
+**O(n · 2^n) time, O(n · 2^n) space** for the output. This is not slower than the recursive version —
+it is the same complexity written as a loop, and it is a perfectly good answer. What it does not do is
+generalise: the moment a choice is constrained (a target sum, a validity rule), bitmasks stop helping
+and the recursion continues to work unchanged.
+
+</BruteForce>
+
+<Insight>
+
+Each element is either taken or skipped, so walk the array making that one decision and record the path whenever it runs out.
+
+</Insight>
+
+<Approach>
+
+1. Keep a `path` — the elements chosen so far — and a starting index `i`.
+2. When `i` reaches the end, the path is a complete subset: **record a copy of it**.
+3. Otherwise, two branches:
+4. **Take** `nums[i]`: append it, recurse with `i + 1`, then **pop it back off**.
+5. **Skip** `nums[i]`: recurse with `i + 1` directly.
+
+The pop in step 4 is the *backtracking* — it undoes the choice so the sibling branch starts from the
+same state. Leaving it out is the defining bug of this entire category, and it will appear in every
+problem here.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def subsets(self, nums: list[int]) -> list[list[int]]:
+        # O(n * 2^n) time and space — one bitmask per subset
+        result: list[list[int]] = []
+
+        for mask in range(1 << len(nums)):
+            result.append([nums[i] for i in range(len(nums)) if mask & (1 << i)])
+
+        return result
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def subsets(self, nums: list[int]) -> list[list[int]]:
+        # O(n * 2^n) time, O(n) space beyond the output
+        result: list[list[int]] = []
+        path: list[int] = []
+
+        def build(i: int) -> None:
+            if i == len(nums):
+                result.append(path[:])       # a COPY: path keeps changing
+                return
+
+            path.append(nums[i])             # take it
+            build(i + 1)
+            path.pop()                       # undo — this is the backtracking
+
+            build(i + 1)                     # skip it
+
+        build(0)
+        return result
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Append a copy, not the list itself.** `result.append(path)` stores a reference, and `path` is
+  mutated on the way back up — every entry in the result ends up empty. `path[:]` or `list(path)` is
+  the fix, and this bug appears in every problem in this category.
+- **The `pop` is not optional.** Without it, the skip branch starts with the element still in the
+  path, and the output is full of subsets that were never chosen.
+- Output size is `2^n`, so `O(2^n)` is the floor here — this is not a problem with a clever fast
+  solution. Say the bound rather than apologising for it.
+- The empty subset is part of the answer. A base case that only records non-empty paths is missing
+  exactly one entry, which is easy to overlook when eyeballing eight lines of output.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"With duplicates in the input."* — Problem 9.5: sort, then skip a value when it equals its
+  predecessor **and** you are at the same decision level. The duplicate handling is the whole
+  difficulty.
+- *"Only subsets of size k."* — LC 77 Combinations: same recursion, record when `len(path) == k`, and
+  prune once too few elements remain to reach `k`.
+- *"Why the bitmask version too?"* — It is genuinely shorter here and it makes the `2^n` explicit. It
+  is also a dead end: every later problem in this category has constraints that a mask cannot express.
+
+</FollowUps>
