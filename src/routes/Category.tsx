@@ -1,17 +1,26 @@
 import { Link, useParams } from "react-router";
 import { getCategory } from "../data/categories";
 import { problemsByCategory } from "../lib/content";
+import { useMode } from "../lib/mode";
+import { useProgress } from "../lib/progress";
 import { DifficultyLabel } from "../components/ui/DifficultyLabel";
 import { PatternChip } from "../components/ui/PatternChip";
 import { EmptyState, PageHeader, Rows } from "../components/ui/primitives";
+import { isUnlocked } from "../components/problem/RevealGate";
 import NotFound from "./NotFound";
 
 export default function Category() {
   const { categorySlug = "" } = useParams();
   const category = getCategory(categorySlug);
+  const mode = useMode();
+  const progress = useProgress();
   if (!category) return <NotFound />;
 
   const problems = problemsByCategory(category.slug);
+  // The pattern name is half the solution (CLAUDE.md §7). The problem page hides it
+  // until the signals are revealed; this list has to agree, or the list gives away
+  // every problem in the category before you have opened one.
+  const gated = mode === "learn";
 
   return (
     <div className="max-w-[76ch]">
@@ -39,11 +48,17 @@ export default function Category() {
                   ) : null}
                   <DifficultyLabel difficulty={problem.difficulty} />
                 </span>
-                <span className="flex flex-wrap gap-1.5 pl-11">
-                  {problem.patterns.map((slug) => (
-                    <PatternChip key={slug} slug={slug} linked={false} />
-                  ))}
-                </span>
+                {isUnlocked(
+                  "signals",
+                  progress.problems[problem.slug]?.revealed ?? 0,
+                  gated,
+                ) ? (
+                  <span className="flex flex-wrap gap-1.5 pl-11">
+                    {problem.patterns.map((slug) => (
+                      <PatternChip key={slug} slug={slug} linked={false} />
+                    ))}
+                  </span>
+                ) : null}
               </Link>
             </li>
           ))}
