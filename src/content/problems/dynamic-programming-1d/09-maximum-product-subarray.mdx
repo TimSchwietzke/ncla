@@ -1,0 +1,147 @@
+---
+id: "13.9"
+slug: maximum-product-subarray
+title: Maximum Product Subarray
+leetcode: 152
+url: https://leetcode.com/problems/maximum-product-subarray/
+difficulty: Medium
+premium: false
+category: dynamic-programming-1d
+patterns: [dp-1d, greedy-scan]
+prerequisites: ["Kadane's algorithm", "Why a minimum can become a maximum"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Given an integer array `nums`, find the **contiguous subarray** with the largest product and return
+that product. Every intermediate product fits in a 32-bit integer.
+
+<Examples>
+  <Example input={`nums = [2, 3, -2, 4]`} output="6">
+    `[2, 3]`. Extending across the `-2` would make it negative.
+  </Example>
+  <Example input={`nums = [-2, 0, -1]`} output="0">
+    The zero beats both negatives. A subarray must be non-empty, so 0 is the answer.
+  </Example>
+  <Example input={`nums = [-2, 3, -4]`} output="24">
+    The whole array. Two negatives multiply back to positive — which is why the smallest running
+    product matters.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= nums.length <= 2 * 10^4`
+- `-10 <= nums[i] <= 10`
+- Every subarray product fits in a **32-bit integer**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- This is Kadane's algorithm with multiplication, and the change is not cosmetic: a **negative**
+  multiplier turns the smallest running product into the largest.
+- So two values have to be carried, not one — the best **and** the worst product ending at each index.
+  The worst is not a curiosity; it is a candidate for the next best.
+- A **zero** resets everything. Both running products collapse, and the next subarray starts fresh —
+  which the recurrence handles by including `num` itself among the candidates.
+
+</Signals>
+
+<BruteForce>
+
+Compute the product of every subarray and keep the largest.
+
+**O(n²) time.** Correct and obvious. At `2 * 10^4` that is `4 * 10^8` multiplications. The bottleneck is
+the usual Kadane one: extending a subarray by one element only multiplies in one more factor, so
+recomputing the whole product per subarray is waste.
+
+</BruteForce>
+
+<Insight>
+
+A negative number swaps the roles of the largest and smallest running products, so carry both.
+
+</Insight>
+
+<Approach>
+
+1. Track `best_here` and `worst_here` — the largest and smallest products of a subarray **ending at the
+   current index**.
+2. For each `num`, the three candidates are `num`, `best_here * num` and `worst_here * num`.
+3. The new `best_here` is their maximum; the new `worst_here` is their minimum.
+4. Keep a global maximum of every `best_here`.
+
+Including `num` on its own in step 2 is what restarts the subarray after a zero, and what makes a
+single-element answer possible. Both new values must be computed from the **old** pair — overwriting
+`best_here` first corrupts `worst_here`.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def maxProduct(self, nums: list[int]) -> int:
+        # O(n^2) time, O(1) space
+        best = nums[0]
+
+        for i in range(len(nums)):
+            product = 1
+            for j in range(i, len(nums)):
+                product *= nums[j]
+                best = max(best, product)
+
+        return best
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def maxProduct(self, nums: list[int]) -> int:
+        # O(n) time, O(1) space
+        best = best_here = worst_here = nums[0]
+
+        for num in nums[1:]:
+            candidates = (num, best_here * num, worst_here * num)
+            best_here, worst_here = max(candidates), min(candidates)   # from the OLD pair
+            best = max(best, best_here)
+
+        return best
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Carry the minimum too.** With only the maximum, `[-2, 3, -4]` answers 3 instead of 24 — the pair of
+  negatives is exactly what the minimum is for.
+- **Compute both new values from the old pair.** Assigning `best_here` first and then using it for
+  `worst_here` mixes a new value with an old one. The tuple assignment above avoids it; two statements
+  need a temporary.
+- **Include `num` alone among the candidates.** That is what restarts the subarray after a zero and what
+  allows a single element to be the answer.
+- **Initialise from `nums[0]`, not from 0 or 1.** Starting at 0 breaks all-negative inputs; starting at
+  1 invents an empty subarray, which the problem forbids.
+- A zero is not a special case. Both running products become 0 or are replaced by `num`, and the
+  recurrence recovers on its own — adding an explicit reset is redundant and easy to get wrong.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Maximum **sum** subarray."* — Plain Kadane: one running value, no minimum, because addition has no
+  sign-flipping multiplier. That is Maximum Subarray in the Greedy category.
+- *"Return the subarray itself."* — Track the start index alongside `best_here`, resetting it whenever
+  `num` alone wins.
+- *"What if the products could overflow?"* — The constraints promise 32-bit, which is doing real work.
+  Without it you would track the sign and the logarithm of the magnitude instead.
+
+</FollowUps>

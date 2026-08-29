@@ -1,0 +1,156 @@
+---
+id: "13.11"
+slug: longest-increasing-subsequence
+title: Longest Increasing Subsequence
+leetcode: 300
+url: https://leetcode.com/problems/longest-increasing-subsequence/
+difficulty: Medium
+premium: false
+category: dynamic-programming-1d
+patterns: [dp-1d, binary-search]
+prerequisites: ["Binary Search", "Subsequence versus substring"]
+targetComplexity: { time: "O(n log n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Given `nums`, return the length of the longest **strictly increasing subsequence** — elements in
+order but not necessarily adjacent.
+
+<Examples>
+  <Example input={`nums = [10, 9, 2, 5, 3, 7, 101, 18]`} output="4">
+    `[2, 3, 7, 101]`. Also `[2, 5, 7, 18]` — length is what is asked for, not the sequence.
+  </Example>
+  <Example input={`nums = [0, 1, 0, 3, 2, 3]`} output="4">
+    `[0, 1, 2, 3]`, taken from non-adjacent positions.
+  </Example>
+  <Example input={`nums = [7, 7, 7, 7]`} output="1">
+    **Strictly** increasing, so equal values cannot extend each other.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= nums.length <= 2500`
+- `-10^4 <= nums[i] <= 10^4`
+- **Strictly** increasing
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- A **subsequence**, not a substring — gaps are allowed. Sliding-window thinking does not apply, and
+  the third example rules out anything based on adjacency.
+- The `O(n²)` formulation is direct: the longest sequence ending at `i` extends the best earlier one
+  whose value is smaller. That is worth writing first.
+- The `O(n log n)` version is a different idea entirely. It keeps, for each length, the **smallest
+  possible tail** — and that array is sorted, so it can be binary searched.
+
+</Signals>
+
+<BruteForce>
+
+For each `i`, look back at every `j < i` with `nums[j] < nums[i]` and take the best.
+
+**O(n²) time, O(n) space.** At `n = 2500` that is six million steps and it passes comfortably. It is
+the answer most people give and it is a good one. The bottleneck is the backward scan: what it is
+really asking is "how long a sequence can end below `nums[i]`", and that question has a sorted
+structure the scan ignores.
+
+</BruteForce>
+
+<Insight>
+
+Keep the smallest possible tail for each achievable length — that list stays sorted, so binary search finds where a new value belongs.
+
+</Insight>
+
+<Approach>
+
+1. Keep `tails`, where `tails[k]` is the **smallest value that can end** an increasing subsequence of
+   length `k + 1`.
+2. For each `num`, binary search `tails` for the first entry `>= num`.
+3. If none exists, `num` extends the longest sequence so far — append it.
+4. Otherwise **replace** that entry: a sequence of that length can now end on something smaller, which
+   can only help later.
+5. The answer is `len(tails)`.
+
+`tails` is not itself a valid subsequence — its entries may come from incompatible positions. Only its
+**length** is meaningful, and saying that out loud is what shows you understand the invariant rather
+than having memorised the code.
+
+`bisect_left` gives the first entry `>= num`, which is what makes the result strictly increasing.
+`bisect_right` would allow equal values and answer the non-strict variant.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def lengthOfLIS(self, nums: list[int]) -> int:
+        # O(n^2) time, O(n) space
+        longest = [1] * len(nums)          # longest sequence ending exactly at i
+
+        for i in range(len(nums)):
+            for j in range(i):
+                if nums[j] < nums[i]:
+                    longest[i] = max(longest[i], longest[j] + 1)
+
+        return max(longest)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+import bisect
+
+
+class Solution:
+    def lengthOfLIS(self, nums: list[int]) -> int:
+        # O(n log n) time, O(n) space
+        tails: list[int] = []              # tails[k] = smallest tail of a length k+1 sequence
+
+        for num in nums:
+            i = bisect.bisect_left(tails, num)     # first entry >= num: keeps it strict
+            if i == len(tails):
+                tails.append(num)          # extends the longest sequence so far
+            else:
+                tails[i] = num             # same length, smaller tail: strictly better
+
+        return len(tails)                  # the LIST is not the answer, its LENGTH is
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`tails` is not the subsequence.** Its entries can come from positions that could never appear
+  together. Returning it as the answer is wrong; returning its length is right.
+- **`bisect_left`, not `bisect_right`.** `bisect_left` finds the first entry `>= num` and replaces it,
+  which forbids equal values. `bisect_right` gives the non-strict version and answers 4 for
+  `[7,7,7,7]`.
+- Replacing rather than appending is the whole invariant: a shorter tail never reduces what can follow,
+  so it is never worse.
+- The `O(n²)` version must initialise every entry to **1**, not 0 — a single element is already a
+  sequence of length 1.
+- `max(longest)` is the answer, not `longest[-1]`. The longest sequence need not end at the last
+  element, and `[10, 9, 2, 5, 3, 7, 101, 18]` ends on a smaller value than its peak.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Return the subsequence itself."* — Record, for each element, the length it achieved and its
+  predecessor, then walk back from the best. The `tails` array alone cannot reconstruct it, which is
+  the price of the faster version.
+- *"Non-decreasing instead of strictly increasing."* — Switch to `bisect_right`. One function name.
+- *"Russian Doll Envelopes."* — LC 354: sort by width, then run this on the heights. Sorting the ties
+  **descending** by height is what prevents equal widths from chaining, and it is the whole trick.
+
+</FollowUps>

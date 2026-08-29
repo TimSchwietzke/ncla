@@ -1,0 +1,148 @@
+---
+id: "13.6"
+slug: palindromic-substrings
+title: Palindromic Substrings
+leetcode: 647
+url: https://leetcode.com/problems/palindromic-substrings/
+difficulty: Medium
+premium: false
+category: dynamic-programming-1d
+patterns: [dp-1d]
+prerequisites: ["Longest Palindromic Substring", "Counting during the expansion"]
+targetComplexity: { time: "O(n^2)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Given a string `s`, return **how many** of its substrings are palindromes. Substrings at different
+positions count separately, even if identical.
+
+<Examples>
+  <Example input={`s = "abc"`} output="3">
+    `"a"`, `"b"`, `"c"`. Every single character counts.
+  </Example>
+  <Example input={`s = "aaa"`} output="6">
+    Three singles, two `"aa"` at different positions, and one `"aaa"`.
+  </Example>
+  <Example input={`s = "aba"`} output="4">
+    Three singles plus `"aba"`. The two `"a"` are separate substrings.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= s.length <= 1000`
+- Lowercase English letters
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- This is Longest Palindromic Substring with a counter instead of a maximum. The expansion is
+  identical; only what you do at each successful step changes.
+- **Every successful expansion is one more palindrome.** Growing from a centre by one character does
+  not extend an answer, it discovers a new substring — so the count increments inside the loop.
+- Positions matter, not values. `"aaa"` has two distinct `"aa"` substrings, which is why the answer is
+  6 and not 3.
+
+</Signals>
+
+<BruteForce>
+
+Check every substring and count the palindromes.
+
+**O(n³) time.** Correct and direct. The bottleneck is the same as before: each check restarts from
+scratch, ignoring that a palindrome of length `k` contains one of length `k - 2` at its centre.
+
+</BruteForce>
+
+<Insight>
+
+Every step an expansion survives is one more palindrome, so count inside the loop rather than after it.
+
+</Insight>
+
+<Approach>
+
+1. For each index `i`, expand from `(i, i)` and from `(i, i + 1)`.
+2. Every time the characters at `left` and `right` match, that is a palindrome — add one.
+3. Continue outwards until they differ or the bounds run out.
+
+The whole difference from the previous problem is where the bookkeeping sits: the maximum was taken
+*after* the loop, the count is taken *inside* it.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def countSubstrings(self, s: str) -> int:
+        # O(n^3) time, O(1) space
+        total = 0
+
+        for i in range(len(s)):
+            for j in range(i, len(s)):
+                piece = s[i:j + 1]
+                if piece == piece[::-1]:
+                    total += 1
+
+        return total
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def countSubstrings(self, s: str) -> int:
+        # O(n^2) time, O(1) space
+        total = 0
+
+        def expand(left: int, right: int) -> int:
+            found = 0
+            while left >= 0 and right < len(s) and s[left] == s[right]:
+                found += 1                   # each surviving step IS a palindrome
+                left -= 1
+                right += 1
+            return found
+
+        for i in range(len(s)):
+            total += expand(i, i)            # odd length
+            total += expand(i, i + 1)        # even length
+
+        return total
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Count inside the loop, not after it.** Adding one per centre counts only the longest palindrome at
+  each centre — `"aaa"` would give 3 instead of 6.
+- **Both centre kinds again.** Without the even case, `"aaa"` loses its two `"aa"` substrings and
+  answers 4.
+- Identical substrings at different positions count separately. A solution that collects them into a
+  set answers 3 for `"aaa"`, which is a different question.
+- Every single character is a palindrome, so the answer is at least `n`. That is a useful sanity check
+  on any implementation.
+- The `dp[i][j]` table gives the same `O(n²)` time at `O(n²)` space, and it is the version that earns
+  this problem its DP label. Centres are strictly better here; the table matters when the *substrings
+  themselves* are needed later.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"The longest one instead of the count."* — The previous problem. Same expansion, a maximum instead of
+  a counter.
+- *"The number of **distinct** palindromic substrings."* — A different and much harder problem: a set,
+  or a palindromic tree (Eertree). Worth knowing that "distinct" changes the difficulty completely.
+- *"Why `2n - 1` centres?"* — `n` characters and `n - 1` gaps between them. Every palindrome is centred
+  on exactly one of those, which is why the enumeration is complete.
+
+</FollowUps>

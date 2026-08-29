@@ -1,0 +1,158 @@
+---
+id: "13.12"
+slug: partition-equal-subset-sum
+title: Partition Equal Subset Sum
+leetcode: 416
+url: https://leetcode.com/problems/partition-equal-subset-sum/
+difficulty: Medium
+premium: false
+category: dynamic-programming-1d
+patterns: [dp-1d]
+prerequisites: ["Coin Change", "0/1 knapsack and why the loop runs backwards"]
+targetComplexity: { time: "O(n * sum)", space: "O(sum)" }
+status: complete
+---
+
+<Statement>
+
+Given an array `nums` of positive integers, return `true` if it can be split into **two subsets with
+equal sums**.
+
+<Examples>
+  <Example input={`nums = [1, 5, 11, 5]`} output="true">
+    `[11]` and `[1, 5, 5]`, both summing to 11.
+  </Example>
+  <Example input={`nums = [1, 2, 3, 5]`} output="false">
+    The total is 11, which is odd — no split can be equal.
+  </Example>
+  <Example input={`nums = [1, 1]`} output="true">
+    Two halves of one each.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= nums.length <= 200`
+- `1 <= nums[i] <= 100`, so the total is at most 20 000
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Two equal halves means each sums to `total / 2`. So the question collapses to: **is some subset's sum
+  exactly half the total?** One subset determines the other.
+- An **odd** total is immediately impossible, and checking that first removes the only degenerate case.
+- Each number is used **at most once**, which makes this 0/1 knapsack rather than Coin Change. That
+  single difference is what reverses the inner loop.
+
+</Signals>
+
+<BruteForce>
+
+Recurse over take-or-skip for each number, tracking the running sum.
+
+**O(2^n) time.** Correct, and it states the question directly. At `n = 200` it is unreachable. The
+bottleneck is that "can I still hit sum `s` using the numbers from index `i` on" depends only on `i`
+and `s`, and there are at most `200 × 10 000` such pairs — far fewer than the paths reaching them.
+
+</BruteForce>
+
+<Insight>
+
+Two equal halves means one subset hits exactly half the total, so track which sums are reachable at all.
+
+</Insight>
+
+<Approach>
+
+1. If the total is odd, return `false`.
+2. `target = total // 2`.
+3. Keep `reachable`, a boolean array over `0..target`, with `reachable[0] = True`.
+4. For each number, walk the sums **from `target` down to `num`** and set
+   `reachable[s] |= reachable[s - num]`.
+5. Return `reachable[target]`.
+
+Step 4's **downward** direction is the whole difference from Coin Change. Going upwards would let the
+same number be added several times within its own pass — which is exactly what Coin Change wants and
+exactly what this problem forbids.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def canPartition(self, nums: list[int]) -> bool:
+        # O(2^n) time — take or skip, for every number
+        total = sum(nums)
+        if total % 2:
+            return False
+        target = total // 2
+
+        def reachable(i: int, remaining: int) -> bool:
+            if remaining == 0:
+                return True
+            if i >= len(nums) or remaining < 0:
+                return False
+            return (reachable(i + 1, remaining - nums[i])      # take it
+                    or reachable(i + 1, remaining))            # skip it
+
+        return reachable(0, target)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def canPartition(self, nums: list[int]) -> bool:
+        # O(n * sum) time, O(sum) space
+        total = sum(nums)
+        if total % 2:
+            return False                          # an odd total can never split evenly
+
+        target = total // 2
+        reachable = [False] * (target + 1)
+        reachable[0] = True                       # the empty subset sums to zero
+
+        for num in nums:
+            for s in range(target, num - 1, -1):  # DOWNWARDS: each number used once
+                if reachable[s - num]:
+                    reachable[s] = True
+
+            if reachable[target]:
+                return True                       # early exit once it is settled
+
+        return reachable[target]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Iterate the sums downwards.** Going upwards lets `reachable[s - num]` be a value this same `num`
+  just set, so the number gets reused — which turns the answer into Coin Change's unbounded version and
+  reports `true` for `[1, 2, 5]`.
+- **Check the odd total first.** Without it, `target` is a truncated half and the answer is wrong rather
+  than merely slow.
+- **`reachable[0] = True`.** The empty subset sums to zero, and without it nothing is ever reachable.
+- Stop the inner loop at `num`, not at 0. Below that, `s - num` is negative and Python's wraparound
+  indexing reads from the end of the array instead of raising.
+- The total is at most 20 000, so the table is small. Saying `O(n · sum)` and noting that `sum` is
+  bounded by the constraints is the honest complexity claim — this is pseudo-polynomial, not polynomial.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Return the two subsets."* — Store which number first made each sum reachable and walk it back. The
+  boolean array alone cannot reconstruct them.
+- *"Minimise the difference between the two subsets."* — LC 1049: the same table, then take the largest
+  reachable sum at most `total / 2`. Nearly the same code, a more general question.
+- *"Why is this not polynomial?"* — The table is sized by the **value** of the sum, not by the input
+  length. That is pseudo-polynomial, and the general partition problem is NP-hard.
+
+</FollowUps>

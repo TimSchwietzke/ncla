@@ -1,0 +1,139 @@
+---
+id: "13.3"
+slug: house-robber
+title: House Robber
+leetcode: 198
+url: https://leetcode.com/problems/house-robber/
+difficulty: Medium
+premium: false
+category: dynamic-programming-1d
+patterns: [dp-1d]
+prerequisites: ["Climbing Stairs", "Take-it-or-leave-it as a recurrence"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Each house holds some money, and robbing two **adjacent** houses triggers the alarm. Return the most
+you can take.
+
+<Examples>
+  <Example input={`nums = [1, 2, 3, 1]`} output="4">
+    Houses 0 and 2: `1 + 3`. Taking house 1 alone gives 2, and 1 and 3 gives 3.
+  </Example>
+  <Example input={`nums = [2, 7, 9, 3, 1]`} output="12">
+    `2 + 9 + 1` beats `7 + 3`, and also beats taking the largest house and whatever survives it.
+  </Example>
+  <Example input={`nums = [5]`} output="5">
+    One house, no neighbours.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= nums.length <= 100`
+- `0 <= nums[i] <= 400`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Each house is a **binary choice**, and the choices are not independent — taking one forbids its
+  neighbour. That coupling is what stops greedy from working.
+- The best haul up to house `i` is either "skip `i`, so it equals the best up to `i-1`" or "take `i`,
+  so it is `nums[i]` plus the best up to `i-2`". Two options, one `max`.
+- The second example is the proof that greedy fails: taking the largest value first commits you to a
+  worse total.
+
+</Signals>
+
+<BruteForce>
+
+Recurse on "rob this house or skip it", branching at every index.
+
+**O(2^n) time.** Correct and it states the choice plainly. The bottleneck is that the same suffix is
+solved over and over — the best haul from house `i` onwards does not depend on how you arrived there,
+so computing it once is enough.
+
+</BruteForce>
+
+<Insight>
+
+At every house the choice is skip it and keep what you had, or take it and add what you had two houses ago.
+
+</Insight>
+
+<Approach>
+
+1. Track two running values: `best_with_previous` — the best up to the previous house — and
+   `best_before_that`.
+2. For each house, the new best is `max(best_with_previous, best_before_that + nums[i])`.
+3. Shift both along.
+4. Return `best_with_previous`.
+
+Both start at `0`, which handles the empty prefix and makes the first house work with no special case:
+`max(0, 0 + nums[0])` is `nums[0]`.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def rob(self, nums: list[int]) -> int:
+        # O(2^n) time — branches at every house
+        def best_from(i: int) -> int:
+            if i >= len(nums):
+                return 0
+            return max(best_from(i + 1),              # skip this house
+                       nums[i] + best_from(i + 2))    # rob it, then skip the neighbour
+
+        return best_from(0)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def rob(self, nums: list[int]) -> int:
+        # O(n) time, O(1) space
+        before_previous, previous = 0, 0        # best up to i-2 and up to i-1
+
+        for money in nums:
+            before_previous, previous = previous, max(previous, before_previous + money)
+
+        return previous
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Greedy does not work.** Taking the largest remaining value fails on `[2, 7, 9, 3, 1]`, which is why
+  that example is here. Being able to produce a counterexample is worth more than the code.
+- **Both variables start at 0.** That makes the single-house case `max(0, 0 + nums[0])` and needs no
+  branch. Initialising with `nums[0]` forces a special case for a one-element array.
+- The rolled-up assignment reads the **old** `previous` on both sides. Splitting it into two statements
+  without a temporary overwrites the value the second line needs.
+- Values may be `0`, and the array is never empty. There is no case where the answer is undefined.
+- An array-based version — `dp[i] = max(dp[i-1], dp[i-2] + nums[i])` — is equally correct and worth
+  writing first if the two-variable form does not come. Compressing it afterwards is the easy part.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"The houses are in a circle."* — The next problem: run this twice, once excluding the first house and
+  once excluding the last.
+- *"Houses arranged in a tree."* — LC 337: each node reports two numbers upwards, "best if I am robbed"
+  and "best if I am not". Same choice, tree recursion — and it is the Trees category's report-upwards
+  idea meeting this one.
+- *"Return which houses were robbed."* — Record the decision per index and walk it back. The two-variable
+  version discards exactly that information, which is the price of the `O(1)` space.
+
+</FollowUps>

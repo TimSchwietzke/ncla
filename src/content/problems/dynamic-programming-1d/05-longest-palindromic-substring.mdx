@@ -1,0 +1,158 @@
+---
+id: "13.5"
+slug: longest-palindromic-substring
+title: Longest Palindromic Substring
+leetcode: 5
+url: https://leetcode.com/problems/longest-palindromic-substring/
+difficulty: Medium
+premium: false
+category: dynamic-programming-1d
+patterns: [dp-1d]
+prerequisites: ["Two pointers", "Enumerating centres rather than pairs"]
+targetComplexity: { time: "O(n^2)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Given a string `s`, return the **longest palindromic substring**. A substring is contiguous; if several
+are equally long, any of them is accepted.
+
+<Examples>
+  <Example input={`s = "babad"`} output={`"bab"`}>
+    `"aba"` is equally long and equally correct.
+  </Example>
+  <Example input={`s = "cbbd"`} output={`"bb"`}>
+    An **even**-length palindrome, which has no single middle character.
+  </Example>
+  <Example input={`s = "a"`} output={`"a"`}>
+    A single character is a palindrome.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= s.length <= 1000`
+- Digits and English letters
+- Any longest palindrome is accepted
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Every palindrome has a **centre**, and there are only `2n - 1` of them: `n` single characters and
+  `n - 1` gaps between characters. Enumerating centres is `O(n)` starting points instead of `O(n²)`
+  substrings.
+- From a centre, expanding outwards while the characters match finds the longest palindrome there in
+  one pass. No table and no recursion is needed.
+- Even-length palindromes have **no middle character**, which is why the gaps have to be centres too.
+  `"cbbd"` is in the examples precisely to catch a solution that only tries single characters.
+
+</Signals>
+
+<BruteForce>
+
+Check every substring for being a palindrome and keep the longest.
+
+**O(n³) time** — `n²` substrings, each verified in `O(n)`. At `n = 1000` that is `10^9` character
+comparisons. The bottleneck is the verification: a substring's palindromeness is almost entirely
+determined by the substring one character shorter inside it, and checking from scratch throws that away.
+
+The classic table version fixes that: `dp[i][j]` is true when `s[i] == s[j]` and `dp[i+1][j-1]`, giving
+`O(n²)` time and `O(n²)` space. Expanding from centres reaches the same time with `O(1)` space.
+
+</BruteForce>
+
+<Insight>
+
+Every palindrome grows outwards from a centre, and there are only 2n − 1 centres to try.
+
+</Insight>
+
+<Approach>
+
+1. For each index `i`, treat it as a centre twice:
+2. **Odd length:** expand from `(i, i)`.
+3. **Even length:** expand from `(i, i + 1)`.
+4. Expanding means moving `left` back and `right` forward while both are in range and the characters
+   match.
+5. Keep the longest span seen and slice it once at the end.
+
+Both centre kinds are needed and neither is a special case — the even one simply starts with an empty
+palindrome when `s[i] != s[i+1]`, which contributes nothing and costs one comparison.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def longestPalindrome(self, s: str) -> str:
+        # O(n^3) time, O(1) space — every substring, verified from scratch
+        best = ""
+
+        for i in range(len(s)):
+            for j in range(i, len(s)):
+                piece = s[i:j + 1]
+                if len(piece) > len(best) and piece == piece[::-1]:
+                    best = piece
+
+        return best
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def longestPalindrome(self, s: str) -> str:
+        # O(n^2) time, O(1) space — expand from each of the 2n - 1 centres
+        start, length = 0, 0
+
+        def expand(left: int, right: int) -> None:
+            nonlocal start, length
+            while left >= 0 and right < len(s) and s[left] == s[right]:
+                left -= 1
+                right += 1
+            # The loop overshoots by one on both sides.
+            if right - left - 1 > length:
+                start, length = left + 1, right - left - 1
+
+        for i in range(len(s)):
+            expand(i, i)                     # odd length, centred on a character
+            expand(i, i + 1)                 # even length, centred on a gap
+
+        return s[start:start + length]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Try both centre kinds.** Only expanding from `(i, i)` misses every even-length palindrome, and
+  `"cbbd"` returns `"c"` instead of `"bb"`.
+- **The loop overshoots.** When it exits, `left` and `right` are one step outside the palindrome, so the
+  length is `right - left - 1` and the start is `left + 1`. Getting this off by one is the most common
+  bug here and it produces answers that are *almost* right.
+- Track a **start and a length**, not the string itself. Slicing inside the loop is `O(n)` per centre
+  and turns the solution into `O(n³)` — the very thing being avoided.
+- `nonlocal` is needed for the two outer variables, exactly as in Diameter of Binary Tree. Without it
+  Python creates locals and the answer stays empty.
+- The `dp[i][j]` table version is a legitimate answer and is what puts this problem in the DP category.
+  Say it, then note that centres give the same time in `O(1)` space.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Count them instead of finding the longest."* — The next problem, and it is the same expansion with a
+  counter instead of a maximum.
+- *"O(n) time."* — Manacher's algorithm. It is worth knowing the name and that it exists; nobody expects
+  it to be written on a whiteboard.
+- *"The longest palindromic **subsequence**."* — LC 516: not contiguous, so centres no longer apply.
+  That is a 2-D dynamic program and belongs in the next category.
+
+</FollowUps>

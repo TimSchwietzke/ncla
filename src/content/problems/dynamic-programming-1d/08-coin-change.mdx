@@ -1,0 +1,150 @@
+---
+id: "13.8"
+slug: coin-change
+title: Coin Change
+leetcode: 322
+url: https://leetcode.com/problems/coin-change/
+difficulty: Medium
+premium: false
+category: dynamic-programming-1d
+patterns: [dp-1d]
+prerequisites: ["Climbing Stairs", "Why greedy fails on arbitrary denominations"]
+targetComplexity: { time: "O(amount * coins)", space: "O(amount)" }
+status: complete
+---
+
+<Statement>
+
+Given coin denominations `coins` and a target `amount`, return the **fewest** coins that sum to it, or
+`-1` if it cannot be made. Each denomination may be used **any number of times**.
+
+<Examples>
+  <Example input={`coins = [1, 2, 5]
+amount = 11`} output="3">
+    `5 + 5 + 1`.
+  </Example>
+  <Example input={`coins = [2]
+amount = 3`} output="-1">
+    An odd amount from even coins is impossible.
+  </Example>
+  <Example input={`coins = [1, 3, 4]
+amount = 6`} output="2">
+    `3 + 3`. Greedily taking the 4 first would need `4 + 1 + 1`, which is three.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= coins.length <= 12` and `1 <= coins[i] <= 2^31 - 1`
+- `0 <= amount <= 10^4`
+- Coins may be reused **without limit**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **Greedy does not work** on arbitrary denominations. The third example is the counterexample, and
+  being able to produce one is what the problem is really testing.
+- The last coin used was one of the denominations, so the best for `amount` is one more than the best
+  for `amount - coin`, minimised over the coins. That is the recurrence.
+- The subproblems are indexed by a single number — the remaining amount — which is what makes this
+  1-D and the table just `amount + 1` entries long.
+
+</Signals>
+
+<BruteForce>
+
+Recurse: try every coin at every step and take the shallowest complete branch.
+
+**O(coins^amount) time.** Correct and hopeless — at `amount = 10^4` the recursion is unbounded in
+practice. The bottleneck is that "the fewest coins for 37" is recomputed for every path that happens to
+reach 37, and there are exponentially many of them.
+
+</BruteForce>
+
+<Insight>
+
+The last coin was one of the denominations, so the best for an amount is one more than the best for that amount minus a coin.
+
+</Insight>
+
+<Approach>
+
+1. `best[0] = 0` — zero coins make zero.
+2. Every other entry starts at infinity, meaning "not reachable yet".
+3. For each amount from 1 to `amount`, and each coin no larger than it:
+4. `best[a] = min(best[a], best[a - coin] + 1)`.
+5. Return `best[amount]`, or `-1` if it is still infinite.
+
+Filling upwards means `best[a - coin]` is always final by the time it is read. Using `amount + 1` as
+the "infinity" sentinel works too and avoids float comparisons — the answer can never exceed `amount`,
+since the smallest coin is at least 1.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def coinChange(self, coins: list[int], amount: int) -> int:
+        # O(coins^amount) time — every combination, nothing remembered
+        def fewest(remaining: int) -> float:
+            if remaining == 0:
+                return 0
+            if remaining < 0:
+                return float("inf")
+            return min((fewest(remaining - coin) + 1 for coin in coins),
+                       default=float("inf"))
+
+        result = fewest(amount)
+        return -1 if result == float("inf") else int(result)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def coinChange(self, coins: list[int], amount: int) -> int:
+        # O(amount * coins) time, O(amount) space
+        UNREACHABLE = amount + 1                  # more coins than any real answer needs
+        best = [0] + [UNREACHABLE] * amount
+
+        for value in range(1, amount + 1):
+            for coin in coins:
+                if coin <= value:
+                    best[value] = min(best[value], best[value - coin] + 1)
+
+        return best[amount] if best[amount] != UNREACHABLE else -1
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Greedy is wrong.** Taking the largest coin that fits fails on `[1, 3, 4]` with amount 6. Have that
+  example ready; interviewers ask for it directly.
+- **`amount = 0` returns 0**, not `-1`. `best[0] = 0` handles it, and a solution starting the whole
+  table at infinity gets it wrong.
+- **`amount + 1` is a safe sentinel** because the answer never exceeds `amount` — every coin is at
+  least 1. Using `float("inf")` also works but mixes floats into an integer answer.
+- Guard `coin <= value` before indexing. A negative index in Python wraps to the end of the list and
+  silently reads the wrong entry rather than raising.
+- Coins can be up to `2^31 - 1`, far larger than `amount`. The guard skips them; without it the wrap
+  above produces nonsense.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Count the ways instead of minimising."* — Coin Change II, in the next category, and the loop order
+  matters there: coins outside, amounts inside, or permutations get counted twice.
+- *"Each coin at most once."* — A 0/1 knapsack: iterate the amounts **downwards** so a coin cannot be
+  reused within its own pass. That single reversal is the whole difference.
+- *"Return the coins, not the count."* — Store which coin won at each amount and walk it back from
+  `amount`.
+
+</FollowUps>

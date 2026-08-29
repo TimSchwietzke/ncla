@@ -1,0 +1,152 @@
+---
+id: "13.10"
+slug: word-break
+title: Word Break
+leetcode: 139
+url: https://leetcode.com/problems/word-break/
+difficulty: Medium
+premium: false
+category: dynamic-programming-1d
+patterns: [dp-1d, hashing-complement]
+prerequisites: ["Coin Change", "Turning a segmentation into a reachability question"]
+targetComplexity: { time: "O(n^2 * L)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Given a string `s` and a dictionary `wordDict`, return `true` if `s` can be split into a sequence of
+one or more dictionary words. Words may be **reused**.
+
+<Examples>
+  <Example input={`s = "leetcode"
+wordDict = ["leet", "code"]`} output="true">
+    `leet` + `code`.
+  </Example>
+  <Example input={`s = "applepenapple"
+wordDict = ["apple", "pen"]`} output="true">
+    `apple` is used twice — reuse is allowed.
+  </Example>
+  <Example input={`s = "catsandog"
+wordDict = ["cats","dog","sand","and","cat"]`} output="false">
+    Several promising starts, all dead ends. `cats` + `and` leaves `og`.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= s.length <= 300`
+- `1 <= wordDict.length <= 1000`, `1 <= wordDict[i].length <= 20`
+- Words may be **reused**, and all dictionary words are unique
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The question is **reachability along the string**: can position `n` be reached from position 0 by
+  jumping over dictionary words? That is Coin Change with a boolean instead of a count.
+- Greedily taking the longest matching prefix fails, which the third example demonstrates. Every split
+  point has to be considered.
+- The dictionary is only ever asked "is this exact piece a word", so it belongs in a **set**. Scanning
+  a list per query multiplies the cost by 1000 for nothing.
+
+</Signals>
+
+<BruteForce>
+
+Recurse: try every dictionary word as a prefix of the remaining string and recurse on the rest.
+
+**Exponential.** Correct, and the natural first attempt. The bottleneck is that the same suffix is
+re-examined through every path that reaches it — `"catsandog"` reaches position 7 via `cats`+`and` and
+via `cat`+`sand`, and solves the rest twice.
+
+</BruteForce>
+
+<Insight>
+
+Position i is reachable when some earlier reachable position j leaves a dictionary word between them.
+
+</Insight>
+
+<Approach>
+
+1. `reachable[0] = True` — the empty prefix is trivially segmented.
+2. For each end position `i` from 1 to `n`:
+3. For each earlier position `j < i`, if `reachable[j]` and `s[j:i]` is in the dictionary, mark
+   `reachable[i]` and stop looking.
+4. The answer is `reachable[n]`.
+
+Only `j` values where `reachable[j]` is already true are worth testing, and the inner loop can be
+bounded further: a dictionary word is at most 20 characters, so `j` never needs to go below `i - 20`.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def wordBreak(self, s: str, wordDict: list[str]) -> bool:
+        # Exponential — re-solves the same suffix through every path
+        words = set(wordDict)
+
+        def breakable(start: int) -> bool:
+            if start == len(s):
+                return True
+            return any(s.startswith(word, start) and breakable(start + len(word))
+                       for word in words)
+
+        return breakable(0)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def wordBreak(self, s: str, wordDict: list[str]) -> bool:
+        # O(n^2 * L) time, O(n) space
+        words = set(wordDict)                     # a set: membership, not a scan
+        longest = max(len(word) for word in words)
+
+        reachable = [False] * (len(s) + 1)
+        reachable[0] = True                       # the empty prefix
+
+        for i in range(1, len(s) + 1):
+            for j in range(max(0, i - longest), i):    # no word is longer than this
+                if reachable[j] and s[j:i] in words:
+                    reachable[i] = True
+                    break
+
+        return reachable[len(s)]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`reachable[0] = True`.** The empty prefix is segmentable, and without it nothing is ever reachable
+  and every answer is `false`.
+- **Greedy fails.** Taking the longest matching word first answers `true` for `"catsandog"` in some
+  orderings. Every split point must be tried, which is what the inner loop does.
+- **Put the dictionary in a set.** `s[j:i] in wordDict` on a list is `O(1000 · L)` per test. It is
+  correct and it is what turns a passing solution into a timeout.
+- Bounding `j` by the longest word is a real saving and not just tidiness — without it the inner loop
+  runs `i` times per position instead of at most 20.
+- The memoised recursion is equally good and arguably clearer. Both are `O(n² · L)`; the table version
+  simply has no stack to overflow.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Return all the segmentations."* — LC 140: backtracking with memoisation, and the answer count can be
+  exponential. Once again, "whether" is polynomial and "which ones" is not.
+- *"Use a trie for the dictionary."* — Walk the trie from each start position, which prunes the moment
+  the prefix is not a word prefix. That is Word Search II's idea applied to a string.
+- *"Why is the bound `i - longest`?"* — A piece longer than the longest dictionary word can never be a
+  word, so testing it is guaranteed waste.
+
+</FollowUps>

@@ -1,0 +1,154 @@
+---
+id: "13.4"
+slug: house-robber-ii
+title: House Robber II
+leetcode: 213
+url: https://leetcode.com/problems/house-robber-ii/
+difficulty: Medium
+premium: false
+category: dynamic-programming-1d
+patterns: [dp-1d]
+prerequisites: ["House Robber", "Removing a constraint by splitting into cases"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+The houses are arranged in a **circle**, so the first and last are neighbours. Adjacent houses still
+cannot both be robbed. Return the most you can take.
+
+<Examples>
+  <Example input={`nums = [2, 3, 2]`} output="3">
+    House 1 alone. Houses 0 and 2 are adjacent in a circle, so `2 + 2` is not allowed.
+  </Example>
+  <Example input={`nums = [1, 2, 3, 1]`} output="4">
+    Houses 0 and 2 — not neighbours even in a circle.
+  </Example>
+  <Example input={`nums = [5]`} output="5">
+    One house is its own neighbour only in a degenerate sense; it can be robbed.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= nums.length <= 100`
+- `0 <= nums[i] <= 1000`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The circle adds exactly **one** constraint: the first and last house cannot both be taken. Everything
+  else is House Robber unchanged.
+- One forbidden pair means the answer splits into two cases — either the first house is out, or the
+  last one is. In both, the remaining houses form a plain **line**.
+- The two cases overlap, and that is fine. Both exclude at least one of the pair, so neither can produce
+  an illegal answer, and the true optimum lies in one of them.
+
+</Signals>
+
+<BruteForce>
+
+Recurse over rob-or-skip, carrying whether the first house was taken so the last one can be forbidden
+accordingly.
+
+**O(2^n) time.** Correct, and the extra flag makes the circular constraint explicit. The bottleneck is
+the same exponential re-exploration as House Robber, now with a second dimension of state that is not
+actually needed.
+
+</BruteForce>
+
+<Insight>
+
+The first and last house cannot both be taken, so solve the line twice — once without the first, once without the last — and keep the better.
+
+</Insight>
+
+<Approach>
+
+1. If there is only one house, return it. Both slices below would otherwise be empty.
+2. Run the House Robber line solver on `nums[1:]` — the first house excluded.
+3. Run it on `nums[:-1]` — the last house excluded.
+4. Return the larger.
+
+Neither case forbids anything it should not: excluding the first house leaves every other adjacency
+intact, and the same for the last. And since the optimum must leave out at least one of the two, it is
+found by one of the runs.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def rob(self, nums: list[int]) -> int:
+        # O(2^n) time — carries whether the first house was taken
+        n = len(nums)
+        if n == 1:
+            return nums[0]
+
+        def best_from(i: int, took_first: bool) -> int:
+            if i >= n:
+                return 0
+            if i == n - 1 and took_first:
+                return 0                          # the last house is blocked by the first
+            return max(best_from(i + 1, took_first),
+                       nums[i] + best_from(i + 2, took_first))
+
+        return max(nums[0] + best_from(2, True), best_from(1, False))
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def rob(self, nums: list[int]) -> int:
+        # O(n) time, O(1) space — the line solver, run twice
+        def rob_line(houses: list[int]) -> int:
+            before_previous, previous = 0, 0
+            for money in houses:
+                before_previous, previous = previous, max(previous, before_previous + money)
+            return previous
+
+        if len(nums) == 1:
+            return nums[0]                        # both slices would be empty
+
+        return max(rob_line(nums[1:]),            # first house excluded
+                   rob_line(nums[:-1]))           # last house excluded
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **The single-house case must be handled first.** With `n = 1` both slices are empty, `rob_line`
+  returns 0, and the answer comes out 0 instead of `nums[0]`.
+- **Two runs, not one clever pass.** Trying to encode "first taken?" as extra state in a single sweep is
+  possible and much easier to get wrong. Two calls to a function you have already tested is the better
+  answer.
+- The two cases **overlap** — a solution taking neither the first nor the last appears in both — and
+  that is harmless, because the maximum is taken. Trying to make them disjoint adds complexity for
+  nothing.
+- Slicing copies the array, which is `O(n)` memory. At `n <= 100` it is irrelevant; passing index ranges
+  instead keeps it truly `O(1)` and is worth mentioning if the interviewer asks about the space claim.
+- `n = 2` works: the slices are single houses, and the answer is the larger of the two — which is
+  correct, since they are neighbours.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Why does splitting into two cases not lose the optimum?"* — Any legal haul omits the first house, the
+  last, or both. The first case covers the first and third, the second covers the second and third.
+- *"Houses in a circle, arranged as a tree."* — Not a thing: a circle is not a tree. Worth noticing that
+  the trick here depends on the cycle having exactly one edge to break.
+- *"A larger forbidden window — no two houses within k."* — The recurrence becomes
+  `max(previous, best[i-k-1] + nums[i])`, and the circular split now has to remove `k` houses rather
+  than one, which is `k` cases instead of two.
+
+</FollowUps>

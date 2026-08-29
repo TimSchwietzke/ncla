@@ -1,0 +1,145 @@
+---
+id: "13.2"
+slug: min-cost-climbing-stairs
+title: Min Cost Climbing Stairs
+leetcode: 746
+url: https://leetcode.com/problems/min-cost-climbing-stairs/
+difficulty: Easy
+premium: false
+category: dynamic-programming-1d
+patterns: [dp-1d]
+prerequisites: ["Climbing Stairs", "Being precise about where the top is"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+`cost[i]` is the price of stepping **off** step `i`. Once paid, you may climb one or two steps. You may
+start at index `0` **or** index `1`. Return the minimum cost to reach the **top**, which is one past
+the last index.
+
+<Examples>
+  <Example input={`cost = [10, 15, 20]`} output="15">
+    Start at index 1, pay 15, and climb two steps straight to the top.
+  </Example>
+  <Example input={`cost = [1, 100, 1, 1, 1, 100, 1, 1, 100, 1]`} output="6">
+    Six ones, skipping every 100.
+  </Example>
+  <Example input={`cost = [5, 5]`} output="5">
+    Either start costs 5 and jumps to the top from there.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `2 <= cost.length <= 1000`
+- `0 <= cost[i] <= 999`
+- The **top** is index `n`, one past the end — and you never pay for it
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Climbing Stairs with a price tag: same two-step recurrence, `min` instead of `+`.
+- **The top is index `n`, not `n-1`.** That is the entire difficulty of this problem, and the first
+  example is built to expose it: the answer 15 never touches `cost[2]`.
+- Two starting points is not a special case. Reaching index 0 or index 1 costs nothing, because you
+  only pay when you **leave** a step.
+
+</Signals>
+
+<BruteForce>
+
+Recurse from each step: `best(i) = cost[i] + min(best(i+1), best(i+2))`, and answer
+`min(best(0), best(1))`.
+
+**O(2^n) time.** Correct, and the recurrence stated directly. The bottleneck is the same as Climbing
+Stairs: `best(i+2)` is computed inside `best(i+1)` and again alongside it, so the work doubles per
+level.
+
+</BruteForce>
+
+<Insight>
+
+Reaching a step costs the cheaper of the two ways to get there, and reaching either of the first two is free.
+
+</Insight>
+
+<Approach>
+
+1. Define `reach(i)` as the minimum cost to **arrive at** step `i`.
+2. `reach(0) = reach(1) = 0` — both starting points are free.
+3. `reach(i) = min(reach(i-1) + cost[i-1], reach(i-2) + cost[i-2])`.
+4. The answer is `reach(n)`, one past the last index.
+5. Only the previous two values are read, so two variables suffice.
+
+Defining the state as "cost to **arrive at**" rather than "cost from here to the top" is what makes the
+two free starting points fall out with no special case, and what makes the top a natural `reach(n)`.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def minCostClimbingStairs(self, cost: list[int]) -> int:
+        # O(2^n) time, O(n) stack — the recurrence with nothing remembered
+        n = len(cost)
+
+        def onwards(i: int) -> int:
+            if i >= n:
+                return 0                      # already at or past the top
+            return cost[i] + min(onwards(i + 1), onwards(i + 2))
+
+        return min(onwards(0), onwards(1))
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def minCostClimbingStairs(self, cost: list[int]) -> int:
+        # O(n) time, O(1) space
+        two_back, one_back = 0, 0             # reach(0) and reach(1), both free
+
+        for i in range(2, len(cost) + 1):     # up to and including the top at index n
+            two_back, one_back = one_back, min(one_back + cost[i - 1],
+                                               two_back + cost[i - 2])
+
+        return one_back
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **The top is index `n`.** Looping to `len(cost) - 1` returns the cost of reaching the last *step*,
+  which is not the top. On `[10, 15, 20]` that gives 10 instead of 15 — a smaller, plausible, wrong
+  answer.
+- **You pay to leave a step, not to arrive.** With `reach(i)` as the state, `cost[i-1]` is what is paid
+  when stepping from `i-1` to `i`. Mixing the two conventions produces an off-by-one in the prices
+  rather than in the indices, which is harder to see.
+- Both starting points are free, so `reach(0)` and `reach(1)` are both `0`. Initialising them to
+  `cost[0]` and `cost[1]` double-charges the first step.
+- The rolled-up assignment updates both variables from the **old** values. Written as two statements it
+  needs a temporary, and overwriting `two_back` first quietly corrupts the second line.
+- `cost.length >= 2`, so the loop always runs at least once. No empty-input case exists.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Steps of up to k."* — Take the minimum over the last `k` entries. The window makes a deque version
+  worthwhile once `k` is large, which connects back to Sliding Window Maximum.
+- *"Return the path taken."* — Store which of the two predecessors won at each step and walk it back
+  from the top.
+- *"Why is `reach` a better state than `onwards`?"* — Both work. `reach` makes the free starting points
+  and the top-at-`n` fall out for free, whereas `onwards` needs the explicit `min(onwards(0),
+  onwards(1))` at the end. Choosing the state that eats the special cases is the real skill.
+
+</FollowUps>

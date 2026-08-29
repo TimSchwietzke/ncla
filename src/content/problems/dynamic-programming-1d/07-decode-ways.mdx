@@ -1,0 +1,154 @@
+---
+id: "13.7"
+slug: decode-ways
+title: Decode Ways
+leetcode: 91
+url: https://leetcode.com/problems/decode-ways/
+difficulty: Medium
+premium: false
+category: dynamic-programming-1d
+patterns: [dp-1d]
+prerequisites: ["Climbing Stairs", "Guards that make a branch invalid rather than costly"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Digits map to letters as `"1" → 'A'` through `"26" → 'Z'`. Given a digit string `s`, return how many
+ways it can be decoded. A decoding that would require a leading zero — `"06"` — is invalid.
+
+<Examples>
+  <Example input={`s = "12"`} output="2">
+    `"1 2"` gives `AB`, `"12"` gives `L`.
+  </Example>
+  <Example input={`s = "226"`} output="3">
+    `2 2 6`, `22 6`, `2 26`.
+  </Example>
+  <Example input={`s = "06"`} output="0">
+    A leading zero decodes to nothing. `"6"` is valid, `"06"` is not.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= s.length <= 100`
+- Digits only, and the string **may contain leading zeros**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Climbing Stairs with **guards**: the last piece decoded was either one digit or two, so the counts
+  add — but only when that piece is actually legal.
+- A one-digit piece is legal unless it is `'0'`. A two-digit piece is legal only between `"10"` and
+  `"26"`, which rules out both `"06"` and `"27"`.
+- A `'0'` can never stand alone, so it must always be the second half of a `"10"` or `"20"`. Any other
+  zero makes the whole string undecodable.
+
+</Signals>
+
+<BruteForce>
+
+Recurse from each position, trying one digit and then two.
+
+**O(2^n) time.** Correct, and it is the recurrence spoken aloud. The bottleneck is the usual one: the
+number of decodings of the suffix starting at `i` does not depend on how you reached `i`, so computing
+it repeatedly is waste.
+
+</BruteForce>
+
+<Insight>
+
+The last letter used one digit or two, so add the two counts — but only where that piece is a legal code.
+
+</Insight>
+
+<Approach>
+
+1. `ways(0) = 1` — the empty prefix has one decoding.
+2. `ways(1) = 1` if `s[0] != '0'`, else `0`.
+3. For each `i` from 2:
+4. If `s[i-1] != '0'`, the last letter used one digit: add `ways(i-1)`.
+5. If `"10" <= s[i-2:i] <= "26"`, it used two: add `ways(i-2)`.
+6. Only the last two values matter, so two variables suffice.
+
+Both guards are needed, and either may fail. When both fail the count becomes 0 and, because zero
+propagates through the additions, the rest of the string correctly answers 0 as well.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def numDecodings(self, s: str) -> int:
+        # O(2^n) time — the recurrence with nothing remembered
+        def ways(i: int) -> int:
+            if i == len(s):
+                return 1                          # decoded the whole string
+            if s[i] == "0":
+                return 0                          # no letter starts with a zero
+
+            total = ways(i + 1)
+            if i + 1 < len(s) and 10 <= int(s[i:i + 2]) <= 26:
+                total += ways(i + 2)
+            return total
+
+        return ways(0)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def numDecodings(self, s: str) -> int:
+        # O(n) time, O(1) space
+        two_back = 1                              # the empty prefix: one decoding
+        one_back = 1 if s[0] != "0" else 0
+
+        for i in range(2, len(s) + 1):
+            current = 0
+
+            if s[i - 1] != "0":                   # last letter took one digit
+                current += one_back
+            if "10" <= s[i - 2:i] <= "26":        # last letter took two
+                current += two_back
+
+            two_back, one_back = one_back, current
+
+        return one_back
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Both guards, independently.** A one-digit piece fails only on `'0'`; a two-digit piece fails outside
+  `10..26`. Checking only one lets `"06"` decode or blocks `"26"`.
+- **`"10" <= piece <= "26"` as a string comparison works** because both are exactly two characters — but
+  `int(piece)` is clearer if you are not sure. What does **not** work is checking `piece[0] in "12"`
+  alone, which admits `"27"`.
+- **`ways(0) = 1`.** The empty prefix has one decoding, and setting it to 0 makes every two-digit
+  contribution vanish.
+- A zero that is not preceded by a 1 or 2 makes the whole answer 0. The recurrence handles it: both
+  guards fail, `current` stays 0, and it propagates. No early return is needed.
+- `s[0] == '0'` means the answer is 0 outright. Initialising `one_back` to 1 unconditionally reports a
+  decoding for `"06"`.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Wildcards, where `'*'` stands for any digit 1-9."* — LC 639: the same recurrence with counts per
+  branch instead of a boolean guard, and modular arithmetic because the answers grow.
+- *"Return the decodings themselves."* — Backtracking, not dynamic programming: the count is
+  polynomial, the list is exponential. The same "how many versus which ones" split as in Backtracking.
+- *"Why does zero propagate correctly?"* — An undecodable prefix contributes 0 to everything after it,
+  and `0 + 0` stays 0. The recurrence needs no special handling for a dead string.
+
+</FollowUps>
