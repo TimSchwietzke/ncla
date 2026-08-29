@@ -1,0 +1,173 @@
+---
+id: "11.8"
+slug: course-schedule
+title: Course Schedule
+leetcode: 207
+url: https://leetcode.com/problems/course-schedule/
+difficulty: Medium
+premium: false
+category: graphs
+patterns: [topological-sort]
+prerequisites: ["Adjacency lists", "What a cycle in a directed graph means"]
+targetComplexity: { time: "O(V + E)", space: "O(V + E)" }
+status: complete
+---
+
+<Statement>
+
+There are `numCourses` courses labelled `0` to `numCourses - 1`. Each pair `[a, b]` in `prerequisites`
+means **course `b` must be taken before course `a`**. Return `true` if all courses can be finished.
+
+<Examples>
+  <Example input={`numCourses = 2
+prerequisites = [[1, 0]]`} output="true">
+    Take 0, then 1.
+  </Example>
+  <Example input={`numCourses = 2
+prerequisites = [[1, 0], [0, 1]]`} output="false">
+    Each course requires the other. Neither can ever be started.
+  </Example>
+  <Example input={`numCourses = 3
+prerequisites = []`} output="true">
+    No prerequisites at all, so any order works.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= numCourses <= 2000`
+- `0 <= prerequisites.length <= 5000`, all pairs unique
+- The graph may be **disconnected**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Prerequisites are **directed** edges, and "can everything be finished" is exactly "is there no
+  cycle". The whole problem is cycle detection on a directed graph.
+- A cycle in a *directed* graph is not "I have seen this node before" — that also happens on a diamond
+  with no cycle at all. It is "I have seen this node **on the current path**", which needs two marks,
+  not one.
+- The graph may be disconnected, so the search has to be started from every course, not only from
+  course 0.
+
+</Signals>
+
+<BruteForce>
+
+From each course, walk every path forwards and report a cycle if any path revisits its own start.
+
+**Exponential in the worst case.** It is correct and it makes clear what a cycle is. The bottleneck is
+that a node reachable through many paths is re-explored through each of them, although the answer for
+that node — "does anything downstream loop back" — is the same every time and could be remembered.
+
+</BruteForce>
+
+<Insight>
+
+A cycle is a node that reappears on the path you are currently walking, not one you merely visited earlier.
+
+</Insight>
+
+<Approach>
+
+1. Build an adjacency list: course → the courses that depend on it, or the other way round; either
+   direction detects a cycle.
+2. Give each course one of three states: **unvisited**, **on the current path**, **fully explored**.
+3. Depth-first from every unvisited course.
+4. Meeting a course that is **on the current path** is a cycle — return `false`.
+5. Meeting a **fully explored** course is fine: it has already been proven cycle-free.
+6. On the way back up, move the course from "on the path" to "fully explored".
+
+Step 5 is what turns the exponential search into `O(V + E)`. Step 6 is the one that gets forgotten,
+and leaving every visited node marked "on the path" reports cycles in perfectly valid diamonds.
+
+The alternative is **Kahn's algorithm**: repeatedly remove courses with no remaining prerequisites. If
+fewer than `numCourses` come out, the rest are stuck in a cycle. Both are `O(V + E)`; Kahn's also
+produces the ordering, which is the next problem.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def canFinish(self, numCourses: int, prerequisites: list[list[int]]) -> bool:
+        # Exponential — re-explores shared subgraphs through every path
+        graph: dict[int, list[int]] = {course: [] for course in range(numCourses)}
+        for course, needs in prerequisites:
+            graph[course].append(needs)
+
+        def leads_back(start: int, current: int, depth: int) -> bool:
+            if depth > numCourses:
+                return True                       # walked further than any acyclic path could
+            for nxt in graph[current]:
+                if nxt == start or leads_back(start, nxt, depth + 1):
+                    return True
+            return False
+
+        return not any(leads_back(course, course, 0) for course in range(numCourses))
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def canFinish(self, numCourses: int, prerequisites: list[list[int]]) -> bool:
+        # O(V + E) time and space
+        graph: dict[int, list[int]] = {course: [] for course in range(numCourses)}
+        for course, needs in prerequisites:
+            graph[course].append(needs)
+
+        UNVISITED, ON_PATH, DONE = 0, 1, 2
+        state = [UNVISITED] * numCourses
+
+        def acyclic(course: int) -> bool:
+            if state[course] == ON_PATH:
+                return False                      # back onto the current path: a cycle
+            if state[course] == DONE:
+                return True                       # already proven fine
+
+            state[course] = ON_PATH
+            for needed in graph[course]:
+                if not acyclic(needed):
+                    return False
+            state[course] = DONE                  # off the path, permanently cleared
+
+            return True
+
+        return all(acyclic(course) for course in range(numCourses))
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Two marks, not one.** A single `visited` set reports a cycle for a diamond — two paths meeting at a
+  node — which has none. `ON_PATH` versus `DONE` is the distinction, and it is the whole problem.
+- **Clear `ON_PATH` on the way out.** Leaving a course marked as on-the-path after its subtree is done
+  makes every later path through it look like a cycle.
+- **Start from every course.** The graph can be disconnected, and a cycle may sit in a component that
+  course 0 never reaches.
+- Read the pair direction carefully: `[a, b]` means `b` before `a`. Reversing it does not change
+  whether a cycle exists, so this problem forgives it — Course Schedule II does not.
+- `prerequisites` may be empty and courses may have none. Initialising the adjacency list for **every**
+  course rather than only for those appearing in the pairs avoids a `KeyError`.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Return a valid order, not just whether one exists."* — The next problem. Kahn's algorithm gives it
+  directly; the depth-first version gives it by recording courses as they become `DONE` and reversing.
+- *"Which courses are involved in the cycle?"* — Keep the current path as a list and slice it from the
+  repeated node. Useful for reporting, and it is why the `ON_PATH` marking is worth keeping explicit.
+- *"Use Kahn's algorithm instead."* — Count incoming edges, queue every course with none, and remove
+  them one by one. It is iterative, so it cannot blow the stack at 2000 courses — a real advantage in
+  Python.
+
+</FollowUps>

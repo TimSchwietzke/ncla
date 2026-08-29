@@ -1,0 +1,178 @@
+---
+id: "11.4"
+slug: walls-and-gates
+title: Walls and Gates
+leetcode: 286
+url: https://leetcode.com/problems/walls-and-gates/
+difficulty: Medium
+premium: true
+category: graphs
+patterns: [bfs-level-order]
+prerequisites: ["Number of Islands", "Starting a search from many sources at once"]
+targetComplexity: { time: "O(m * n)", space: "O(m * n)" }
+status: complete
+---
+
+<Statement>
+
+An `m x n` grid holds three kinds of cell: `-1` is a wall, `0` is a gate, and `2147483647` (INF) is an
+empty room. Fill every room with the distance to its **nearest** gate, moving up, down, left or right.
+A room that cannot reach any gate keeps INF. Modify the grid **in place**.
+
+<Examples>
+  <Example input={`grid = [[INF, -1,  0, INF],
+        [INF, INF, INF, -1],
+        [INF, -1, INF,  -1],
+        [  0, -1, INF, INF]]`} output={`[[3, -1, 0, 1],
+ [2,  2, 1, -1],
+ [1, -1, 2, -1],
+ [0, -1, 3,  4]]`}>
+    Two gates. Each room takes the smaller of its distances to them.
+  </Example>
+  <Example input={`grid = [[0, -1], [INF, INF]]`} output={`[[0, -1], [1, 2]]`}>
+    The wall forces the long way round.
+  </Example>
+  <Example input={`grid = [[INF]]`} output={`[[INF]]`}>
+    No gate at all, so the room keeps INF.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= m, n <= 100`
+- Each cell is `-1`, `0`, or `2147483647`
+- The grid is modified **in place**; nothing is returned
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **"Nearest"** on an unweighted grid is breadth-first search. Every step costs one, so the first time
+  BFS reaches a cell is along a shortest path.
+- There are **many gates**, and running one BFS per gate is the obvious and wasteful reading. Starting
+  from *all* of them simultaneously computes every nearest distance in a single sweep.
+- Because all sources start at distance 0 together, the wavefront that reaches a room first came from
+  its closest gate. No comparison between gates is ever needed.
+
+</Signals>
+
+<BruteForce>
+
+Run a separate BFS from every room, stopping at the first gate it reaches.
+
+**O((m · n)²) time.** Correct, and with `100 x 100` that is `10^8` cell visits — slow enough to matter.
+The bottleneck is that every room rediscovers the same corridors. Turning the search around, so the
+gates search outwards instead of the rooms searching inwards, does all of them at once.
+
+</BruteForce>
+
+<Insight>
+
+Start the search from every gate at the same time — the wave that reaches a room first came from its nearest one.
+
+</Insight>
+
+<Approach>
+
+1. Scan the grid and enqueue **every** gate. They all begin at distance 0.
+2. Run one breadth-first sweep from that whole frontier.
+3. When a neighbour is a room — still INF — set it to the current cell's distance plus one and enqueue
+   it.
+4. Walls are never enqueued, and a room already given a distance is no longer INF, so the INF test is
+   also the visited test.
+5. Rooms the wave never reaches keep INF, which is exactly the required behaviour.
+
+Step 4 is why no separate `visited` structure appears. The value INF means "unassigned", and assigning
+a distance marks it — one condition doing two jobs.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+from collections import deque
+
+INF = 2147483647
+
+
+class Solution:
+    def wallsAndGates(self, rooms: list[list[int]]) -> None:
+        # O((m * n)^2) time — a fresh search from every room
+        rows, cols = len(rooms), len(rooms[0])
+
+        def nearest_gate(sr: int, sc: int) -> int:
+            queue = deque([(sr, sc, 0)])
+            seen = {(sr, sc)}
+            while queue:
+                r, c, distance = queue.popleft()
+                if rooms[r][c] == 0:
+                    return distance
+                for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                    if (0 <= nr < rows and 0 <= nc < cols
+                            and rooms[nr][nc] != -1 and (nr, nc) not in seen):
+                        seen.add((nr, nc))
+                        queue.append((nr, nc, distance + 1))
+            return INF
+
+        for r in range(rows):
+            for c in range(cols):
+                if rooms[r][c] == INF:
+                    rooms[r][c] = nearest_gate(r, c)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+from collections import deque
+
+INF = 2147483647
+
+
+class Solution:
+    def wallsAndGates(self, rooms: list[list[int]]) -> None:
+        # O(m * n) time, O(m * n) space — one sweep from every gate at once
+        rows, cols = len(rooms), len(rooms[0])
+
+        queue = deque((r, c) for r in range(rows) for c in range(cols) if rooms[r][c] == 0)
+
+        while queue:
+            r, c = queue.popleft()
+            for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                if 0 <= nr < rows and 0 <= nc < cols and rooms[nr][nc] == INF:
+                    rooms[nr][nc] = rooms[r][c] + 1     # INF check doubles as visited
+                    queue.append((nr, nc))
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Enqueue every gate before the sweep starts.** Running one BFS per gate and taking minima also
+  works and is `O(gates · m · n)`; seeding the queue with all of them is the same code and one pass.
+- **The `== INF` test is the visited check.** Testing `!= -1` instead lets the wave re-enter cells that
+  already have a distance and overwrite them with larger ones.
+- Set the distance **when enqueuing**, not when dequeuing. Otherwise a cell can be queued from two
+  neighbours and processed twice.
+- Unreachable rooms must keep INF, not become `-1` or `0`. The algorithm does this by never touching
+  them — no cleanup pass is needed, and adding one is how it goes wrong.
+- The function returns `None`. It mutates `rooms` in place, and returning a new grid is a misread of
+  the signature.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Rotting Oranges."* — The next problem is this one with the answer being *when the wave finishes*
+  rather than *how far it got*. Recognising them as the same sweep is the point of their being
+  adjacent.
+- *"Weighted movement costs."* — BFS no longer works, because a longer path can be cheaper. That is
+  Dijkstra, and it is the Advanced Graphs category.
+- *"The nearest gate for one specific room."* — A single BFS from that room, which is the brute force
+  above. It is the *right* algorithm when only one answer is wanted — worth saying, since it shows the
+  multi-source trick is about answering all of them.
+
+</FollowUps>

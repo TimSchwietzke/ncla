@@ -1,0 +1,174 @@
+---
+id: "11.12"
+slug: redundant-connection
+title: Redundant Connection
+leetcode: 684
+url: https://leetcode.com/problems/redundant-connection/
+difficulty: Medium
+premium: false
+category: graphs
+patterns: [union-find]
+prerequisites: ["Graph Valid Tree", "Union-find"]
+targetComplexity: { time: "O(n * alpha(n))", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+A tree with `n` nodes labelled `1` to `n` had **one extra edge** added. Given the resulting edge list,
+return the edge that can be removed so a tree remains. If several qualify, return the one that appears
+**last** in the input.
+
+<Examples>
+  <Example input={`edges = [[1,2],[1,3],[2,3]]`} output={`[2, 3]`}>
+    The triangle's last edge closes the cycle.
+  </Example>
+  <Example input={`edges = [[1,2],[2,3],[3,4],[1,4],[1,5]]`} output={`[1, 4]`}>
+    The cycle is 1–2–3–4–1, and `[1,4]` is the last of its edges in the input.
+  </Example>
+  <Example input={`edges = [[1,2],[1,3],[1,4],[3,4]]`} output={`[3, 4]`}>
+    The extra edge need not involve the highest labels.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `3 <= n <= 1000` and `n == edges.length`
+- Nodes are labelled `1` to `n`
+- The graph is **connected** and has exactly one cycle
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- `n` nodes and `n` edges means exactly **one** cycle. The answer is an edge on that cycle, and the
+  tie-break picks the last one.
+- Processing edges in order, the **first** edge that joins two already-connected nodes is that last
+  one — because every earlier edge was still merging separate pieces.
+- "Already connected?" is union-find's question. This problem is the purest use of it in the whole
+  list: no counting, no extra state, just the first `find` collision.
+
+</Signals>
+
+<BruteForce>
+
+Remove each edge in turn, starting from the last, and test whether the rest forms a valid tree.
+
+**O(n²) time.** Correct and it follows the statement literally. The bottleneck is the repeated
+connectivity check: `n` traversals over `n` edges, when a single pass adding edges one at a time
+already knows the moment a cycle appears.
+
+</BruteForce>
+
+<Insight>
+
+Add the edges in order, and the first one whose two ends are already connected is the answer.
+
+</Insight>
+
+<Approach>
+
+1. Set up union-find over nodes `1..n` — note the labels start at **1**, so size the arrays `n + 1`.
+2. Walk the edges in the given order.
+3. For each, find both roots. If they match, the two nodes were already connected, so this edge closes
+   the cycle — return it.
+4. Otherwise union them and continue.
+
+The "last such edge" tie-break needs no extra work. Since the graph is a tree plus one edge, exactly
+one edge ever fails the check, and it is by construction the last edge of its cycle to be processed.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def findRedundantConnection(self, edges: list[list[int]]) -> list[int]:
+        # O(n^2) time — drops each edge and re-tests connectivity
+        n = len(edges)
+
+        def connected_without(skip: int) -> bool:
+            graph: dict[int, list[int]] = {node: [] for node in range(1, n + 1)}
+            for i, (a, b) in enumerate(edges):
+                if i == skip:
+                    continue
+                graph[a].append(b)
+                graph[b].append(a)
+
+            seen = {1}
+            stack = [1]
+            while stack:
+                node = stack.pop()
+                for neighbour in graph[node]:
+                    if neighbour not in seen:
+                        seen.add(neighbour)
+                        stack.append(neighbour)
+            return len(seen) == n
+
+        for i in range(n - 1, -1, -1):          # from the back: the last one wins
+            if connected_without(i):
+                return edges[i]
+
+        return []
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def findRedundantConnection(self, edges: list[list[int]]) -> list[int]:
+        # O(n * alpha(n)) time, O(n) space
+        n = len(edges)
+        parent = list(range(n + 1))             # nodes are 1..n, so size n + 1
+        rank = [1] * (n + 1)
+
+        def find(x: int) -> int:
+            while parent[x] != x:
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            return x
+
+        for a, b in edges:
+            root_a, root_b = find(a), find(b)
+            if root_a == root_b:
+                return [a, b]                   # already connected: this edge closes the cycle
+
+            if rank[root_a] < rank[root_b]:
+                root_a, root_b = root_b, root_a
+            parent[root_b] = root_a
+            rank[root_a] += rank[root_b]
+
+        return []                               # unreachable: the input always has a cycle
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Nodes are labelled from 1, not 0.** Sizing the arrays `n` instead of `n + 1` gives an `IndexError`
+  on the highest label — the single most common slip on this problem.
+- **Return the edge, not the nodes' roots.** The answer is `[a, b]` as it appeared in the input.
+- **Process the edges in the given order.** Sorting them, or iterating backwards, breaks the "last such
+  edge" guarantee that makes the first collision the right answer.
+- Return **immediately** on the collision. Continuing and keeping the last collision also works — there
+  is only one — but it obscures why the first one is already correct.
+- If the graph were directed, this would be LC 685 and considerably harder: a node can then have two
+  parents, and union-find alone no longer decides it.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Directed edges."* — LC 685: two failure modes now exist — a node with two parents, and a cycle —
+  and they can coexist. The fix is to consider the candidate edges separately.
+- *"Return every edge on the cycle."* — Union-find only finds the closing edge. Recovering the whole
+  cycle needs a traversal from one endpoint to the other in the tree built so far.
+- *"Why is the first collision the last edge of the cycle?"* — Every edge before it merged two distinct
+  components, so none of them could close a cycle. The first one that fails is therefore the last edge
+  of the only cycle to be seen.
+
+</FollowUps>

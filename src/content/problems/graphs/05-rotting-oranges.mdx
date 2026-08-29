@@ -1,0 +1,188 @@
+---
+id: "11.5"
+slug: rotting-oranges
+title: Rotting Oranges
+leetcode: 994
+url: https://leetcode.com/problems/rotting-oranges/
+difficulty: Medium
+premium: false
+category: graphs
+patterns: [bfs-level-order]
+prerequisites: ["Walls and Gates", "Counting rounds of a level-order sweep"]
+targetComplexity: { time: "O(m * n)", space: "O(m * n)" }
+status: complete
+---
+
+<Statement>
+
+A grid holds `0` (empty), `1` (fresh orange) and `2` (rotten orange). Every minute, each fresh orange
+**4-directionally adjacent** to a rotten one becomes rotten. Return the number of minutes until no
+fresh orange remains, or `-1` if that never happens.
+
+<Examples>
+  <Example input={`grid = [[2,1,1],
+        [1,1,0],
+        [0,1,1]]`} output="4">
+    The rot spreads outwards from the corner and reaches the last orange after four minutes.
+  </Example>
+  <Example input={`grid = [[2,1,1],
+        [0,1,1],
+        [1,0,1]]`} output="-1">
+    The orange at the bottom left is cut off by empty cells and never rots.
+  </Example>
+  <Example input={`grid = [[0, 2]]`} output="0">
+    Nothing fresh to begin with, so no time passes at all.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= m, n <= 10`
+- Each cell is `0`, `1` or `2`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Everything spreads **at the same time**, which is the definition of a level-order sweep. One round of
+  the queue is one minute.
+- There are usually several rotten oranges to begin with, so the search starts from all of them at
+  once — the same multi-source setup as Walls and Gates.
+- The `-1` case is not a failure of the search; it is a **fact about the input**. Some fresh oranges
+  are simply unreachable, and the way to detect that is to count them.
+
+</Signals>
+
+<BruteForce>
+
+Simulate literally: each minute, scan the whole grid, find every rotten orange, and rot its fresh
+neighbours. Repeat until nothing changes.
+
+**O((m · n)²) time.** Correct and easy to trust. The bottleneck is the rescanning: every minute walks
+all `m · n` cells although only the cells that rotted *last* minute can cause anything new. A queue
+holds exactly those.
+
+</BruteForce>
+
+<Insight>
+
+One round of the queue is one minute, so counting rounds counts minutes — and any fresh orange left over was never reachable.
+
+</Insight>
+
+<Approach>
+
+1. Sweep once: enqueue every rotten orange and **count** the fresh ones.
+2. If `fresh == 0`, return `0` immediately — no time passes.
+3. While the queue is not empty and fresh oranges remain:
+4. Take `len(queue)` first: those cells are exactly this minute's rotten oranges.
+5. Pop each, rot every fresh neighbour, decrement `fresh`, and enqueue it.
+6. Increment the minute counter **once per round**, not per orange.
+7. Return the minutes if `fresh == 0`, otherwise `-1`.
+
+Step 6 is the same trick as Binary Tree Level Order Traversal: capture the queue length before
+draining it, so one iteration of the outer loop is one level. Here a level is a minute.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def orangesRotting(self, grid: list[list[int]]) -> int:
+        # O((m * n)^2) time — rescans the whole grid every minute
+        rows, cols = len(grid), len(grid[0])
+        minutes = 0
+
+        while True:
+            rotting = [(r, c) for r in range(rows) for c in range(cols)
+                       if grid[r][c] == 2]
+            spread = False
+
+            for r, c in rotting:
+                for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                    if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] == 1:
+                        grid[nr][nc] = 3            # 3 = "rots at the END of this minute"
+                        spread = True
+
+            if not spread:
+                break
+
+            for r in range(rows):
+                for c in range(cols):
+                    if grid[r][c] == 3:
+                        grid[r][c] = 2
+            minutes += 1
+
+        if any(grid[r][c] == 1 for r in range(rows) for c in range(cols)):
+            return -1
+        return minutes
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+from collections import deque
+
+
+class Solution:
+    def orangesRotting(self, grid: list[list[int]]) -> int:
+        # O(m * n) time, O(m * n) space
+        rows, cols = len(grid), len(grid[0])
+        queue: deque[tuple[int, int]] = deque()
+        fresh = 0
+
+        for r in range(rows):
+            for c in range(cols):
+                if grid[r][c] == 2:
+                    queue.append((r, c))
+                elif grid[r][c] == 1:
+                    fresh += 1
+
+        minutes = 0
+        while queue and fresh:
+            for _ in range(len(queue)):          # exactly one minute per round
+                r, c = queue.popleft()
+                for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                    if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] == 1:
+                        grid[nr][nc] = 2
+                        fresh -= 1
+                        queue.append((nr, nc))
+            minutes += 1
+
+        return minutes if fresh == 0 else -1      # leftovers were unreachable
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`while queue and fresh`, not just `while queue`.** Without the `fresh` term the loop runs one extra
+  round after the last orange rots — draining the final wavefront finds nothing but still increments
+  the counter — and every answer comes out one too large.
+- **Count the fresh oranges up front.** It is what distinguishes "finished" from "stuck", and scanning
+  the grid again at the end also works but is easy to forget entirely.
+- A grid with no fresh oranges answers `0`, even if it is entirely empty. The `while` condition handles
+  it; special-casing it separately is redundant.
+- **One increment per round, not per orange.** Incrementing inside the inner loop counts oranges rotted
+  rather than minutes elapsed.
+- The naive simulation needs a **third marker**. Rotting neighbours to `2` immediately lets the same
+  minute cascade across the whole grid, and the answer collapses to 1. The `3` above is what keeps the
+  minutes separate — worth showing, because it is the bug the queue version cannot have.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Which orange rots last?"* — Record the coordinate whenever `fresh` hits 0. The sweep already knows.
+- *"Rot spreads diagonally too."* — Eight neighbours instead of four. Nothing else changes, which is
+  the sign that the direction list is the only place geometry lives.
+- *"Why is this Walls and Gates again?"* — Both are multi-source BFS on a grid. There the answer is the
+  distance written into each cell; here it is the number of rounds. Same sweep, different thing read
+  off it.
+
+</FollowUps>

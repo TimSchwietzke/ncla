@@ -1,0 +1,206 @@
+---
+id: "11.13"
+slug: word-ladder
+title: Word Ladder
+leetcode: 127
+url: https://leetcode.com/problems/word-ladder/
+difficulty: Hard
+premium: false
+category: graphs
+patterns: [bfs-level-order, hashing-complement]
+prerequisites: ["Rotting Oranges", "Building a graph that is never written down"]
+targetComplexity: { time: "O(n * L^2)", space: "O(n * L)" }
+status: complete
+---
+
+<Statement>
+
+Given `beginWord`, `endWord` and a `wordList`, find the length of the **shortest** transformation
+sequence where each step changes exactly one letter and every intermediate word is in the list. Return
+`0` if none exists. The length counts **words**, including both ends.
+
+<Examples>
+  <Example input={`beginWord = "hit"
+endWord = "cog"
+wordList = ["hot","dot","dog","lot","log","cog"]`} output="5">
+    `hit → hot → dot → dog → cog`. Five words, so four changes.
+  </Example>
+  <Example input={`beginWord = "hit"
+endWord = "cog"
+wordList = ["hot","dot","dog","lot","log"]`} output="0">
+    `cog` is not in the list, so it can never be reached.
+  </Example>
+  <Example input={`beginWord = "a"
+endWord = "c"
+wordList = ["a","b","c"]`} output="2">
+    A single-letter word: `a → c` directly. `beginWord` need not be in the list.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= beginWord.length <= 10`, all words the same length
+- `1 <= wordList.length <= 5000`, all words unique, lowercase
+- `beginWord` need **not** be in `wordList`; `endWord` must be, or the answer is `0`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **"Shortest"** on unweighted steps is breadth-first search. Every transformation costs one, so the
+  first time BFS reaches `endWord` is along a shortest ladder.
+- The graph is never given. Words are the nodes and "differs by one letter" is the edge relation — the
+  work is in generating neighbours cheaply, not in traversing.
+- Comparing every pair of words is `O(n² · L)`, which at 5000 words is 250 million character
+  comparisons. The **wildcard bucket** — `h*t` grouping `hot`, `hat`, `hit` — turns neighbour lookup
+  into a dictionary hit.
+
+</Signals>
+
+<BruteForce>
+
+Build the adjacency list by comparing every pair of words, then run BFS over it.
+
+**O(n² · L) to build, O(n · L) to search.** Correct, and at `n = 5000` and `L = 10` the build is 250
+million comparisons — the part that times out. The bottleneck is entirely in construction: the search
+itself was never the problem.
+
+</BruteForce>
+
+<Insight>
+
+Group the words by patterns like h*t, and every word's neighbours are the words sharing one of its L patterns.
+
+</Insight>
+
+<Approach>
+
+1. If `endWord` is not in `wordList`, return `0` immediately.
+2. Build a dictionary from **pattern → words**: for each word and each position, the pattern with that
+   position replaced by `*`.
+3. BFS from `beginWord` with a visited set, counting **levels** — one level is one word in the ladder.
+4. For the current word, take each of its `L` patterns and consider every word in that bucket.
+5. Reaching `endWord` returns the current level.
+6. An exhausted queue returns `0`.
+
+Step 3 uses the `for _ in range(len(queue))` idiom from Binary Tree Level Order Traversal — the level
+count *is* the answer, so it must advance once per round and not once per word.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+from collections import deque
+
+
+class Solution:
+    def ladderLength(self, beginWord: str, endWord: str, wordList: list[str]) -> int:
+        # O(n^2 * L) to build the graph — the part that is too slow
+        words = list(wordList)
+        if endWord not in words:
+            return 0
+        if beginWord not in words:
+            words.append(beginWord)
+
+        def one_apart(a: str, b: str) -> bool:
+            return sum(x != y for x, y in zip(a, b)) == 1
+
+        graph: dict[str, list[str]] = {word: [] for word in words}
+        for i in range(len(words)):
+            for j in range(i + 1, len(words)):
+                if one_apart(words[i], words[j]):
+                    graph[words[i]].append(words[j])
+                    graph[words[j]].append(words[i])
+
+        queue = deque([beginWord])
+        seen = {beginWord}
+        length = 1
+
+        while queue:
+            for _ in range(len(queue)):
+                word = queue.popleft()
+                if word == endWord:
+                    return length
+                for neighbour in graph[word]:
+                    if neighbour not in seen:
+                        seen.add(neighbour)
+                        queue.append(neighbour)
+            length += 1
+
+        return 0
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+from collections import defaultdict, deque
+
+
+class Solution:
+    def ladderLength(self, beginWord: str, endWord: str, wordList: list[str]) -> int:
+        # O(n * L^2) time, O(n * L) space
+        if endWord not in wordList:
+            return 0
+
+        # pattern -> words matching it, e.g. "h*t" -> ["hot", "hit"]
+        buckets: dict[str, list[str]] = defaultdict(list)
+        for word in wordList:
+            for i in range(len(word)):
+                buckets[word[:i] + "*" + word[i + 1:]].append(word)
+
+        queue = deque([beginWord])
+        seen = {beginWord}
+        length = 1                               # the ladder counts words, starting at 1
+
+        while queue:
+            for _ in range(len(queue)):          # one round is one rung
+                word = queue.popleft()
+                if word == endWord:
+                    return length
+
+                for i in range(len(word)):
+                    for neighbour in buckets[word[:i] + "*" + word[i + 1:]]:
+                        if neighbour not in seen:
+                            seen.add(neighbour)
+                            queue.append(neighbour)
+
+            length += 1
+
+        return 0
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **The answer counts words, not steps.** `hit → hot → dot → dog → cog` is 5, not 4. Starting `length`
+  at 1 rather than 0 is what encodes that.
+- **Check `endWord in wordList` first.** Without it the search runs to exhaustion and returns 0 anyway,
+  which is right — but the second example is there to make the check explicit, and it is free.
+- **Mark words as seen when enqueuing.** Marking on dequeue lets the same word enter the queue from
+  several patterns, and on a dense word list that is a real blow-up.
+- `beginWord` need not be in `wordList`, and it must **not** be added to the buckets — it is a starting
+  point, not a reachable target. The visited set handles it.
+- Advance `length` once per **round**, outside the inner loop. Incrementing per word counts words
+  visited rather than rungs climbed.
+- Bidirectional BFS — expanding from both ends and meeting in the middle — roughly halves the search
+  depth. Worth naming as the follow-up rather than attempting it first.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Return the ladder itself, or all shortest ladders."* — LC 126: record each word's predecessors
+  during the BFS, then walk back from `endWord`. Considerably fiddlier, and the BFS half is unchanged.
+- *"Bidirectional BFS."* — Search from both ends, always expanding the smaller frontier, and stop when
+  they meet. The branching factor is squared-rooted, which matters on large word lists.
+- *"Why buckets rather than trying all 26 letters?"* — Both work. Generating the 25 variants per
+  position and testing membership is `O(26 · L)` per word and needs no preprocessing; the buckets are
+  `O(L)` per word after an `O(n · L²)` build. Which wins depends on how many words there are.
+
+</FollowUps>

@@ -1,0 +1,175 @@
+---
+id: "11.11"
+slug: number-of-connected-components-in-an-undirected-graph
+title: Number of Connected Components in an Undirected Graph
+leetcode: 323
+url: https://leetcode.com/problems/number-of-connected-components-in-an-undirected-graph/
+difficulty: Medium
+premium: true
+category: graphs
+patterns: [union-find]
+prerequisites: ["Graph Valid Tree", "Union-find with rank and path compression"]
+targetComplexity: { time: "O(n * alpha(n))", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Given `n` nodes labelled `0` to `n - 1` and a list of **undirected** edges, return the number of
+**connected components**.
+
+<Examples>
+  <Example input={`n = 5
+edges = [[0,1],[1,2],[3,4]]`} output="2">
+    `{0, 1, 2}` and `{3, 4}`.
+  </Example>
+  <Example input={`n = 5
+edges = [[0,1],[1,2],[2,3],[3,4]]`} output="1">
+    One chain covering everything.
+  </Example>
+  <Example input={`n = 3
+edges = []`} output="3">
+    No edges, so every node is its own component.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= n <= 2000`, `1 <= edges.length <= 5000`
+- Edges are **undirected**, with no repeats and no self-loops
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- This is Number of Islands on an explicit graph instead of a grid. The technique does not change at
+  all — only the way neighbours are looked up.
+- Union-find answers it without any traversal: start with `n` components and subtract one every time an
+  edge actually merges two different ones.
+- An edge **inside** a component changes nothing. Distinguishing "merged" from "already together" is the
+  entire counting logic.
+
+</Signals>
+
+<BruteForce>
+
+Build an adjacency list, then flood from every unvisited node, counting how many floods you start.
+
+**O(n + e) time, O(n + e) space.** This is a completely legitimate answer and it is the direct
+translation of Number of Islands. The bottleneck is only structural: it needs the adjacency list built
+first, and it cannot answer the question while edges are still arriving.
+
+</BruteForce>
+
+<Insight>
+
+Start with n components and remove one each time an edge joins two that were separate.
+
+</Insight>
+
+<Approach>
+
+1. `components = n` — every node alone.
+2. `parent[x] = x` for all `x`, plus a rank per node.
+3. For each edge, find both roots.
+4. Same root: the edge is internal, change nothing.
+5. Different roots: union them and decrement `components`.
+6. Return `components`.
+
+`find` uses **path compression** and the union uses **rank**, which together make each operation
+effectively constant. Without them a long chain of unions degrades `find` to `O(n)`, and the total
+becomes quadratic.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def countComponents(self, n: int, edges: list[list[int]]) -> int:
+        # O(n + e) time and space — flood fill, one per component
+        graph: dict[int, list[int]] = {node: [] for node in range(n)}
+        for a, b in edges:
+            graph[a].append(b)
+            graph[b].append(a)
+
+        seen: set[int] = set()
+        components = 0
+
+        for start in range(n):
+            if start in seen:
+                continue
+            components += 1
+            stack = [start]
+            seen.add(start)
+            while stack:
+                node = stack.pop()
+                for neighbour in graph[node]:
+                    if neighbour not in seen:
+                        seen.add(neighbour)
+                        stack.append(neighbour)
+
+        return components
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def countComponents(self, n: int, edges: list[list[int]]) -> int:
+        # O(n * alpha(n)) time, O(n) space
+        parent = list(range(n))
+        rank = [1] * n
+        components = n                          # everything starts apart
+
+        def find(x: int) -> int:
+            while parent[x] != x:
+                parent[x] = parent[parent[x]]   # path compression
+                x = parent[x]
+            return x
+
+        for a, b in edges:
+            root_a, root_b = find(a), find(b)
+            if root_a == root_b:
+                continue                        # already together: nothing merges
+
+            if rank[root_a] < rank[root_b]:     # union by rank
+                root_a, root_b = root_b, root_a
+            parent[root_b] = root_a
+            rank[root_a] += rank[root_b]
+            components -= 1                     # two became one
+
+        return components
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Only decrement when a union actually happens.** Subtracting once per edge counts internal edges as
+  merges, and a triangle reports 0 components instead of 1.
+- **Compare roots, not labels.** `if a == b` never fires; the question is whether `find(a)` and
+  `find(b)` agree.
+- Isolated nodes count. Starting `components` at `n` includes them for free; counting distinct roots at
+  the end works too, and forgetting nodes with no edges is the usual slip.
+- **Path compression and union by rank are not optional at this size.** They are two lines, and without
+  them a path-shaped input makes `find` linear.
+- The flood-fill version must build the adjacency list for **all** `n` nodes, not only those appearing
+  in edges, or isolated nodes vanish from the sweep.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Return the size of the largest component."* — The `rank` array already holds each root's size if
+  you maintain it as a count, which the union above does. Take the maximum over the roots.
+- *"Edges arrive over time."* — Union-find handles it in a stream; the flood fill would have to restart.
+  That is the reason both solutions are worth having.
+- *"Where has this appeared already?"* — Number of Islands is this problem on a grid, and Graph Valid
+  Tree is this problem plus an edge count. Three problems, one structure.
+
+</FollowUps>

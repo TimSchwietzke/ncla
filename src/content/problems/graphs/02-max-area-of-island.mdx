@@ -1,0 +1,169 @@
+---
+id: "11.2"
+slug: max-area-of-island
+title: Max Area of Island
+leetcode: 695
+url: https://leetcode.com/problems/max-area-of-island/
+difficulty: Medium
+premium: false
+category: graphs
+patterns: [bfs-level-order, tree-dfs]
+prerequisites: ["Number of Islands", "Returning a size from a flood fill"]
+targetComplexity: { time: "O(m * n)", space: "O(m * n)" }
+status: complete
+---
+
+<Statement>
+
+Given an `m x n` binary grid, return the **largest** island area — the number of `1` cells in the
+biggest 4-directionally connected group. Return `0` if there is no land.
+
+<Examples>
+  <Example input={`grid = [[0,0,1,0,0],
+        [0,1,1,0,0],
+        [0,0,0,0,1]]`} output="3">
+    The connected group of three beats the lone 1 in the corner.
+  </Example>
+  <Example input={`grid = [[0, 0], [0, 0]]`} output="0">
+    No land at all, and the answer is 0 rather than undefined.
+  </Example>
+  <Example input={`grid = [[1, 1], [1, 1]]`} output="4">
+    One island covering everything.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= m, n <= 50`
+- Each cell is `0` or `1`
+- Connection is **4-directional**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- This is Number of Islands with the counter moved: instead of counting how many floods you started,
+  you measure how big each flood got.
+- The flood already visits exactly the cells of one island. The size is therefore free — it just has
+  to be returned rather than discarded.
+- The empty case matters. Starting the maximum at `0` is what makes "no land" answer correctly with no
+  special case.
+
+</Signals>
+
+<BruteForce>
+
+Collect every island as a set of coordinates, exactly as in Number of Islands, then take the largest.
+
+**O(m · n) time, O(m · n) space.** This is not asymptotically worse — it is the same sweep keeping
+more than it needs. The bottleneck is memory and clarity: every island is materialised in full when
+only its size is ever read.
+
+</BruteForce>
+
+<Insight>
+
+The flood already touches exactly one island's cells, so counting them as it goes is the whole answer.
+
+</Insight>
+
+<Approach>
+
+1. Sweep every cell; start a flood at each unvisited `1`.
+2. The flood marks cells as it enqueues them and counts how many it marked.
+3. Keep the largest count seen.
+4. Return that, starting from `0`.
+
+The recursive form is shorter here — `1 + area(up) + area(down) + area(left) + area(right)` — and with
+`m, n <= 50` the depth is at most 2500, which fits inside Python's limit. That is a real difference
+from Number of Islands, where the grid can be `300 x 300`, and it is worth noticing that the
+constraint decides which form is safe.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def maxAreaOfIsland(self, grid: list[list[int]]) -> int:
+        # O(m * n) time, O(m * n) space — materialises every island
+        rows, cols = len(grid), len(grid[0])
+        seen: set[tuple[int, int]] = set()
+        islands: list[set[tuple[int, int]]] = []
+
+        for r in range(rows):
+            for c in range(cols):
+                if grid[r][c] != 1 or (r, c) in seen:
+                    continue
+                component: set[tuple[int, int]] = set()
+                stack = [(r, c)]
+                seen.add((r, c))
+                while stack:
+                    cr, cc = stack.pop()
+                    component.add((cr, cc))
+                    for nr, nc in ((cr + 1, cc), (cr - 1, cc), (cr, cc + 1), (cr, cc - 1)):
+                        if (0 <= nr < rows and 0 <= nc < cols
+                                and grid[nr][nc] == 1 and (nr, nc) not in seen):
+                            seen.add((nr, nc))
+                            stack.append((nr, nc))
+                islands.append(component)
+
+        return max((len(island) for island in islands), default=0)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def maxAreaOfIsland(self, grid: list[list[int]]) -> int:
+        # O(m * n) time, O(m * n) recursion depth in the worst case
+        rows, cols = len(grid), len(grid[0])
+
+        def area(r: int, c: int) -> int:
+            if r < 0 or r >= rows or c < 0 or c >= cols or grid[r][c] != 1:
+                return 0
+
+            grid[r][c] = 0                       # sink before recursing, or it revisits
+            return (1 + area(r + 1, c) + area(r - 1, c)
+                    + area(r, c + 1) + area(r, c - 1))
+
+        best = 0
+        for r in range(rows):
+            for c in range(cols):
+                if grid[r][c] == 1:
+                    best = max(best, area(r, c))
+
+        return best                              # 0 when there is no land
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Sink the cell before recursing.** Marking after the four recursive calls lets each neighbour walk
+  straight back, and the recursion never terminates.
+- **Start `best` at 0**, not at `-inf` or 1. An all-water grid must answer 0, and the sweep never runs
+  the flood at all.
+- The cells here are integers `0`/`1`, while Number of Islands uses the strings `"0"`/`"1"`. Copying
+  one solution onto the other silently compares an int against a string and finds no land.
+- Recursion is safe at `50 x 50` (2500 deep) and would not be at `300 x 300`. The constraint is what
+  makes the shorter form acceptable — say that rather than assuming recursion is always fine.
+- Four directions. Diagonals would merge islands and inflate the answer.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"The largest island after flipping one 0 to 1."* — LC 827: label each island with an id and its
+  size, then for every water cell sum the distinct neighbouring islands plus one. Two passes, and the
+  labelling is what makes it linear.
+- *"The perimeter instead of the area."* — LC 463: count edges facing water or the border. The same
+  flood, a different thing counted.
+- *"Do it without touching the grid."* — A `visited` set of coordinates. `O(m · n)` memory in exchange
+  for leaving the caller's data alone.
+
+</FollowUps>

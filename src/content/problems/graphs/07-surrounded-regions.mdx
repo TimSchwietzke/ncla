@@ -1,0 +1,191 @@
+---
+id: "11.7"
+slug: surrounded-regions
+title: Surrounded Regions
+leetcode: 130
+url: https://leetcode.com/problems/surrounded-regions/
+difficulty: Medium
+premium: false
+category: graphs
+patterns: [tree-dfs]
+prerequisites: ["Number of Islands", "Solving the complement instead"]
+targetComplexity: { time: "O(m * n)", space: "O(m * n)" }
+status: complete
+---
+
+<Statement>
+
+Given an `m x n` board of `'X'` and `'O'`, capture every **surrounded** region: flip to `'X'` all
+`'O'` regions that do not touch the border. Modify the board **in place**.
+
+<Examples>
+  <Example input={`board = [["X","X","X","X"],
+         ["X","O","O","X"],
+         ["X","X","O","X"],
+         ["X","O","X","X"]]`} output={`[["X","X","X","X"],
+ ["X","X","X","X"],
+ ["X","X","X","X"],
+ ["X","O","X","X"]]`}>
+    The inner region is captured. The lone `O` on the bottom edge survives.
+  </Example>
+  <Example input={`board = [["O","O"],["O","O"]]`} output={`[["O","O"],["O","O"]]`}>
+    Every cell is on the border, so nothing is captured.
+  </Example>
+  <Example input={`board = [["X"]]`} output={`[["X"]]`}>
+    Nothing to do.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= m, n <= 200`
+- Each cell is `'X'` or `'O'`
+- The board is modified **in place**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- "Surrounded" is defined by what a region **does not** touch, and a negative condition is awkward to
+  check directly. The complement — "touches the border" — is a positive one, and positive conditions
+  are what searches answer.
+- There are far fewer border cells than interior ones, and every safe region must contain at least one.
+  So the search should start there.
+- Once the safe regions are known, everything else is captured by definition. No per-region decision is
+  needed at all.
+
+</Signals>
+
+<BruteForce>
+
+For each region of `'O'`, flood it and check whether any of its cells sits on the border. Flip it if
+none does.
+
+**O(m · n) time, O(m · n) space.** This is not asymptotically worse — it is the same sweep with the
+decision made per region rather than once. The bottleneck is bookkeeping: each region has to be
+collected in full, tested, and then revisited to flip it, which is three passes over the same cells and
+three chances to get the marking wrong.
+
+</BruteForce>
+
+<Insight>
+
+Find the regions that are safe — the ones reachable from the border — and everything else is captured.
+
+</Insight>
+
+<Approach>
+
+1. Flood inward from every `'O'` on the border, marking each cell reached with a temporary `'S'`.
+2. Sweep the whole board:
+3. `'O'` was never reached, so it was surrounded — flip it to `'X'`.
+4. `'S'` was reached, so it is safe — restore it to `'O'`.
+5. `'X'` is untouched.
+
+The temporary marker is what lets one sweep do both jobs. Marking the safe cells directly as `'X'`
+would make them indistinguishable from the ones being captured.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def solve(self, board: list[list[str]]) -> None:
+        # O(m * n) time — collects each region, tests it, then flips it
+        rows, cols = len(board), len(board[0])
+        seen: set[tuple[int, int]] = set()
+
+        for r in range(rows):
+            for c in range(cols):
+                if board[r][c] != "O" or (r, c) in seen:
+                    continue
+
+                region: list[tuple[int, int]] = []
+                stack = [(r, c)]
+                seen.add((r, c))
+                on_border = False
+
+                while stack:
+                    cr, cc = stack.pop()
+                    region.append((cr, cc))
+                    if cr in (0, rows - 1) or cc in (0, cols - 1):
+                        on_border = True
+                    for nr, nc in ((cr + 1, cc), (cr - 1, cc), (cr, cc + 1), (cr, cc - 1)):
+                        if (0 <= nr < rows and 0 <= nc < cols
+                                and board[nr][nc] == "O" and (nr, nc) not in seen):
+                            seen.add((nr, nc))
+                            stack.append((nr, nc))
+
+                if not on_border:
+                    for cr, cc in region:
+                        board[cr][cc] = "X"
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def solve(self, board: list[list[str]]) -> None:
+        # O(m * n) time, O(m * n) space — flood from the border, then one sweep
+        rows, cols = len(board), len(board[0])
+
+        def mark_safe(sr: int, sc: int) -> None:
+            if board[sr][sc] != "O":
+                return
+            stack = [(sr, sc)]
+            board[sr][sc] = "S"                   # temporary: "reachable from the border"
+
+            while stack:
+                r, c = stack.pop()
+                for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                    if 0 <= nr < rows and 0 <= nc < cols and board[nr][nc] == "O":
+                        board[nr][nc] = "S"
+                        stack.append((nr, nc))
+
+        for r in range(rows):                     # the whole border
+            mark_safe(r, 0)
+            mark_safe(r, cols - 1)
+        for c in range(cols):
+            mark_safe(0, c)
+            mark_safe(rows - 1, c)
+
+        for r in range(rows):
+            for c in range(cols):
+                if board[r][c] == "O":            # never reached: surrounded
+                    board[r][c] = "X"
+                elif board[r][c] == "S":          # reached: put it back
+                    board[r][c] = "O"
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Solve the complement.** Trying to detect "surrounded" directly means proving a negative for every
+  region. Marking what is safe and flipping the rest turns it into one flood and one sweep.
+- **Use a third symbol.** Marking safe cells as `'X'` loses the distinction and captures exactly the
+  regions that should survive. The temporary `'S'` must be restored in the final sweep.
+- **Seed the entire border**, all four sides. Covering only the top and left passes the first example
+  by luck and fails on regions touching the bottom or right.
+- Mark on enqueue, not on pop — the same rule as every grid BFS here. Marking late lets a cell enter
+  the stack from two neighbours.
+- The function returns `None` and mutates in place. Building and returning a new board is a misread of
+  the signature, and LeetCode checks the original object.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Count the captured regions instead of flipping them."* — Same flood, then sweep counting the
+  remaining `'O'` groups. The complement trick is unchanged.
+- *"Do it with union-find."* — Add a virtual "border" node, union every border `'O'` to it, and union
+  adjacent `'O'`s. Anything not connected to the virtual node is captured. Same idea, different tool.
+- *"Where does this trick appear again?"* — Pacific Atlantic Water Flow, one problem earlier: both
+  refuse to answer per cell and instead flood from the edges. That is the shared lesson of the pair.
+
+</FollowUps>

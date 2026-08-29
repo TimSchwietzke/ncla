@@ -1,0 +1,181 @@
+---
+id: "11.6"
+slug: pacific-atlantic-water-flow
+title: Pacific Atlantic Water Flow
+leetcode: 417
+url: https://leetcode.com/problems/pacific-atlantic-water-flow/
+difficulty: Medium
+premium: false
+category: graphs
+patterns: [tree-dfs]
+prerequisites: ["Number of Islands", "Reversing the direction of a search"]
+targetComplexity: { time: "O(m * n)", space: "O(m * n)" }
+status: complete
+---
+
+<Statement>
+
+An `m x n` island has heights. The **Pacific** touches the top and left edges, the **Atlantic** the
+bottom and right. Water flows from a cell to a 4-directionally adjacent one of **equal or lower**
+height, and off the island at the matching edge.
+
+Return every cell from which water can reach **both** oceans.
+
+<Examples>
+  <Example input={`heights = [[1,2,2,3,5],
+           [3,2,3,4,4],
+           [2,4,5,3,1],
+           [6,7,1,4,5],
+           [5,1,1,2,4]]`} output={`[[0,4],[1,3],[1,4],[2,2],[3,0],[3,1],[4,0]]`}>
+    Seven cells drain both ways. The order does not matter.
+  </Example>
+  <Example input={`heights = [[1]]`} output={`[[0,0]]`}>
+    A single cell touches every edge, so it reaches both oceans.
+  </Example>
+  <Example input={`heights = [[1,2],[4,3]]`} output={`[[0,1],[1,0],[1,1]]`}>
+    Only the top-left corner fails, because it is too low to send water anywhere useful.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= m, n <= 200`
+- `0 <= heights[r][c] <= 10^5`
+- Water flows to **equal or lower** neighbours — ties are allowed
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Searching *from* each cell asks "can I get down to an ocean", and answering it for all `m · n` cells
+  separately repeats enormous amounts of work.
+- **Turn it around.** Start at the ocean edges and walk **uphill** — to neighbours of equal or greater
+  height. Every cell reached that way can send water back down to that ocean.
+- Two searches, two sets, and the answer is their intersection. Nothing needs to be computed per cell
+  at all.
+
+</Signals>
+
+<BruteForce>
+
+From every cell, run a search downhill and record which oceans it reaches.
+
+**O((m · n)²) time.** Correct and the direct reading of the statement. At `200 x 200` that is
+`1.6 * 10^9` cell visits. The bottleneck is that neighbouring cells drain through the same corridors
+and each rediscovers them; a search from the ocean visits every corridor once.
+
+</BruteForce>
+
+<Insight>
+
+Walk uphill from each ocean instead of downhill from each cell — the two reachable sets intersect exactly where water goes both ways.
+
+</Insight>
+
+<Approach>
+
+1. Keep two sets, `pacific` and `atlantic`.
+2. Flood **inland from the Pacific edges** — the whole top row and left column — moving only to
+   neighbours **at least as high** as the current cell.
+3. Do the same from the Atlantic edges: bottom row and right column.
+4. The answer is every cell in both sets.
+
+The comparison flips with the direction. Water flows to *lower or equal*; walking backwards means
+moving to *higher or equal*. Getting that backwards produces a plausible, wrong answer, and it is the
+one thing to say out loud while writing it.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def pacificAtlantic(self, heights: list[list[int]]) -> list[list[int]]:
+        # O((m * n)^2) time — a downhill search from every cell
+        rows, cols = len(heights), len(heights[0])
+
+        def reaches(sr: int, sc: int) -> tuple[bool, bool]:
+            seen = {(sr, sc)}
+            stack = [(sr, sc)]
+            pacific = atlantic = False
+
+            while stack:
+                r, c = stack.pop()
+                if r == 0 or c == 0:
+                    pacific = True
+                if r == rows - 1 or c == cols - 1:
+                    atlantic = True
+                for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                    if (0 <= nr < rows and 0 <= nc < cols and (nr, nc) not in seen
+                            and heights[nr][nc] <= heights[r][c]):     # downhill
+                        seen.add((nr, nc))
+                        stack.append((nr, nc))
+
+            return pacific, atlantic
+
+        return [[r, c] for r in range(rows) for c in range(cols)
+                if all(reaches(r, c))]
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def pacificAtlantic(self, heights: list[list[int]]) -> list[list[int]]:
+        # O(m * n) time, O(m * n) space — two floods inland from the edges
+        rows, cols = len(heights), len(heights[0])
+
+        def flood(starts: list[tuple[int, int]]) -> set[tuple[int, int]]:
+            seen = set(starts)
+            stack = list(starts)
+
+            while stack:
+                r, c = stack.pop()
+                for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                    if (0 <= nr < rows and 0 <= nc < cols and (nr, nc) not in seen
+                            and heights[nr][nc] >= heights[r][c]):     # uphill: reversed
+                        seen.add((nr, nc))
+                        stack.append((nr, nc))
+
+            return seen
+
+        pacific = flood([(0, c) for c in range(cols)] + [(r, 0) for r in range(rows)])
+        atlantic = flood([(rows - 1, c) for c in range(cols)]
+                         + [(r, cols - 1) for r in range(rows)])
+
+        return [[r, c] for r, c in pacific & atlantic]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **The comparison flips when the search does.** Flowing downhill is `<=`; walking back from the ocean
+  is `>=`. Keeping `<=` while starting from the edges returns the cells water flows *into* from the
+  coast, which is a different and wrong set.
+- **Equal heights count.** The statement says "equal or lower", so `>=` and not `>`. A strict
+  comparison silently drops every plateau, and plateaus are common in the test data.
+- Seed **both** edges of each ocean. The Pacific is the top row *and* the left column; using only one
+  produces an answer that looks right on a square symmetric grid.
+- The corners belong to both oceans and appear in both seed lists. That is harmless — the `seen` set
+  absorbs the duplicate — and worth not special-casing.
+- Order does not matter in the output, so there is no reason to sort. Sorting to match the example
+  costs `O(k log k)` for nothing.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Only the Pacific."* — One flood, and the answer is that set. The problem becomes trivial, which is
+  a good check that the intersection was the only thing making it interesting.
+- *"Water flows strictly downhill."* — Change both comparisons to strict. Plateaus then block flow
+  entirely and the answer set shrinks sharply.
+- *"Where does the reversal trick appear again?"* — Any "which sources reach this target" question:
+  search from the target backwards. It is the same idea as multi-source BFS, one level of indirection
+  further.
+
+</FollowUps>

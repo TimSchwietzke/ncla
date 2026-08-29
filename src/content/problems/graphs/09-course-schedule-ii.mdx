@@ -1,0 +1,180 @@
+---
+id: "11.9"
+slug: course-schedule-ii
+title: Course Schedule II
+leetcode: 210
+url: https://leetcode.com/problems/course-schedule-ii/
+difficulty: Medium
+premium: false
+category: graphs
+patterns: [topological-sort]
+prerequisites: ["Course Schedule", "Kahn's algorithm"]
+targetComplexity: { time: "O(V + E)", space: "O(V + E)" }
+status: complete
+---
+
+<Statement>
+
+Given `numCourses` and `prerequisites`, where `[a, b]` means **`b` before `a`**, return **an order** in
+which every course can be taken. Return an empty array if no such order exists. Any valid order is
+accepted.
+
+<Examples>
+  <Example input={`numCourses = 2
+prerequisites = [[1, 0]]`} output={`[0, 1]`}>
+    Course 0 has no prerequisite, so it goes first.
+  </Example>
+  <Example input={`numCourses = 4
+prerequisites = [[1,0],[2,0],[3,1],[3,2]]`} output={`[0, 2, 1, 3]`}>
+    `[0, 1, 2, 3]` is equally valid — 1 and 2 are independent of each other.
+  </Example>
+  <Example input={`numCourses = 2
+prerequisites = [[1,0],[0,1]]`} output={`[]`}>
+    A cycle, so no order exists.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= numCourses <= 2000`
+- `prerequisites[i].length == 2`, `a != b`, all pairs unique
+- **Any** valid order is accepted
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Course Schedule asked *whether* an order exists; this asks for one. The same algorithm produces both,
+  which is why they sit next to each other.
+- A course can be taken as soon as **all** its prerequisites are done, so the natural quantity to track
+  is how many are still outstanding — the **in-degree**.
+- "Any valid order" means the answer is not unique. A solution that matches a specific expected array
+  is testing the wrong thing; the check is that the order respects every edge.
+
+</Signals>
+
+<BruteForce>
+
+Repeatedly scan all courses for one whose prerequisites are all already taken, append it, and start
+again.
+
+**O(V²  + V · E) time.** Correct and it describes the idea exactly. The bottleneck is the rescanning:
+after taking a course, only the courses that depended on **it** can have become available, and the
+scan re-examines everything instead.
+
+</BruteForce>
+
+<Insight>
+
+Track how many prerequisites each course still needs, and taking a course only ever unblocks its direct dependents.
+
+</Insight>
+
+<Approach>
+
+1. Build the graph as **prerequisite → dependents**, and count each course's in-degree.
+2. Queue every course with in-degree `0` — nothing blocks them.
+3. Pop one, append it to the order, and for each dependent decrement its in-degree.
+4. A dependent reaching `0` is now free — enqueue it.
+5. If the order holds all `numCourses` at the end, return it. Otherwise a cycle kept some courses
+   permanently blocked — return `[]`.
+
+Step 5 is the cycle detection, and it comes for free: nothing inside a cycle ever reaches in-degree 0,
+so it never enters the queue. No separate check is needed.
+
+This is **Kahn's algorithm**, and it is iterative — which at 2000 courses matters, because the
+recursive version can exceed Python's stack.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def findOrder(self, numCourses: int, prerequisites: list[list[int]]) -> list[int]:
+        # O(V^2 + V * E) time — rescans every course after each one is taken
+        needs: dict[int, set[int]] = {course: set() for course in range(numCourses)}
+        for course, before in prerequisites:
+            needs[course].add(before)
+
+        order: list[int] = []
+        taken: set[int] = set()
+
+        while len(order) < numCourses:
+            for course in range(numCourses):
+                if course in taken:
+                    continue
+                if needs[course] <= taken:          # every prerequisite already taken
+                    order.append(course)
+                    taken.add(course)
+                    break
+            else:
+                return []                           # a full scan found nothing: cycle
+
+        return order
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+from collections import deque
+
+
+class Solution:
+    def findOrder(self, numCourses: int, prerequisites: list[list[int]]) -> list[int]:
+        # O(V + E) time and space — Kahn's algorithm, iterative
+        dependents: dict[int, list[int]] = {course: [] for course in range(numCourses)}
+        indegree = [0] * numCourses
+
+        for course, before in prerequisites:        # [a, b] means b before a
+            dependents[before].append(course)
+            indegree[course] += 1
+
+        queue = deque(course for course in range(numCourses) if indegree[course] == 0)
+        order: list[int] = []
+
+        while queue:
+            course = queue.popleft()
+            order.append(course)
+
+            for dependent in dependents[course]:
+                indegree[dependent] -= 1
+                if indegree[dependent] == 0:        # nothing blocks it any more
+                    queue.append(dependent)
+
+        return order if len(order) == numCourses else []   # short means a cycle
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Edge direction matters here, unlike in Course Schedule.** `[a, b]` means `b` comes first, so the
+  edge runs `b → a` and it is `a`'s in-degree that increases. Reversing it yields a reversed order that
+  still "looks" topological and fails every test.
+- **The length check is the cycle detection.** There is no separate cycle search: courses in a cycle
+  never reach in-degree 0, so they never enter the queue and the order comes out short.
+- Initialise the adjacency list and in-degrees for **all** courses, including those in no prerequisite
+  pair. They have in-degree 0 and must appear in the answer.
+- Any valid order is accepted, so do not sort the result or try to match an example. Verify instead
+  that every `[a, b]` has `b` before `a`.
+- The depth-first version also works — append each course when it becomes `DONE`, then reverse — but at
+  2000 courses it can exceed Python's recursion limit. Kahn's has no such problem, which is the
+  practical reason to prefer it.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Is the order unique?"* — It is unique exactly when the queue never holds more than one course at a
+  time. A one-line check, and a genuinely useful follow-up.
+- *"The shortest schedule with parallel semesters."* — Each round of the queue is one semester, the
+  same level-order trick as Rotting Oranges. The answer is the number of rounds.
+- *"Alien Dictionary."* — Category 12: derive the edges from the input first, then run exactly this.
+  Building the graph is the hard half there; this part is already solved.
+
+</FollowUps>

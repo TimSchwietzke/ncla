@@ -1,0 +1,183 @@
+---
+id: "11.1"
+slug: number-of-islands
+title: Number of Islands
+leetcode: 200
+url: https://leetcode.com/problems/number-of-islands/
+difficulty: Medium
+premium: false
+category: graphs
+patterns: [bfs-level-order, tree-dfs]
+prerequisites: ["A grid is a graph", "Marking cells as visited"]
+targetComplexity: { time: "O(m * n)", space: "O(m * n)" }
+status: complete
+---
+
+<Statement>
+
+Given an `m x n` grid of `'1'` (land) and `'0'` (water), return the number of **islands** — groups of
+land connected horizontally or vertically. The grid's borders are surrounded by water.
+
+<Examples>
+  <Example input={`grid = [["1","1","1","1","0"],
+        ["1","1","0","1","0"],
+        ["1","1","0","0","0"],
+        ["0","0","0","0","0"]]`} output="1">
+    All the land is connected, even around the gap in the middle.
+  </Example>
+  <Example input={`grid = [["1","1","0","0","0"],
+        ["1","1","0","0","0"],
+        ["0","0","1","0","0"],
+        ["0","0","0","1","1"]]`} output="3">
+    Three separate groups. Diagonal touching does **not** connect them.
+  </Example>
+  <Example input={`grid = [["0"]]`} output="0">
+    No land at all.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= m, n <= 300`
+- Each cell is `'0'` or `'1'`
+- Connection is **4-directional** — never diagonal
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **A grid is a graph.** Each cell is a node and each of its four neighbours is an edge. Once that
+  clicks, the entire Graphs category stops distinguishing between grids and adjacency lists.
+- "How many separate groups" is **connected components**. Start a traversal from every unvisited node
+  and count how many times you had to start.
+- The traversal itself never matters here — depth-first and breadth-first visit the same cells and give
+  the same count. Only the memory profile differs.
+
+</Signals>
+
+<BruteForce>
+
+For every pair of land cells, test whether a path connects them, then group them.
+
+**O((m · n)² ) or worse.** It is correct and it answers the question as literally posed. The
+bottleneck is that connectivity is computed pairwise, when a single sweep already discovers each whole
+component at once — the information is available for free and is being thrown away.
+
+</BruteForce>
+
+<Insight>
+
+Every time you find land nobody has visited, that is a new island — then sink the whole thing so it is never counted again.
+
+</Insight>
+
+<Approach>
+
+1. Walk every cell.
+2. When a cell holds `'1'`, increment the count: this is a new island.
+3. Immediately flood it — visit every connected land cell and mark it visited.
+4. Continue the sweep. Everything belonging to that island is now marked, so it can never start a
+   second count.
+
+Marking can be a `visited` set or, more cheaply, overwriting the cell with `'0'`. The overwrite
+destroys the input, which is fine on LeetCode and worth flagging anywhere else.
+
+Breadth-first with an explicit queue is the version below, because a depth-first recursion on a
+`300 x 300` grid of solid land is 90 000 frames deep and exceeds Python's recursion limit.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def numIslands(self, grid: list[list[str]]) -> int:
+        # O((m * n)^2) time — recomputes reachability from every land cell
+        rows, cols = len(grid), len(grid[0])
+        land = [(r, c) for r in range(rows) for c in range(cols) if grid[r][c] == "1"]
+
+        def reachable(start: tuple[int, int]) -> set[tuple[int, int]]:
+            seen = {start}
+            stack = [start]
+            while stack:
+                r, c = stack.pop()
+                for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                    if (0 <= nr < rows and 0 <= nc < cols
+                            and grid[nr][nc] == "1" and (nr, nc) not in seen):
+                        seen.add((nr, nc))
+                        stack.append((nr, nc))
+            return seen
+
+        components: list[set[tuple[int, int]]] = []
+        for cell in land:
+            if not any(cell in component for component in components):
+                components.append(reachable(cell))
+
+        return len(components)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+from collections import deque
+
+
+class Solution:
+    def numIslands(self, grid: list[list[str]]) -> int:
+        # O(m * n) time, O(m * n) space for the queue in the worst case
+        rows, cols = len(grid), len(grid[0])
+        islands = 0
+
+        def sink(start_r: int, start_c: int) -> None:
+            queue = deque([(start_r, start_c)])
+            grid[start_r][start_c] = "0"          # mark on ENQUEUE, not on dequeue
+
+            while queue:
+                r, c = queue.popleft()
+                for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                    if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] == "1":
+                        grid[nr][nc] = "0"
+                        queue.append((nr, nc))
+
+        for r in range(rows):
+            for c in range(cols):
+                if grid[r][c] == "1":
+                    islands += 1                  # unvisited land: a new island
+                    sink(r, c)
+
+        return islands
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Mark when you enqueue, not when you dequeue.** Otherwise a cell reachable from two neighbours is
+  queued twice, and on a large solid island the queue grows quadratically. This is the single most
+  common performance bug in grid BFS.
+- **Sink the island immediately after counting it.** Counting without marking counts every land cell
+  as its own island.
+- Four directions, never eight. The second example gives 3 with 4-directional connectivity and fewer
+  with diagonals, so a wrong direction set produces a plausible number.
+- Recursive DFS is elegant and, at `300 x 300`, exceeds Python's default recursion limit of 1000 on a
+  grid that is all land. Either raise the limit, use an explicit stack, or use BFS as above — and say
+  which and why.
+- Overwriting the grid destroys the caller's data. A `visited` set costs `O(m · n)` memory and keeps
+  the input intact; state which trade you are making rather than doing it silently.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"The largest island, not the count."* — The next problem: `sink` returns the number of cells it
+  visited instead of nothing.
+- *"Islands in a stream of added land cells."* — LC 305: union-find, joining each new cell to its
+  already-land neighbours. Re-flooding after every addition would be quadratic.
+- *"Count distinct island **shapes**."* — LC 694: record each island's cells relative to its starting
+  cell and put the normalised shape in a set. The traversal is unchanged; only the bookkeeping grows.
+
+</FollowUps>
