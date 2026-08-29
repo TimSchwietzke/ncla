@@ -1,0 +1,205 @@
+---
+id: "10.3"
+slug: word-search-ii
+title: Word Search II
+leetcode: 212
+url: https://leetcode.com/problems/word-search-ii/
+difficulty: Hard
+premium: false
+category: tries
+patterns: [tree-dfs, backtracking]
+prerequisites: ["Word Search", "Implement Trie", "Walking two structures at once"]
+targetComplexity: { time: "O(m * n * 4^L)", space: "O(total characters)" }
+status: complete
+---
+
+<Statement>
+
+Given an `m x n` board of lowercase letters and a list of `words`, return **all** the words that can
+be spelled by walking through horizontally or vertically adjacent cells. A cell may not be reused
+within one word.
+
+<Examples>
+  <Example input={`board = [["o","a","a","n"],
+         ["e","t","a","e"],
+         ["i","h","k","r"],
+         ["i","f","l","v"]]
+words = ["oath", "pea", "eat", "rain"]`} output={`["oath", "eat"]`}>
+    Two of the four are spellable. `pea` and `rain` are not.
+  </Example>
+  <Example input={`board = [["a","b"]]
+words = ["ab", "ba", "abc"]`} output={`["ab", "ba"]`}>
+    Both directions along a row work; `abc` runs off the board.
+  </Example>
+  <Example input={`board = [["a"]]
+words = ["a", "aa"]`} output={`["a"]`}>
+    `aa` would need the single cell twice, which is forbidden.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= m, n <= 12`
+- `1 <= words.length <= 3 * 10^4` and `1 <= words[i].length <= 10`
+- All words are **unique**, lowercase letters only
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Running Word Search once per word is `3 * 10^4` independent searches over a 144-cell grid. The
+  numbers are the tell: the word **list** is the large input, so the algorithm must not scale with it
+  linearly.
+- Every search would re-walk the same grid prefixes. Words sharing a prefix should share that walk —
+  which is exactly what a trie makes possible.
+- Turning the search around is the move: instead of asking "can I find this word", walk the grid once
+  and ask "is what I have spelled so far still a prefix of anything?". A dead prefix kills the branch
+  immediately, whatever the word list contains.
+
+</Signals>
+
+<BruteForce>
+
+Run the Word Search algorithm once for every word.
+
+**O(words · m · n · 4^L) time.** It is correct and it is what most people write first. With
+`3 * 10^4` words it times out by a wide margin — and the reason is instructive: searching for `aaa`
+and `aab` repeats the entire walk for `aa`. The repetition is between *words*, so no amount of
+tuning the single-word search removes it.
+
+</BruteForce>
+
+<Insight>
+
+Put the words in a trie and walk the grid once — the trie says whether the current path is still worth extending.
+
+</Insight>
+
+<Approach>
+
+1. Insert every word into a trie. Store the **whole word** on its final node, so a hit needs no
+   reconstruction.
+2. From every cell, start a depth-first search that descends the grid and the trie **together**.
+3. If the current letter is not a child of the current trie node, stop. This is the prune that does all
+   the work.
+4. If the node carries a word, record it and **clear it** so the same word is not reported twice from
+   another path.
+5. Mark the cell, recurse into the four neighbours, then unmark it.
+6. Optionally, prune a trie leaf once it has no children left — the search then shrinks as words are
+   found.
+
+Step 4 is the neat trick: clearing the stored word deduplicates without a set, and it also makes the
+trie smaller as the search proceeds.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def findWords(self, board: list[list[str]], words: list[str]) -> list[str]:
+        # O(words * m * n * 4^L) — one independent grid search per word
+        rows, cols = len(board), len(board[0])
+
+        def exists(word: str) -> bool:
+            def search(r: int, c: int, i: int) -> bool:
+                if i == len(word):
+                    return True
+                if r < 0 or r >= rows or c < 0 or c >= cols or board[r][c] != word[i]:
+                    return False
+                board[r][c] = "#"
+                found = (search(r + 1, c, i + 1) or search(r - 1, c, i + 1)
+                         or search(r, c + 1, i + 1) or search(r, c - 1, i + 1))
+                board[r][c] = word[i]
+                return found
+
+            return any(search(r, c, 0) for r in range(rows) for c in range(cols))
+
+        return [word for word in words if exists(word)]
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class TrieNode:
+    def __init__(self) -> None:
+        self.children: dict[str, "TrieNode"] = {}
+        self.word: str | None = None      # the whole word, so a hit needs no rebuilding
+
+
+class Solution:
+    def findWords(self, board: list[list[str]], words: list[str]) -> list[str]:
+        # O(m * n * 4^L) time, O(total characters) space
+        root = TrieNode()
+        for word in words:
+            node = root
+            for ch in word:
+                node = node.children.setdefault(ch, TrieNode())
+            node.word = word
+
+        rows, cols = len(board), len(board[0])
+        found: list[str] = []
+
+        def search(r: int, c: int, node: TrieNode) -> None:
+            if r < 0 or r >= rows or c < 0 or c >= cols:
+                return
+
+            ch = board[r][c]
+            child = node.children.get(ch)
+            if child is None:                 # dead prefix: no word continues this way
+                return
+
+            if child.word is not None:
+                found.append(child.word)
+                child.word = None             # report each word once, without a set
+
+            board[r][c] = "#"                 # "#" is never a trie child, so it blocks reuse
+            search(r + 1, c, child)
+            search(r - 1, c, child)
+            search(r, c + 1, child)
+            search(r, c - 1, child)
+            board[r][c] = ch
+
+            if not child.children:            # exhausted branch: shrink the trie
+                node.children.pop(ch)
+
+        for r in range(rows):
+            for c in range(cols):
+                search(r, c, root)
+
+        return found
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Descend the trie in step with the grid.** Passing the root into every recursive call instead of the
+  child restarts the word at every cell, and the output fills with words that are not there.
+- **Clear the word after reporting it.** The same word can be reachable by several paths, and without
+  clearing it appears more than once. A `set` also works; clearing is cheaper and shrinks the search.
+- **Restore the cell on the way out.** Same lesson as Word Search — and `"#"` is safe as a marker
+  precisely because no trie node has it as a child, so the lookup in step 3 rejects it.
+- Check the bounds **before** reading `board[r][c]`. Python's negative indices wrap silently, so
+  `r == -1` reads the last row and produces wrong answers rather than a crash.
+- Running Word Search per word is not a small constant worse — it is a factor of `3 * 10^4`. Say the
+  bound, because that is the reason the Tries category contains this problem at all.
+- Pruning exhausted trie branches is optional for correctness and substantial in practice. Mention it
+  as an optimisation rather than presenting it as required.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Why is this in Tries rather than Backtracking?"* — The backtracking is unchanged from Word Search.
+  What is new is the structure that lets `3 * 10^4` searches become one, and that is the trie.
+- *"Return where each word was found."* — Carry the path of coordinates alongside the recursion and
+  copy it when a word is hit, exactly as with `path[:]` in the backtracking problems.
+- *"Stream the words instead of having them up front."* — The trie can be built incrementally, but the
+  grid walk has to be redone. This design assumes the word list is known first, which is worth stating.
+
+</FollowUps>

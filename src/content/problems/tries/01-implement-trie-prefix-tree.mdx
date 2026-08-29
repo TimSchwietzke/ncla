@@ -1,0 +1,172 @@
+---
+id: "10.1"
+slug: implement-trie-prefix-tree
+title: Implement Trie (Prefix Tree)
+leetcode: 208
+url: https://leetcode.com/problems/implement-trie-prefix-tree/
+difficulty: Medium
+premium: false
+category: tries
+patterns: [tree-dfs]
+prerequisites: ["Nested dictionaries", "Why a prefix is not a word"]
+targetComplexity: { time: "O(L) per operation", space: "O(total characters)" }
+status: complete
+---
+
+<Statement>
+
+Implement a **trie** (prefix tree).
+
+`insert(word)` stores a word. `search(word)` returns `true` only if that exact word was inserted.
+`startsWith(prefix)` returns `true` if any inserted word begins with that prefix.
+
+<Examples>
+  <Example input={`insert("apple")
+search("apple")`} output="true">
+    The word was inserted, so it is found.
+  </Example>
+  <Example input={`… then search("app")`} output="false">
+    `app` is a **prefix** of `apple`, not a word that was inserted. This is the distinction the whole
+    structure exists to make.
+  </Example>
+  <Example input={`… then startsWith("app")`} output="true">
+    The same string, asked as a prefix question, answers `true`.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= word.length, prefix.length <= 2000`
+- Lowercase English letters only
+- At most `3 * 10^4` calls in total
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Two questions that differ **only** in whether a word ended here. That single bit per node is the
+  entire design, and everything else follows from it.
+- Words sharing a prefix should share the work of storing it. A tree keyed by character does that
+  automatically — the path spells the prefix, so the prefix is never stored as a string at all.
+- Lookup cost is the **word length**, not the number of words. That is what a trie buys and what a hash
+  set of words cannot give you for `startsWith`.
+
+</Signals>
+
+<BruteForce>
+
+Keep the words in a set. `search` is a membership test; `startsWith` scans every stored word.
+
+**`search` is `O(L)`, `startsWith` is `O(number of words · L)`.** The `search` half is genuinely
+excellent — better than a trie, in fact. The bottleneck is entirely `startsWith`: a hash set knows
+whether a string is present and nothing whatsoever about what begins with it, so the only option is to
+look at everything.
+
+</BruteForce>
+
+<Insight>
+
+Let the path from the root spell the prefix, and mark the nodes where a word happens to end.
+
+</Insight>
+
+<Approach>
+
+1. A node holds a dictionary from character to child node, plus a boolean `is_word`.
+2. `insert`: walk the word, creating any missing child, and set `is_word` on the final node.
+3. `search`: walk the word; fail if any character is missing. Succeed only if the final node has
+   `is_word` set.
+4. `startsWith`: the same walk, but reaching the end is enough — `is_word` is never consulted.
+
+Steps 3 and 4 are the same three lines with one extra condition, which is why the walk is worth
+factoring out. The difference between them is the only thing this problem is testing.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Trie:
+    def __init__(self) -> None:
+        # search O(L); startsWith O(words * L)
+        self.words: set[str] = set()
+
+    def insert(self, word: str) -> None:
+        self.words.add(word)
+
+    def search(self, word: str) -> bool:
+        return word in self.words
+
+    def startsWith(self, prefix: str) -> bool:
+        return any(word.startswith(prefix) for word in self.words)   # the whole set, every call
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class TrieNode:
+    def __init__(self) -> None:
+        self.children: dict[str, "TrieNode"] = {}
+        self.is_word = False        # "a word ends here", not "this node exists"
+
+
+class Trie:
+    def __init__(self) -> None:
+        # every operation O(L), O(total characters) space
+        self.root = TrieNode()
+
+    def insert(self, word: str) -> None:
+        node = self.root
+        for ch in word:
+            if ch not in node.children:
+                node.children[ch] = TrieNode()
+            node = node.children[ch]
+        node.is_word = True
+
+    def _walk(self, text: str) -> "TrieNode | None":
+        node = self.root
+        for ch in text:
+            if ch not in node.children:
+                return None
+            node = node.children[ch]
+        return node
+
+    def search(self, word: str) -> bool:
+        node = self._walk(word)
+        return node is not None and node.is_word     # a prefix is not a word
+
+    def startsWith(self, prefix: str) -> bool:
+        return self._walk(prefix) is not None        # reaching the end is enough
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`is_word` is the whole problem.** Without it, `search("app")` returns `true` after inserting
+  `"apple"`, because the path exists. The examples are built around exactly this.
+- **`search` and `startsWith` differ by one condition, not by one algorithm.** Writing two separate
+  walks invites them to drift apart; factoring the walk out makes the difference visible.
+- Do not store the words at the nodes. The path already spells them, and storing them again defeats
+  the prefix sharing that is the point of the structure.
+- A hash set is genuinely *better* for `search` alone. Say that — the trie earns its place because of
+  `startsWith`, and being able to name why is worth more than the implementation.
+- Space is `O(total characters inserted)` in the worst case, and much less when the words share
+  prefixes. Quoting `O(words · L)` overstates it and misses what the structure does.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Support deletion."* — Walk down, clear `is_word`, and remove nodes on the way back up while they
+  have no children and no `is_word`. The pruning is the fiddly part.
+- *"Count the words with a given prefix."* — Keep a counter per node, incremented on the way down
+  during `insert`. `startsWith` then answers "how many" as cheaply as "whether".
+- *"An alphabet of 26, as an array."* — `children` becomes a fixed 26-slot list. Faster and simpler for
+  lowercase-only input, and much more wasteful for a large or sparse alphabet.
+
+</FollowUps>

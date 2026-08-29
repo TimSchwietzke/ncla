@@ -1,0 +1,183 @@
+---
+id: "10.2"
+slug: design-add-and-search-words-data-structure
+title: Design Add and Search Words Data Structure
+leetcode: 211
+url: https://leetcode.com/problems/design-add-and-search-words-data-structure/
+difficulty: Medium
+premium: false
+category: tries
+patterns: [tree-dfs, backtracking]
+prerequisites: ["Implement Trie", "Recursion that branches on a wildcard"]
+targetComplexity: { time: "O(L) typical, O(26^dots * L) worst", space: "O(total characters)" }
+status: complete
+---
+
+<Statement>
+
+Design a structure supporting `addWord(word)` and `search(word)`, where the searched word may contain
+`.` — a wildcard matching **any single letter**.
+
+<Examples>
+  <Example input={`addWord("bad"), addWord("dad"), addWord("mad")
+search("pad")`} output="false">
+    No stored word is `pad`.
+  </Example>
+  <Example input={`search(".ad")`} output="true">
+    The dot matches `b`, `d` or `m` — any one is enough.
+  </Example>
+  <Example input={`search("b..")`} output="true">
+    Two dots, both matching, and the word must still be exactly three letters long.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= word.length <= 25`
+- Added words are lowercase letters; searched words may also contain `.`
+- **At most 2 dots** per search
+- At most `10^4` calls in total
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Without the wildcard this is Implement Trie. The dot is the only new thing, and it changes the walk
+  from a **descent** into a **search**.
+- At a dot, every child is a candidate. That is a branch point, so the iterative walk has to become
+  recursive — and the recursion must stop at the first success.
+- The wildcard does **not** change the length. `b..` matches only three-letter words, which is why the
+  base case still checks that the whole pattern was consumed.
+- "At most 2 dots" is the constraint that makes the exponential branching harmless: `26²` is 676, not
+  a problem.
+
+</Signals>
+
+<BruteForce>
+
+Keep the words in a list and match each one against the pattern character by character.
+
+**O(number of words · L) per search, O(total characters) space.** Correct and completely
+straightforward — with `10^4` calls over `10^4` words it is a hundred million character comparisons,
+which is borderline rather than hopeless. The bottleneck is that every word is examined even when the
+pattern's first letter rules out almost all of them; a trie discards those subtrees for free.
+
+</BruteForce>
+
+<Insight>
+
+A dot turns one descent into a fan-out — try every child, and return as soon as one of them matches.
+
+</Insight>
+
+<Approach>
+
+1. Build the trie exactly as in the previous problem: `children` plus `is_word`.
+2. `search` calls a recursive helper `find(index, node)`.
+3. When `index == len(word)`, succeed only if `node.is_word` — the pattern must be fully consumed
+   **and** a word must end here.
+4. If `word[index]` is a letter, descend into that child if it exists, otherwise fail.
+5. If it is `.`, recurse into **every** child with `index + 1`, and return `true` the moment one
+   succeeds.
+
+Step 5's early return is the part that gets written wrong. Recursing over all children and ignoring
+the results — or overwriting a `True` with a later `False` — turns a correct search into one that only
+finds matches through the alphabetically last child.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class WordDictionary:
+    def __init__(self) -> None:
+        # O(words * L) per search
+        self.words: list[str] = []
+
+    def addWord(self, word: str) -> None:
+        self.words.append(word)
+
+    def search(self, word: str) -> bool:
+        for candidate in self.words:
+            if len(candidate) != len(word):
+                continue
+            if all(p == "." or p == c for p, c in zip(word, candidate)):
+                return True
+        return False
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class TrieNode:
+    def __init__(self) -> None:
+        self.children: dict[str, "TrieNode"] = {}
+        self.is_word = False
+
+
+class WordDictionary:
+    def __init__(self) -> None:
+        # O(L) without dots, O(26^dots * L) worst case; at most 2 dots is the guarantee
+        self.root = TrieNode()
+
+    def addWord(self, word: str) -> None:
+        node = self.root
+        for ch in word:
+            if ch not in node.children:
+                node.children[ch] = TrieNode()
+            node = node.children[ch]
+        node.is_word = True
+
+    def search(self, word: str) -> bool:
+        def find(index: int, node: TrieNode) -> bool:
+            if index == len(word):
+                return node.is_word          # pattern consumed AND a word ends here
+
+            ch = word[index]
+            if ch == ".":
+                for child in node.children.values():
+                    if find(index + 1, child):
+                        return True          # stop at the first match
+                return False
+
+            if ch not in node.children:
+                return False
+            return find(index + 1, node.children[ch])
+
+        return find(0, self.root)
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Return `True` immediately inside the wildcard loop.** Collecting results and combining them at the
+  end is slower and, if written as a plain assignment rather than an `or`, a later failure overwrites
+  an earlier success.
+- **The base case still needs `is_word`.** Consuming the whole pattern only means the length matched;
+  `b..` must not succeed on a stored `"bad"` prefix of `"badly"` — it succeeds because `"bad"` was
+  itself added.
+- A dot matches **exactly one** character, never zero and never several. The length check is implicit
+  in the recursion, and a solution that treats `.` like a regex `*` fails `search("b.")` after adding
+  `"bad"`.
+- Iterating `node.children.values()` is right; iterating over all 26 letters and testing membership
+  also works but visits absent branches for nothing.
+- The "at most 2 dots" constraint is what keeps this fast. Say it — without that promise, a pattern of
+  25 dots would be `26^25` and the trie would not save you.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Unlimited dots."* — The worst case becomes `26^L`. Memoising `(index, node)` pairs helps, since the
+  same subproblem recurs; that is the standard rescue.
+- *"A `*` matching any run of characters."* — Now it is genuine wildcard matching, and the recursion
+  needs to try consuming zero or more characters at each `*` — LC 44, and considerably harder.
+- *"Search many patterns at once."* — Flip the structure: put the *patterns* in the trie and stream the
+  text through it. That is the Aho-Corasick idea, and it is what the next problem does with a grid.
+
+</FollowUps>
