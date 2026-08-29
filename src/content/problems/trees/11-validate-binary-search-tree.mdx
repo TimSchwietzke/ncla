@@ -1,0 +1,160 @@
+---
+id: "7.11"
+slug: validate-binary-search-tree
+title: Validate Binary Search Tree
+leetcode: 98
+url: https://leetcode.com/problems/validate-binary-search-tree/
+difficulty: Medium
+premium: false
+category: trees
+patterns: [tree-dfs]
+prerequisites: ["The BST ordering property", "Carrying bounds downwards"]
+targetComplexity: { time: "O(n)", space: "O(h)" }
+status: complete
+---
+
+<Statement>
+
+Given the `root` of a binary tree, decide whether it is a valid **binary search tree**: every value
+in a node's left subtree is **strictly less** than the node, every value in its right subtree is
+**strictly greater**, and both subtrees are themselves valid BSTs.
+
+<Examples>
+  <Example input={`root = [2, 1, 3]`} output="true">
+    1 < 2 < 3, and both children are leaves.
+  </Example>
+  <Example input={`root = [5, 1, 4, null, null, 3, 6]`} output="false">
+    Every parent-child pair looks fine, but the 3 sits in the root's **right** subtree and is smaller
+    than 5.
+  </Example>
+  <Example input={`root = [5, 4, 6, null, null, 3, 7]`} output="false">
+    Same trap one level down: the 3 is a valid left child of the 6, and still illegal below the 5.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- The tree holds between `1` and `10^4` nodes
+- `-2^31 <= Node.val <= 2^31 - 1` — the full 32-bit range, **including the extremes**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The condition is about **whole subtrees**, not about parents and children. Checking each node
+  against its two children is the seductive wrong answer, and the second example is built to catch it.
+- Descending into the left child means every value below is now capped by the parent; descending right
+  raises the floor. Each node therefore lives inside an **interval**, narrowed on the way down.
+- The other characterisation is just as useful: a tree is a BST exactly when its **in-order traversal
+  is strictly increasing**. Two different correct solutions, and both are worth being able to state.
+
+</Signals>
+
+<BruteForce>
+
+At every node, walk its entire left subtree checking that all values are smaller, and its entire right
+subtree checking that all are larger.
+
+**O(n²) time in the worst case, O(h) space.** It is correct — unlike the parent-child check — and it
+is a reasonable thing to describe. The bottleneck is the repeated walking: every node re-examines its
+whole subtree, when a single top-down pass could have carried the limits with it.
+
+</BruteForce>
+
+<Insight>
+
+Every node lives inside an interval that its ancestors have already narrowed — pass the bounds down instead of looking around.
+
+</Insight>
+
+<Approach>
+
+1. Define `valid(node, low, high)`, starting with no bounds at all.
+2. An empty node is valid.
+3. Fail unless `low < node.val < high`, both **strict**.
+4. Recurse left with `high = node.val` — everything over there must stay below this node.
+5. Recurse right with `low = node.val`.
+6. Both sides must hold.
+
+Using `None` for "no bound yet" rather than a sentinel number matters here: the values span the full
+32-bit range, so `float("-inf")` works in Python but `-2**31` as a starting bound would reject a
+legitimate node holding exactly `-2**31`.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def isValidBST(self, root: Optional[TreeNode]) -> bool:
+        # O(n^2) time, O(h) space — every node rescans its whole subtree
+        def every(node: Optional[TreeNode], ok) -> bool:
+            if not node:
+                return True
+            return ok(node.val) and every(node.left, ok) and every(node.right, ok)
+
+        if not root:
+            return True
+
+        if not every(root.left, lambda v: v < root.val):
+            return False
+        if not every(root.right, lambda v: v > root.val):
+            return False
+
+        return self.isValidBST(root.left) and self.isValidBST(root.right)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def isValidBST(self, root: Optional[TreeNode]) -> bool:
+        # O(n) time, O(h) space
+        def valid(node: Optional[TreeNode], low: Optional[int], high: Optional[int]) -> bool:
+            if not node:
+                return True
+            if low is not None and node.val <= low:
+                return False
+            if high is not None and node.val >= high:
+                return False
+
+            return (valid(node.left, low, node.val)      # left is capped by this node
+                    and valid(node.right, node.val, high))
+
+        return valid(root, None, None)
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Checking only parent against child is wrong.** It is the first thing that comes to mind and it
+  returns `true` for the second example. A value must respect *every* ancestor, not just its parent.
+- **Strict comparisons.** Duplicates are not allowed by this definition, so `<=` and `>=` are the
+  failure conditions. Using `<` and `>` as the failure test accepts a tree with equal values.
+- **Do not seed the bounds with integer extremes.** Values may be exactly `-2^31` or `2^31 - 1`, so
+  starting from those constants rejects valid trees. `None` — or Python's infinities — avoids it, and
+  in a fixed-width language `None` is the only safe choice.
+- The in-order alternative must compare against the **previous value visited**, not against the
+  parent, and must also be strict. It is elegant and it has its own trap: the "previous" has to
+  survive across recursive calls.
+- The bounds narrow in only one direction per step: going left changes `high`, going right changes
+  `low`. Swapping them passes symmetric test trees and fails everything else.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Do it in-order instead."* — Traverse in-order carrying the last value seen; the tree is a BST
+  exactly when the sequence is strictly increasing. Same complexity, and it generalises to "find the
+  two swapped nodes" (LC 99) far better than the bounds version.
+- *"Allow duplicates on one side."* — Relax exactly one comparison to non-strict. Which side is a
+  design decision, and saying that it *is* a decision is the answer.
+- *"Recover a BST where two nodes were swapped."* — LC 99: the in-order sequence has one or two
+  descents; find them and swap back. This problem is the detector, that one is the repair.
+
+</FollowUps>

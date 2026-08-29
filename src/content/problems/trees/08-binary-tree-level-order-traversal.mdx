@@ -1,0 +1,167 @@
+---
+id: "7.8"
+slug: binary-tree-level-order-traversal
+title: Binary Tree Level Order Traversal
+leetcode: 102
+url: https://leetcode.com/problems/binary-tree-level-order-traversal/
+difficulty: Medium
+premium: false
+category: trees
+patterns: [bfs-level-order]
+prerequisites: ["Queues", "Why a level must be measured before it is consumed"]
+targetComplexity: { time: "O(n)", space: "O(width)" }
+status: complete
+---
+
+<Statement>
+
+Given the `root` of a binary tree, return its values **level by level**, left to right — one list per
+level.
+
+<Examples>
+  <Example input={`root = [3, 9, 20, null, null, 15, 7]`} output={`[[3], [9, 20], [15, 7]]`}>
+    Three levels. The 15 and 7 are children of the 20, and the 9 has none.
+  </Example>
+  <Example input={`root = [1]`} output={`[[1]]`}>
+    One level holding one node — note the nesting, it is not `[1]`.
+  </Example>
+  <Example input={`root = []`} output={`[]`}>
+    No levels at all, so an empty outer list.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- The tree holds between `0` and `2000` nodes
+- `-1000 <= Node.val <= 1000`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **"Level by level"** is the recognition sentence for breadth-first search. Depth-first visits a
+  whole branch before its siblings, which is the opposite of what is asked.
+- Nodes must come out in the order they were discovered, oldest first. That is a **queue**, and using
+  a stack instead silently produces depth-first order.
+- The output is grouped, so the boundary between levels has to be visible. A plain queue loses it —
+  something has to mark where one level ends.
+
+</Signals>
+
+<BruteForce>
+
+Walk the tree depth-first, passing the current depth down, and append each value to `result[depth]`.
+
+**O(n) time, O(n) space.** It is correct and it is a perfectly good answer — the grouping comes from
+the index rather than from the traversal order. The bottleneck is not speed; it is that the traversal
+no longer matches the question, so *why* it works needs an extra sentence. The queue version has the
+level structure built in.
+
+</BruteForce>
+
+<Insight>
+
+Measure the queue before draining it — its current length is exactly one level.
+
+</Insight>
+
+<Approach>
+
+1. If the tree is empty, return `[]`.
+2. Put the root in a queue.
+3. While the queue is not empty:
+4. Take `size = len(queue)` **first**. Those `size` nodes are precisely the current level.
+5. Pop exactly `size` nodes, collect their values, and push their children.
+6. Append the collected values as one level.
+
+Step 4 is the entire trick and it is one line. The children pushed in step 5 belong to the *next*
+level, and because the size was captured beforehand they cannot leak into this one.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def levelOrder(self, root: Optional[TreeNode]) -> list[list[int]]:
+        # O(n) time, O(n) space — depth-first, grouped by depth
+        levels: list[list[int]] = []
+
+        def walk(node: Optional[TreeNode], depth: int) -> None:
+            if not node:
+                return
+            if depth == len(levels):
+                levels.append([])
+            levels[depth].append(node.val)
+            walk(node.left, depth + 1)
+            walk(node.right, depth + 1)
+
+        walk(root, 0)
+        return levels
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+from collections import deque
+
+
+class Solution:
+    def levelOrder(self, root: Optional[TreeNode]) -> list[list[int]]:
+        # O(n) time, O(width) space
+        if not root:
+            return []
+
+        levels: list[list[int]] = []
+        queue = deque([root])
+
+        while queue:
+            size = len(queue)               # capture BEFORE draining: this is one level
+            level = []
+
+            for _ in range(size):
+                node = queue.popleft()
+                level.append(node.val)
+                if node.left:
+                    queue.append(node.left)
+                if node.right:
+                    queue.append(node.right)
+
+            levels.append(level)
+
+        return levels
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Capture `len(queue)` before the inner loop.** Writing `for _ in range(len(queue))` inside a loop
+  that also appends re-evaluates nothing in Python — `range` is built once — but
+  `while len(queue) > 0` with a manual counter, or appending before measuring, merges the levels into
+  one flat list.
+- **Use a `deque`, not a list.** `list.pop(0)` is `O(n)`, which turns the whole traversal into
+  `O(n²)`. It is the single most common performance mistake in every BFS problem.
+- Check children for `None` **before** enqueuing. Pushing `None` and skipping it later also works, but
+  then the level sizes count phantom nodes and the grouping goes wrong.
+- The empty tree returns `[]`, not `[[]]`. The early return handles it; without it the first
+  `len(queue)` is 1 for a queue holding `None`.
+- Space is `O(width)`, not `O(n)` — the queue only ever holds one level plus part of the next. On a
+  balanced tree that is `n/2`, so the distinction matters less than the fact that you know it.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Bottom-up, deepest level first."* — LC 107: build the same list and reverse it, or insert at the
+  front. Nothing about the traversal changes.
+- *"Zigzag order."* — LC 103: reverse every other level as you append it. Reversing the queue itself
+  is the tempting wrong answer, because it breaks the parent-child ordering for the level after.
+- *"Only the rightmost node of each level."* — The next problem, and it is this loop keeping the last
+  value instead of all of them.
+
+</FollowUps>

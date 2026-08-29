@@ -1,0 +1,146 @@
+---
+id: "7.1"
+slug: invert-binary-tree
+title: Invert Binary Tree
+leetcode: 226
+url: https://leetcode.com/problems/invert-binary-tree/
+difficulty: Easy
+premium: false
+category: trees
+patterns: [tree-dfs]
+prerequisites: ["Recursion on a tree", "Trusting the recursive call"]
+targetComplexity: { time: "O(n)", space: "O(h)" }
+status: complete
+---
+
+<Statement>
+
+Given the `root` of a binary tree, **invert** it — swap the left and right child of every node — and
+return the root.
+
+<Examples>
+  <Example input={`root = [4, 2, 7, 1, 3, 6, 9]`} output={`[4, 7, 2, 9, 6, 3, 1]`}>
+    Every level is mirrored. The 2 and the 7 trade places, and so do their children.
+  </Example>
+  <Example input={`root = [2, 1, 3]`} output={`[2, 3, 1]`}>
+    One swap at the root is the whole answer.
+  </Example>
+  <Example input={`root = []`} output={`[]`}>
+    An empty tree inverts to an empty tree and must not crash.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- The tree holds between `0` and `100` nodes
+- `-100 <= Node.val <= 100`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The operation is defined **per node** and is the same at every node. That is the shape recursion
+  was built for.
+- Inverting a tree means inverting both subtrees and then swapping them — the problem contains
+  smaller copies of itself, with no interaction between them.
+- The empty tree is the base case and it is free: nothing to swap, nothing to recurse into.
+
+</Signals>
+
+<BruteForce>
+
+There is no meaningfully worse approach here, and that is worth saying plainly rather than inventing
+one. Every solution has to touch every node, so `O(n)` time is the floor.
+
+What *does* vary is the traversal. An **iterative** version with an explicit stack or queue does the
+same work as the recursive one and swaps recursion depth for an explicit container — `O(n)` time
+either way, and the same `O(h)` space in a different place. The "brute force" below is that version:
+not slower, just more machinery for the same result.
+
+</BruteForce>
+
+<Insight>
+
+Invert both subtrees, then swap them — and trust the recursive call to have done its half.
+
+</Insight>
+
+<Approach>
+
+1. If the node is `None`, return `None`. That is the whole base case.
+2. Swap the node's two children.
+3. Recurse into both children.
+4. Return the node.
+
+Steps 2 and 3 commute: swapping first and then inverting the (now swapped) children gives the same
+tree as inverting first and swapping after. Being able to see *why* is a good check that you have
+understood what the recursion is promising.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def invertTree(self, root: Optional[TreeNode]) -> Optional[TreeNode]:
+        # O(n) time, O(n) space — same work, explicit stack instead of recursion
+        stack = [root]
+
+        while stack:
+            node = stack.pop()
+            if not node:
+                continue
+            node.left, node.right = node.right, node.left
+            stack.append(node.left)
+            stack.append(node.right)
+
+        return root
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def invertTree(self, root: Optional[TreeNode]) -> Optional[TreeNode]:
+        # O(n) time, O(h) space for the recursion stack
+        if not root:
+            return None
+
+        root.left, root.right = root.right, root.left
+        self.invertTree(root.left)
+        self.invertTree(root.right)
+
+        return root
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Return the node, not `None`, at the end.** The signature returns a tree; forgetting the final
+  `return root` makes the whole thing evaluate to `None` and the answer disappears.
+- Swap the **children**, not the values. Swapping `val` works for a symmetric shape and fails the
+  moment the tree is lopsided, because the structure is what has to mirror.
+- `O(h)` space, not `O(1)`. The recursion stack is real, and on a degenerate tree `h` equals `n` —
+  say which one you mean when you quote the space.
+- The `None` check has to come first. `root.left` on an empty tree is an `AttributeError`, and the
+  empty tree is a legal input here.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Do it iteratively."* — The version above with a stack, or a queue for a level-by-level sweep.
+  Worth having, because "what if the tree is 10^5 deep" is a real follow-up and Python's recursion
+  limit is 1000.
+- *"Check whether a tree is a mirror of itself."* — LC 101 Symmetric Tree: compare left against right
+  in lockstep instead of swapping. Same recursion, a different question.
+- *"Why is this problem famous?"* — It is the one Max Howell was asked at Google. It is genuinely a
+  four-line problem; the reason to know it is that it is the smallest possible example of "trust the
+  recursive call".
+
+</FollowUps>

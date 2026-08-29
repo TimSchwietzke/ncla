@@ -1,0 +1,169 @@
+---
+id: "7.9"
+slug: binary-tree-right-side-view
+title: Binary Tree Right Side View
+leetcode: 199
+url: https://leetcode.com/problems/binary-tree-right-side-view/
+difficulty: Medium
+premium: false
+category: trees
+patterns: [bfs-level-order]
+prerequisites: ["Binary Tree Level Order Traversal", "Reading the question as 'per level'"]
+targetComplexity: { time: "O(n)", space: "O(width)" }
+status: complete
+---
+
+<Statement>
+
+Standing to the right of a binary tree, return the values you can see, from top to bottom — that is,
+the **rightmost node of every level**.
+
+<Examples>
+  <Example input={`root = [1, 2, 3, null, 5, null, 4]`} output={`[1, 3, 4]`}>
+    Level by level: 1, then 3 (the 2 is hidden behind it), then 4.
+  </Example>
+  <Example input={`root = [1, 2, 3, 4, null, null, null, 5]`} output={`[1, 3, 4, 5]`}>
+    The visible node need not be on the right side of the *tree* — the 4 and 5 hang off the far left
+    and are visible because nothing else is at their depth.
+  </Example>
+  <Example input={`root = []`} output={`[]`}>
+    Nothing to see.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- The tree holds between `0` and `100` nodes
+- `-100 <= Node.val <= 100`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- "From top to bottom" plus "one thing per level" is level-order traversal wearing a disguise. The
+  previous problem already produces the levels; this one keeps the last element of each.
+- The second example is the trap: **visible does not mean rightmost in the tree.** A node deep on the
+  left is visible if nothing else shares its depth, so following `node.right` down from the root is
+  wrong.
+- Any traversal that reaches each depth in a known order works. Right-first depth-first sees the
+  visible node **first** at every depth, which is the neat one-pass alternative.
+
+</Signals>
+
+<BruteForce>
+
+Build the full level-order traversal, then take the last value of each level.
+
+**O(n) time, O(n) space.** Correct, and honestly a fine answer — it reuses a solved problem, which is
+worth points. The bottleneck is only that every level is materialised in full when just its last
+element survives.
+
+</BruteForce>
+
+<Insight>
+
+Only the last node of each level is visible, so keep that one and discard the rest as you go.
+
+</Insight>
+
+<Approach>
+
+1. Run the level-order sweep from the previous problem.
+2. Within a level, remember the value of the node popped **last** — that is the rightmost.
+3. Append it and move on.
+
+The depth-first alternative is worth knowing and is shorter: walk **right before left**, carrying the
+depth. The first node reached at any depth is the visible one, so append whenever
+`depth == len(result)`.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+from collections import deque
+
+
+class Solution:
+    def rightSideView(self, root: Optional[TreeNode]) -> list[int]:
+        # O(n) time, O(n) space — full level order, then take the last of each
+        if not root:
+            return []
+
+        levels: list[list[int]] = []
+        queue = deque([root])
+
+        while queue:
+            level = []
+            for _ in range(len(queue)):
+                node = queue.popleft()
+                level.append(node.val)
+                if node.left:
+                    queue.append(node.left)
+                if node.right:
+                    queue.append(node.right)
+            levels.append(level)
+
+        return [level[-1] for level in levels]
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+from collections import deque
+
+
+class Solution:
+    def rightSideView(self, root: Optional[TreeNode]) -> list[int]:
+        # O(n) time, O(width) space
+        if not root:
+            return []
+
+        view: list[int] = []
+        queue = deque([root])
+
+        while queue:
+            rightmost = None
+            for _ in range(len(queue)):
+                node = queue.popleft()
+                rightmost = node.val         # the last one assigned is the visible one
+                if node.left:
+                    queue.append(node.left)
+                if node.right:
+                    queue.append(node.right)
+            view.append(rightmost)
+
+        return view
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Do not just walk down the right spine.** `while node: view.append(node.val); node = node.right`
+  passes the first example and fails the second, where the visible nodes at depth 3 and 4 hang off the
+  left. This is the defining mistake of the problem.
+- Enqueue **left before right**, then take the last popped. Reversing the enqueue order and taking the
+  first works too, but only if you also flip it consistently — mixing the two returns the *left* side
+  view, which looks plausible on a symmetric test.
+- The depth-first version must recurse **right first** and append only when `depth == len(view)`.
+  Appending unconditionally gives every node, and going left first gives the left side view.
+- `rightmost` is reassigned on every pop and read once per level. It is not `queue[-1]` — that node
+  belongs to the *next* level by the time the loop ends.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"The left side view."* — Take the first node popped per level instead of the last. Worth doing once,
+  because it makes clear that the traversal is the thing and the selection is trivial.
+- *"Do it depth-first."* — Right before left, carrying the depth, appending when `depth == len(view)`.
+  `O(h)` space instead of `O(width)`, which is better on a wide shallow tree.
+- *"The bottom view, or the top view."* — Now the horizontal position matters, not the depth: track a
+  column index and keep the first or last node per column. A different sweep entirely.
+
+</FollowUps>

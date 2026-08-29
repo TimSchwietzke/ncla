@@ -1,0 +1,162 @@
+---
+id: "7.14"
+slug: binary-tree-maximum-path-sum
+title: Binary Tree Maximum Path Sum
+leetcode: 124
+url: https://leetcode.com/problems/binary-tree-maximum-path-sum/
+difficulty: Hard
+premium: false
+category: trees
+patterns: [tree-dfs]
+prerequisites: ["Diameter of Binary Tree", "Separating what is returned from what is recorded"]
+targetComplexity: { time: "O(n)", space: "O(h)" }
+status: complete
+---
+
+<Statement>
+
+A **path** is any sequence of nodes connected by edges, using each node at most once. It need not pass
+through the root and need not reach a leaf. Return the largest possible sum of the values along a
+path.
+
+<Examples>
+  <Example input={`root = [1, 2, 3]`} output="6">
+    The path 2 → 1 → 3 uses all three nodes and bends at the root.
+  </Example>
+  <Example input={`root = [-10, 9, 20, null, null, 15, 7]`} output="42">
+    15 → 20 → 7 sums to 42. Going through the root would drag in the -10 and lose.
+  </Example>
+  <Example input={`root = [-3]`} output="-3">
+    Every value is negative, and a path must hold at least one node — so the answer is negative too.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- The tree holds between `1` and `3 * 10^4` nodes
+- `-1000 <= Node.val <= 1000` — values may be **negative**
+- A path must contain at least one node
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- This is Diameter of Binary Tree with sums instead of counts, and negatives instead of `1` per node.
+  The **record versus report** split is identical; only the arithmetic changes.
+- A path *bends* at exactly one node — its highest point. So the answer is a maximum over every node
+  of "best left arm + node + best right arm".
+- Negative values are the new difficulty. An arm that sums to less than zero is worse than no arm at
+  all, so each arm's contribution is clamped at zero — but the **node itself** can never be skipped.
+
+</Signals>
+
+<BruteForce>
+
+For every node, compute the best downward path from each child from scratch, and take the largest
+bend.
+
+**O(n²) time, O(h) space.** Same shape as the naive Diameter: the downward best is recomputed at every
+node although the child already knew it. On a degenerate tree that is `9 · 10^8` operations for
+`3 · 10^4` nodes.
+
+</BruteForce>
+
+<Insight>
+
+A path bends at exactly one node, so record the bend at every node while reporting only the better single arm upwards.
+
+</Insight>
+
+<Approach>
+
+1. Keep a `best` outside the recursion, started at negative infinity — not at zero, because the answer
+   may be negative.
+2. Define `arm(node)`: the largest sum of a path that starts at `node` and only goes **down**.
+3. An empty node contributes `0`.
+4. Get `left = max(arm(node.left), 0)` and `right = max(arm(node.right), 0)`. The clamp is what
+   discards an arm that would only subtract.
+5. **Record:** `best = max(best, node.val + left + right)` — the path that bends here.
+6. **Report:** `return node.val + max(left, right)` — one arm only, because the parent's path can
+   descend through this node on a single side.
+
+Step 5 and step 6 return different quantities, exactly as in Diameter. Reporting the bend upwards
+would let a parent build a path that visits this node's subtree twice, which is not a path.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def maxPathSum(self, root: Optional[TreeNode]) -> int:
+        # O(n^2) time, O(h) space — the downward best is recomputed at every node
+        def arm(node: Optional[TreeNode]) -> int:
+            if not node:
+                return 0
+            return max(0, node.val + max(arm(node.left), arm(node.right)))
+
+        def walk(node: Optional[TreeNode]) -> int:
+            if not node:
+                return float("-inf")
+            through = node.val + max(arm(node.left), 0) + max(arm(node.right), 0)
+            return max(through, walk(node.left), walk(node.right))
+
+        return walk(root)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def maxPathSum(self, root: Optional[TreeNode]) -> int:
+        # O(n) time, O(h) space
+        best = float("-inf")
+
+        def arm(node: Optional[TreeNode]) -> int:
+            nonlocal best
+            if not node:
+                return 0
+
+            left = max(arm(node.left), 0)      # a negative arm is worse than no arm
+            right = max(arm(node.right), 0)
+
+            best = max(best, node.val + left + right)   # record: the path bending here
+            return node.val + max(left, right)          # report: one arm, for the parent
+
+        arm(root)
+        return int(best)
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Clamp the arms, never the node.** `max(arm(child), 0)` is right; applying the same clamp to
+  `node.val + …` on the way up is wrong, because a path must contain at least one node and the
+  all-negative tree must answer with its largest single value.
+- **Start `best` at negative infinity.** Starting at `0` returns `0` for the third example instead of
+  `-3`, and it is the most common failure on this problem.
+- **Report one arm, record the bend.** Returning `node.val + left + right` upwards lets an ancestor
+  reuse this subtree on both sides, producing a shape that is not a path at all.
+- The path need not touch a leaf, and need not touch the root. Both examples above exist to enforce
+  that — the second one's answer lives entirely inside the right subtree.
+- `nonlocal best` is required, exactly as in Diameter. Without it Python creates a local and the
+  function returns negative infinity.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Return the path itself."* — Record the bending node alongside `best`, then walk down the better arm
+  on each side from there, stopping when the arm value stops improving.
+- *"Only paths that end at a leaf."* — The clamp disappears: an arm must be taken even if negative, and
+  the base case changes from `0` to negative infinity for a missing child.
+- *"Why is this Diameter with different arithmetic?"* — Diameter records `left + right` and reports
+  `1 + max(left, right)`. This records `val + left + right` and reports `val + max(left, right)`. Same
+  two lines, and seeing that is worth more than either solution alone.
+
+</FollowUps>

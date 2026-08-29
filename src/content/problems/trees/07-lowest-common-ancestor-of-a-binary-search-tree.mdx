@@ -1,0 +1,167 @@
+---
+id: "7.7"
+slug: lowest-common-ancestor-of-a-binary-search-tree
+title: Lowest Common Ancestor of a Binary Search Tree
+leetcode: 235
+url: https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/
+difficulty: Medium
+premium: false
+category: trees
+patterns: [binary-search, tree-dfs]
+prerequisites: ["The BST ordering property", "Binary Search"]
+targetComplexity: { time: "O(h)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Given a **binary search tree** and two nodes `p` and `q` in it, return their **lowest common
+ancestor** — the deepest node having both as descendants. A node counts as a descendant of itself.
+
+<Examples>
+  <Example input={`root = [6, 2, 8, 0, 4, 7, 9, null, null, 3, 5]
+p = 2, q = 8`} output="6">
+    2 goes left of the root and 8 goes right, so the root is where they part.
+  </Example>
+  <Example input={`root = [6, 2, 8, 0, 4, 7, 9, null, null, 3, 5]
+p = 2, q = 4`} output="2">
+    4 lives under 2, and a node is its own descendant — so the answer is 2 itself.
+  </Example>
+  <Example input={`root = [2, 1]
+p = 2, q = 1`} output="2">
+    The smallest case where one node is the ancestor of the other.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- The tree holds between `2` and `10^5` nodes
+- `-10^9 <= Node.val <= 10^9`, all values **unique**
+- `p != q`, and both are guaranteed to exist in the tree
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- It is a **search** tree, not just a tree. Every node's value splits the remaining values into
+  "smaller, on the left" and "larger, on the right" — the same structure a sorted array has, and the
+  same technique applies.
+- The two targets separate at exactly one node: the first node whose value lies **between** them.
+  Above that they travel together, below it they never meet again.
+- Nothing is ever computed bottom-up here, so no recursion is needed at all. A loop and two
+  comparisons suffice, which is why the space target is `O(1)`.
+
+</Signals>
+
+<BruteForce>
+
+Ignore the ordering: find the root-to-`p` path and the root-to-`q` path, then take the last node they
+share.
+
+**O(n) time, O(n) space.** It is correct on *any* binary tree, which is exactly its virtue — it is the
+answer to LC 236, where the BST property is not available. The bottleneck is that it searches the
+whole tree for two nodes whose location the values already reveal.
+
+</BruteForce>
+
+<Insight>
+
+Walk down from the root and follow the side both targets lie on — the first node that sits between them is the answer.
+
+</Insight>
+
+<Approach>
+
+1. Start at the root.
+2. If **both** values are smaller than the current node, the answer is somewhere to the left — go
+   left.
+3. If **both** are larger, go right.
+4. Otherwise the values straddle this node — or one of them *is* this node — and this is the lowest
+   common ancestor. Return it.
+5. The walk never backtracks, so it costs one step per level: `O(h)`.
+
+Case 4 covers "one is an ancestor of the other" without a special case, which is what makes the
+second example work: at node 2, `p` equals the node and `q` is larger, so neither of the first two
+branches fires.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def lowestCommonAncestor(self, root: "TreeNode", p: "TreeNode", q: "TreeNode") -> "TreeNode":
+        # O(n) time, O(n) space — works on any binary tree, ignores the BST property
+        def path_to(target: "TreeNode") -> list:
+            trail = []
+
+            def walk(node) -> bool:
+                if not node:
+                    return False
+                trail.append(node)
+                if node is target or walk(node.left) or walk(node.right):
+                    return True
+                trail.pop()
+                return False
+
+            walk(root)
+            return trail
+
+        a, b = path_to(p), path_to(q)
+        best = root
+        for x, y in zip(a, b):
+            if x is not y:
+                break
+            best = x
+        return best
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def lowestCommonAncestor(self, root: "TreeNode", p: "TreeNode", q: "TreeNode") -> "TreeNode":
+        # O(h) time, O(1) space
+        node = root
+
+        while node:
+            if p.val < node.val and q.val < node.val:
+                node = node.left           # both smaller: the split is further left
+            elif p.val > node.val and q.val > node.val:
+                node = node.right
+            else:
+                return node                # they straddle this node, or one of them is it
+
+        return root
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **The `else` branch is the answer, not a fallthrough.** It fires when the values straddle the node
+  *and* when one of them equals it — which is exactly the "a node is its own descendant" clause in
+  the statement. Adding a separate equality check is redundant and usually gets the ordering wrong.
+- Compare **values**, not node identities. `p` and `q` are given as nodes, but the navigation is
+  arithmetic on their values.
+- `O(h)`, not `O(log n)`. A BST is only balanced if someone balanced it; with `10^5` nodes in a chain
+  this walk is `10^5` steps. Quote the height and say when it collapses to `log n`.
+- Do not reach for the general LC 236 solution here. It works, and it throws away the property that
+  makes this problem `O(1)` space — the interviewer chose the BST version deliberately.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Same question on a plain binary tree."* — LC 236: recurse, and return the node where the two
+  targets first come back from different sides. `O(n)` time, and it is worth being able to write both.
+- *"What if `p` or `q` might be absent?"* — The guarantee is doing real work: without it you must
+  verify both exist, which costs a second pass. Say so rather than silently assuming.
+- *"Do it recursively."* — The same three cases, written as a recursion. It reads well and costs
+  `O(h)` stack, which loses the `O(1)` space this version has.
+
+</FollowUps>

@@ -1,0 +1,159 @@
+---
+id: "7.12"
+slug: kth-smallest-element-in-a-bst
+title: Kth Smallest Element in a BST
+leetcode: 230
+url: https://leetcode.com/problems/kth-smallest-element-in-a-bst/
+difficulty: Medium
+premium: false
+category: trees
+patterns: [tree-dfs]
+prerequisites: ["In-order traversal", "The BST ordering property"]
+targetComplexity: { time: "O(h + k)", space: "O(h)" }
+status: complete
+---
+
+<Statement>
+
+Given the root of a **binary search tree** and an integer `k`, return the `k`-th smallest value,
+counting from 1.
+
+<Examples>
+  <Example input={`root = [3, 1, 4, null, 2]
+k = 1`} output="1">
+    The smallest value is the leftmost node, not the root.
+  </Example>
+  <Example input={`root = [5, 3, 6, 2, 4, null, null, 1]
+k = 3`} output="3">
+    In order the values are 1, 2, 3, 4, 5, 6 — the third is 3, which happens to be an inner node.
+  </Example>
+  <Example input={`root = [2, 1]
+k = 2`} output="2">
+    The root is the largest here, and still the second smallest.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- The tree holds `n` nodes with `1 <= k <= n <= 10^4`
+- `0 <= Node.val <= 10^4`
+- **Follow-up:** what if the tree is modified often and this query is frequent?
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- A BST's **in-order traversal is sorted**. That single fact converts "the k-th smallest" into "the
+  k-th thing this traversal produces", and no comparison logic is needed at all.
+- The traversal can stop as soon as it has counted `k` values — the rest of the tree is irrelevant.
+  That is what turns `O(n)` into `O(h + k)`.
+- Nothing here uses the *values*, only the ordering. A solution doing arithmetic on `node.val` has
+  misread the problem.
+
+</Signals>
+
+<BruteForce>
+
+Traverse the whole tree, collect every value into a list, sort it, and index.
+
+**O(n log n) time, O(n) space.** Correct, and it discards the property that makes this a BST problem
+rather than an array problem. The bottleneck is the sort: the in-order traversal already emits the
+values in order, so sorting re-derives an ordering that was free.
+
+</BruteForce>
+
+<Insight>
+
+In-order traversal of a BST emits the values in sorted order, so the k-th one it produces is the answer.
+
+</Insight>
+
+<Approach>
+
+1. Walk in order: **left subtree, then the node, then the right subtree**.
+2. Keep a counter of how many values have been emitted.
+3. When the counter reaches `k`, that node's value is the answer — stop.
+4. The iterative form makes stopping natural: push left children onto a stack, pop, count, then move
+   to the right child.
+
+The iterative version is worth writing here rather than the recursive one, precisely because "stop
+early" is awkward in a recursion that has no way to unwind other than a sentinel or an exception.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def kthSmallest(self, root: Optional[TreeNode], k: int) -> int:
+        # O(n log n) time, O(n) space — ignores the BST property entirely
+        values: list[int] = []
+
+        def walk(node: Optional[TreeNode]) -> None:
+            if not node:
+                return
+            values.append(node.val)
+            walk(node.left)
+            walk(node.right)
+
+        walk(root)
+        return sorted(values)[k - 1]
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def kthSmallest(self, root: Optional[TreeNode], k: int) -> int:
+        # O(h + k) time, O(h) space — stops as soon as k values have been seen
+        stack: list[TreeNode] = []
+        node = root
+
+        while node or stack:
+            while node:                    # go as far left as possible
+                stack.append(node)
+                node = node.left
+
+            node = stack.pop()             # this is the next smallest value
+            k -= 1
+            if k == 0:
+                return node.val
+
+            node = node.right              # then the right subtree
+
+        return -1                          # unreachable: 1 <= k <= n
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`k` is 1-indexed.** The first smallest is `k = 1`, so the counter must hit zero *after* `k`
+  decrements. Off by one here returns the neighbour, which looks right on a small tree.
+- **In-order means left, node, right.** Pre-order (node first) also visits everything and produces the
+  wrong sequence. The brute force above uses pre-order deliberately, which is why it has to sort.
+- Push the node **before** descending left, and process it **after** popping. The pattern
+  "descend-left-pushing, pop, go right" is the whole iterative in-order traversal and it is worth
+  having memorised.
+- Do not return early from a plain recursion by mutating a shared counter without also stopping the
+  walk — it produces the right answer but keeps traversing, silently losing the `O(h + k)` bound you
+  just claimed.
+- `O(h + k)`, not `O(k)`. Reaching the smallest element costs a descent of the tree first.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"The tree changes often and this is queried often."* — LeetCode's own follow-up: store a **subtree
+  size** on every node, maintained on insert and delete. Then the k-th smallest is a descent: compare
+  `k` against the left subtree's size and go one way or the other, in `O(h)`.
+- *"The k-th **largest**."* — Mirror the traversal: right, node, left. Or ask for the `(n - k + 1)`-th
+  smallest, which needs `n`.
+- *"On a plain binary tree instead."* — The BST property is gone, so the traversal is no longer
+  sorted; collect and use a heap or quickselect. Worth naming, since it shows what the property bought.
+
+</FollowUps>

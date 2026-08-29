@@ -1,0 +1,154 @@
+---
+id: "7.6"
+slug: subtree-of-another-tree
+title: Subtree of Another Tree
+leetcode: 572
+url: https://leetcode.com/problems/subtree-of-another-tree/
+difficulty: Easy
+premium: false
+category: trees
+patterns: [tree-dfs]
+prerequisites: ["Same Tree", "Running one recursion inside another"]
+targetComplexity: { time: "O(n * m)", space: "O(h)" }
+status: complete
+---
+
+<Statement>
+
+Given the roots `root` and `subRoot`, return `true` if some node of `root` starts a subtree that is
+**identical** to `subRoot` — same structure, same values, and **all** of that node's descendants.
+
+<Examples>
+  <Example input={`root = [3, 4, 5, 1, 2]
+subRoot = [4, 1, 2]`} output="true">
+    The node 4 and everything under it matches exactly.
+  </Example>
+  <Example input={`root = [3, 4, 5, 1, 2, null, null, null, null, 0]
+subRoot = [4, 1, 2]`} output="false">
+    The same 4, 1 and 2 are there — but the 1 now has a child, and a subtree includes **every**
+    descendant.
+  </Example>
+  <Example input={`root = [1, 1]
+subRoot = [1]`} output="true">
+    The left child is a leaf holding 1, which is exactly `subRoot`. The root also holds 1 but has a
+    child, so it does not match.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `root` holds between `1` and `2000` nodes, `subRoot` between `1` and `1000`
+- `-10^4 <= Node.val <= 10^4`
+- A subtree must include **all** descendants of its node
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- "Same structure and node values" is Same Tree, already solved. The only new question is **where** to
+  start the comparison.
+- The answer is "at some node", so the outer job is a plain traversal and the inner job is the
+  equality check. Two recursions, one inside the other.
+- The second example is the whole point of the word *subtree*: a partial match is not a match. Any
+  approach that compares prefixes rather than whole subtrees gets that case wrong.
+
+</Signals>
+
+<BruteForce>
+
+There is no naive-and-slower version worth writing here — the direct approach *is* nested recursion.
+What is worth stating is the complexity honestly: `O(n · m)`, since in the worst case every one of
+`n` nodes triggers a full `m`-node comparison.
+
+With `n = 2000` and `m = 1000` that is two million node comparisons, comfortably inside the limits.
+The `O(n + m)` version below is the improvement, and it is a genuinely different idea rather than a
+tightening of this one.
+
+</BruteForce>
+
+<Insight>
+
+Walk the big tree, and at every node ask the question you already know how to answer: is this exactly the other tree?
+
+</Insight>
+
+<Approach>
+
+1. Reuse `is_same(a, b)` from Same Tree — lockstep walk, matching values and shapes.
+2. Walk `root`. At each node, if `is_same(node, subRoot)` then answer `true`.
+3. Otherwise recurse into both children and answer `true` if either finds a match.
+4. Reaching `None` in the outer walk means no match here — return `false`.
+
+`subRoot` is guaranteed non-empty by the constraints, which is why the outer walk can return `false`
+on an empty node without ambiguity. If an empty `subRoot` were allowed, it would trivially be a
+subtree of anything and that case would need naming.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def isSubtree(self, root: Optional[TreeNode], subRoot: Optional[TreeNode]) -> bool:
+        # O(n * m) time, O(h) space
+        def is_same(a: Optional[TreeNode], b: Optional[TreeNode]) -> bool:
+            if not a and not b:
+                return True
+            if not a or not b or a.val != b.val:
+                return False
+            return is_same(a.left, b.left) and is_same(a.right, b.right)
+
+        if not root:
+            return False
+        if is_same(root, subRoot):
+            return True
+
+        return self.isSubtree(root.left, subRoot) or self.isSubtree(root.right, subRoot)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def isSubtree(self, root: Optional[TreeNode], subRoot: Optional[TreeNode]) -> bool:
+        # O(n + m) time, O(n + m) space — serialise both, then substring search
+        def serialise(node: Optional[TreeNode]) -> str:
+            if not node:
+                return ",#"                     # null marker: keeps the structure
+            return f",^{node.val}{serialise(node.left)}{serialise(node.right)}"
+
+        return serialise(subRoot) in serialise(root)
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **A subtree includes every descendant.** The second example exists precisely to catch a solution
+  that stops comparing once `subRoot` runs out. `is_same` handles it correctly because it requires
+  *both* sides to end together.
+- **The serialised version needs both a null marker and a value delimiter.** Without `#` for nulls,
+  structure is lost. Without a separator like `^` before each value, the subtree `[2]` is found inside
+  a tree containing `12` — the classic false positive of the string approach.
+- `or` in the outer recursion, not `and`. A match on either side is enough.
+- The nested version is `O(n · m)` and that is a fine answer to give. Say the bound rather than
+  hoping nobody asks; then offer the serialisation as the improvement.
+- The string version is `O(n + m)` **only with a linear substring search**. Python's `in` is not
+  guaranteed linear in the worst case; saying "with KMP this is `O(n + m)`" is the precise claim.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Make it genuinely `O(n + m)`."* — Serialise both and match with KMP or Z-algorithm rather than
+  relying on the language's substring operator.
+- *"Find **all** the places it occurs."* — Collect every match instead of returning at the first, or
+  find every occurrence of the serialised needle.
+- *"Subtree by structure only, ignoring values."* — Drop the value comparison from `is_same`; the
+  shape of the solution does not change, which is a good sign the decomposition was right.
+
+</FollowUps>

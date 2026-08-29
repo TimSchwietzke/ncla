@@ -1,0 +1,143 @@
+---
+id: "7.5"
+slug: same-tree
+title: Same Tree
+leetcode: 100
+url: https://leetcode.com/problems/same-tree/
+difficulty: Easy
+premium: false
+category: trees
+patterns: [tree-dfs]
+prerequisites: ["Recursion on two trees at once", "Structural equality"]
+targetComplexity: { time: "O(n)", space: "O(h)" }
+status: complete
+---
+
+<Statement>
+
+Given the roots of two binary trees `p` and `q`, return `true` if they are **the same**: identical in
+structure and in every node value.
+
+<Examples>
+  <Example input={`p = [1, 2, 3]
+q = [1, 2, 3]`} output="true">
+    Same shape, same values, at every position.
+  </Example>
+  <Example input={`p = [1, 2]
+q = [1, null, 2]`} output="false">
+    The same two values, but the 2 hangs on the left in one tree and on the right in the other.
+    **Structure counts.**
+  </Example>
+  <Example input={`p = []
+q = []`} output="true">
+    Two empty trees are the same tree.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- Each tree holds between `0` and `100` nodes
+- `-10^4 <= Node.val <= 10^4`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Two trees are the same when their roots match **and** their left subtrees are the same **and** their
+  right subtrees are the same. The definition is recursive and the code is that sentence.
+- The recursion walks **both** trees in lockstep — one traversal, two cursors. That is the new shape
+  here; everything before it walked one tree.
+- Structure is part of the answer, so shape mismatches have to be caught. `None` against a node is a
+  `false`, not a base case to skip.
+
+</Signals>
+
+<BruteForce>
+
+Serialise both trees to a string — values with explicit null markers — and compare the strings.
+
+**O(n) time, O(n) space.** It genuinely works, and the null markers are essential: without them
+`[1, 2]` and `[1, null, 2]` serialise identically and the second example comes out `true`. The
+bottleneck is memory: two full copies of the trees exist just to be compared character by character,
+when a lockstep walk can stop at the first difference.
+
+</BruteForce>
+
+<Insight>
+
+Walk both trees together — same value here, same tree on the left, same tree on the right.
+
+</Insight>
+
+<Approach>
+
+1. If both nodes are `None`, they match — return `true`.
+2. If exactly one is `None`, the shapes differ — return `false`.
+3. If the values differ, return `false`.
+4. Otherwise return "left subtrees match **and** right subtrees match".
+
+Steps 1 and 2 have to be in that order and cannot be merged. `not p and not q` is the success case;
+`not p or not q` afterwards is the mismatch. Writing only one of them either crashes on `p.val` or
+reports two differently-shaped trees as equal.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def isSameTree(self, p: Optional[TreeNode], q: Optional[TreeNode]) -> bool:
+        # O(n) time, O(n) space
+        def serialise(node: Optional[TreeNode]) -> str:
+            if not node:
+                return "#"                      # the null marker is what makes this correct
+            return f"({node.val},{serialise(node.left)},{serialise(node.right)})"
+
+        return serialise(p) == serialise(q)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def isSameTree(self, p: Optional[TreeNode], q: Optional[TreeNode]) -> bool:
+        # O(n) time, O(h) space
+        if not p and not q:
+            return True
+        if not p or not q:                      # exactly one is missing: shapes differ
+            return False
+        if p.val != q.val:
+            return False
+
+        return self.isSameTree(p.left, q.left) and self.isSameTree(p.right, q.right)
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Both-`None` before either-`None`.** Reversing the two checks makes two empty trees report
+  `false`. They are two lines and their order is the whole base case.
+- **Compare left with left and right with right.** Crossing them tests whether one tree mirrors the
+  other — that is LC 101, a different problem, and the first example passes either way.
+- The serialised version **needs null markers**. Without them, structure is lost and `[1, 2]` equals
+  `[1, null, 2]`. If you offer serialisation as the answer, say the marker out loud.
+- `and` short-circuits, which is what gives the early exit on a mismatch. Building both boolean
+  results first and combining them afterwards walks the whole tree for nothing.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Is one tree a subtree of the other?"* — The next problem, and it calls this function at every node
+  of the larger tree.
+- *"Is the tree a mirror of itself?"* — LC 101: the same lockstep walk with the comparisons crossed,
+  `left.left` against `right.right`.
+- *"Compare two trees that may have children in any order."* — Much harder: the children have to be
+  matched up, which needs canonical forms or a matching between multisets of subtrees.
+
+</FollowUps>

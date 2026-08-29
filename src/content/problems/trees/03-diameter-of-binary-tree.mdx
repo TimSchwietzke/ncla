@@ -1,0 +1,156 @@
+---
+id: "7.3"
+slug: diameter-of-binary-tree
+title: Diameter of Binary Tree
+leetcode: 543
+url: https://leetcode.com/problems/diameter-of-binary-tree/
+difficulty: Easy
+premium: false
+category: trees
+patterns: [tree-dfs]
+prerequisites: ["Maximum Depth", "Separating what is returned from what is recorded"]
+targetComplexity: { time: "O(n)", space: "O(h)" }
+status: complete
+---
+
+<Statement>
+
+Given the `root` of a binary tree, return the length of its **diameter** — the longest path between
+any two nodes, measured in **edges**. The path need not pass through the root.
+
+<Examples>
+  <Example input={`root = [1, 2, 3, 4, 5]`} output="3">
+    The path 4 → 2 → 1 → 3 uses three edges. It passes through the root, but only by coincidence.
+  </Example>
+  <Example input={`root = [1, 2]`} output="1">
+    Two nodes, one edge.
+  </Example>
+  <Example input={`root = [1]`} output="0">
+    A single node has no edges at all — the reason the answer counts edges, not nodes.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- The tree holds between `1` and `10^4` nodes
+- `-100 <= Node.val <= 100`
+- The length is measured in **edges**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- "Need not pass through the root" is the whole difficulty. The answer is a maximum over **every**
+  node, not a property of the root.
+- For any single node, the longest path *through* it is `left height + right height`. So the answer
+  is the largest such sum anywhere in the tree.
+- A node therefore has two different jobs: **report** its height upwards, and **record** the path
+  through itself. Separating those two is the technique this problem exists to teach.
+
+</Signals>
+
+<BruteForce>
+
+For every node, compute the height of its left and right subtree from scratch and take the largest
+sum.
+
+**O(n²) time, O(h) space** — every node re-walks its whole subtree, and on a degenerate tree that is
+quadratic. The bottleneck is that computing a height already visits every descendant, so the
+information needed at the parent was available one call earlier and was thrown away.
+
+</BruteForce>
+
+<Insight>
+
+One traversal can do both jobs: a node reports its height upwards while recording the path that runs through it.
+
+</Insight>
+
+<Approach>
+
+1. Keep a `best` that lives outside the recursion.
+2. Define `height(node)`: an empty node has height `0`.
+3. Get `left = height(node.left)` and `right = height(node.right)`.
+4. **Record:** the longest path through this node is `left + right` edges. Update `best`.
+5. **Report:** return `1 + max(left, right)` — the height, which is what the parent needs.
+
+Steps 4 and 5 return different quantities, and confusing them is the defining bug of this problem.
+The parent cannot use `left + right` for anything — a path through the parent can only descend one
+side of this node.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def diameterOfBinaryTree(self, root: Optional[TreeNode]) -> int:
+        # O(n^2) time, O(h) space — height is recomputed at every node
+        def height(node: Optional[TreeNode]) -> int:
+            if not node:
+                return 0
+            return 1 + max(height(node.left), height(node.right))
+
+        def walk(node: Optional[TreeNode]) -> int:
+            if not node:
+                return 0
+            through = height(node.left) + height(node.right)
+            return max(through, walk(node.left), walk(node.right))
+
+        return walk(root)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def diameterOfBinaryTree(self, root: Optional[TreeNode]) -> int:
+        # O(n) time, O(h) space
+        best = 0
+
+        def height(node: Optional[TreeNode]) -> int:
+            nonlocal best
+            if not node:
+                return 0
+
+            left = height(node.left)
+            right = height(node.right)
+
+            best = max(best, left + right)      # record: the path THROUGH this node
+            return 1 + max(left, right)         # report: the height, for the parent
+
+        height(root)
+        return best
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Return the height, record the diameter.** Returning `left + right` corrupts every ancestor's
+  arithmetic, because a path through the parent can only use one side of this node.
+- **Edges, not nodes.** `left + right` is already an edge count, because an empty child contributes
+  height 0 and each level adds one. Adding `+ 1` gives node counts and is off by one everywhere.
+- The single-node tree answers `0`. Initialising `best` to 1, or to `-inf`, both go wrong here.
+- `nonlocal best` is required in Python — assigning to `best` inside the closure without it creates a
+  new local and the answer stays 0. A one-element list or an instance attribute are the usual
+  alternatives.
+- The diameter can live entirely in one subtree. Test a tree where the deep part hangs off a child
+  and never touches the root; a solution that only considers the root passes the first example.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Return the path itself, not its length."* — Record the node alongside `best`, then walk down the
+  deepest branch on each side from there.
+- *"Diameter of a general N-ary tree."* — Take the two largest child heights instead of exactly two.
+  The record-and-report split is unchanged, which is a good sign it is the right idea.
+- *"Diameter of an arbitrary graph."* — No longer a tree problem: two breadth-first searches, or
+  all-pairs shortest paths. Worth noticing how much the tree structure was doing.
+
+</FollowUps>

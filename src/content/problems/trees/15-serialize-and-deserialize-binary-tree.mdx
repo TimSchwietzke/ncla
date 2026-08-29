@@ -1,0 +1,198 @@
+---
+id: "7.15"
+slug: serialize-and-deserialize-binary-tree
+title: Serialize and Deserialize Binary Tree
+leetcode: 297
+url: https://leetcode.com/problems/serialize-and-deserialize-binary-tree/
+difficulty: Hard
+premium: false
+category: trees
+patterns: [tree-dfs, length-prefix]
+prerequisites: ["Preorder traversal", "Why null markers are not optional"]
+targetComplexity: { time: "O(n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Design an algorithm to **serialize** a binary tree to a string and **deserialize** that string back
+into the identical tree. The format is yours to choose; the only requirement is that the round trip
+reproduces the original tree exactly.
+
+<Examples>
+  <Example input={`root = [1, 2, 3, null, null, 4, 5]`} output={`[1, 2, 3, null, null, 4, 5]`}>
+    Serialising and deserialising must give back the same shape, not merely the same values.
+  </Example>
+  <Example input={`root = []`} output={`[]`}>
+    The empty tree has to survive the round trip too.
+  </Example>
+  <Example input={`root = [1, 2]`} output={`[1, 2]`}>
+    A node with only a **left** child. Without null markers this is indistinguishable from a node with
+    only a right child.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- The tree holds between `0` and `10^4` nodes
+- `-1000 <= Node.val <= 1000`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The two halves are one design decision, not two problems: **choose a format that the reader can walk
+  without guessing.** Encode and Decode Strings asked the same question about a list.
+- Values alone lose the structure. `[1, 2]` as a left child and `[1, 2]` as a right child produce the
+  same value sequence, so **absence has to be written down** — that is what a null marker is.
+- With null markers, **preorder is self-describing**: read a value, then recursively read its left
+  subtree, then its right. The reader always knows what comes next, which is why no length or bracket
+  is needed.
+
+</Signals>
+
+<BruteForce>
+
+Serialise the values without markers and try to rebuild from the sequence alone.
+
+**This does not work, and that is the point.** It is not slow — it is ambiguous. The third example is
+the counterexample: two different trees produce identical output, so no deserialiser can be correct.
+Recognising that the naive format is *impossible* rather than merely inefficient is the whole first
+step here.
+
+</BruteForce>
+
+<Insight>
+
+Write the missing children down as well — with null markers, a preorder walk tells the reader exactly where every subtree ends.
+
+</Insight>
+
+<Approach>
+
+**Serialize:**
+1. Walk in preorder. Emit `node.val` for a node, and a marker such as `N` for `None`.
+2. Join the tokens with a separator.
+
+**Deserialize:**
+3. Split into tokens and keep a single index that only ever moves forward.
+4. Read one token. If it is the marker, return `None`.
+5. Otherwise build the node, then recursively read its **left** subtree, then its **right**.
+6. Return the node.
+
+Step 5's order must mirror step 1's exactly. The shared index is what makes it work: the left subtree
+consumes precisely its own tokens and leaves the pointer at the start of the right subtree.
+
+Level-order with markers is an equally valid format and is what LeetCode's own bracket notation uses.
+It needs a queue on both sides and more care about trailing nulls — preorder is the one to write.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Codec:
+    # WRONG on purpose: without null markers the format is ambiguous.
+    def serialize(self, root: Optional[TreeNode]) -> str:
+        out: list[str] = []
+
+        def walk(node: Optional[TreeNode]) -> None:
+            if not node:
+                return                       # absence leaves no trace — that is the bug
+            out.append(str(node.val))
+            walk(node.left)
+            walk(node.right)
+
+        walk(root)
+        return ",".join(out)
+
+    def deserialize(self, data: str) -> Optional[TreeNode]:
+        # [1,2] with a left child and [1,2] with a right child both arrive as "1,2",
+        # so this can only ever guess. It picks left.
+        tokens = [t for t in data.split(",") if t]
+        if not tokens:
+            return None
+
+        root = TreeNode(int(tokens[0]))
+        node = root
+        for token in tokens[1:]:
+            node.left = TreeNode(int(token))
+            node = node.left
+        return root
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Codec:
+    def serialize(self, root: Optional[TreeNode]) -> str:
+        # O(n) time, O(n) space
+        out: list[str] = []
+
+        def walk(node: Optional[TreeNode]) -> None:
+            if not node:
+                out.append("N")              # the marker is what preserves the structure
+                return
+            out.append(str(node.val))
+            walk(node.left)
+            walk(node.right)
+
+        walk(root)
+        return ",".join(out)
+
+    def deserialize(self, data: str) -> Optional[TreeNode]:
+        # O(n) time, O(n) space
+        tokens = data.split(",")
+        self.at = 0                          # one pointer, only ever moving forward
+
+        def build() -> Optional[TreeNode]:
+            token = tokens[self.at]
+            self.at += 1
+
+            if token == "N":
+                return None
+
+            node = TreeNode(int(token))
+            node.left = build()              # same order as serialize wrote them
+            node.right = build()
+            return node
+
+        return build()
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Null markers are the problem, not a detail.** Without them the format cannot be decoded, no matter
+  how clever the reader. Say that before writing anything.
+- **The index must be shared across the whole recursion.** A local counter, or passing an integer by
+  value, resets on each call and the tree comes out wrong. An instance attribute, a `nonlocal`, or an
+  iterator over the tokens all work; a plain parameter does not.
+- **Read left before right**, matching the write order. Swapping them mirrors the tree and passes any
+  symmetric test.
+- Negative values are legal, so the marker must not collide with a minus sign or a digit. `N` is safe;
+  `-1` is not.
+- The empty tree serialises to `"N"` and must deserialise back to `None`. Check it — a version that
+  special-cases `not root` on the way out but not on the way back in fails exactly here.
+- `data.split(",")` on the empty string yields `[""]`, not `[]`. That is why the format writes an
+  explicit `N` for the empty tree rather than an empty string.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Use level order instead."* — A queue on both sides, markers still required. It matches LeetCode's
+  own display format, and trailing nulls need trimming or the string grows for no reason.
+- *"Make the output smaller."* — For a **BST**, preorder alone is enough without markers, because the
+  ordering says where each subtree ends. That is a genuinely different problem (LC 449) and a good
+  demonstration that structure can replace markers.
+- *"Where else does this shape appear?"* — Encode and Decode Strings, in category 1. Both are asking
+  how a reader knows where one thing ends and the next begins; one answers with a length, this one
+  with a marker.
+
+</FollowUps>

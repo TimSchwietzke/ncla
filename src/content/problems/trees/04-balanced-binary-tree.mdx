@@ -1,0 +1,155 @@
+---
+id: "7.4"
+slug: balanced-binary-tree
+title: Balanced Binary Tree
+leetcode: 110
+url: https://leetcode.com/problems/balanced-binary-tree/
+difficulty: Easy
+premium: false
+category: trees
+patterns: [tree-dfs]
+prerequisites: ["Maximum Depth", "Diameter of Binary Tree", "Returning two facts at once"]
+targetComplexity: { time: "O(n)", space: "O(h)" }
+status: complete
+---
+
+<Statement>
+
+Given a binary tree, decide whether it is **height-balanced**: at *every* node, the heights of the
+two subtrees differ by at most 1.
+
+<Examples>
+  <Example input={`root = [3, 9, 20, null, null, 15, 7]`} output="true">
+    The root's subtrees have heights 1 and 2, and every deeper node is a leaf.
+  </Example>
+  <Example input={`root = [1, 2, 2, 3, 3, null, null, 4, 4]`} output="false">
+    The root looks fine at a glance, but the imbalance sits one level down.
+  </Example>
+  <Example input={`root = []`} output="true">
+    An empty tree is balanced by definition.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- The tree holds between `0` and `5000` nodes
+- `-10^4 <= Node.val <= 10^4`
+- The condition must hold at **every** node, not only at the root
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- "At every node" means one violation anywhere makes the whole answer `false`. That is a property to
+  be **propagated upwards**, not checked once.
+- Deciding balance at a node needs the two subtree heights — the same quantity Maximum Depth already
+  computes. Computing it separately is the mistake; computing it *once* is the solution.
+- A node therefore has to hand its parent **two** facts: how tall it is, and whether anything below
+  it was already broken.
+
+</Signals>
+
+<BruteForce>
+
+At every node, compute both subtree heights from scratch, check the difference, and recurse.
+
+**O(n²) time, O(h) space.** Correct, and the natural first thing to write. The bottleneck is exactly
+the one from Diameter: `height` already visits the whole subtree, so calling it once per node walks
+the tree over and over. On a degenerate tree that is `10^7` operations for 5000 nodes.
+
+</BruteForce>
+
+<Insight>
+
+One traversal can return both the height and the verdict, so the height is never computed twice.
+
+</Insight>
+
+<Approach>
+
+1. Define `check(node)` returning a pair: `(is_balanced, height)`.
+2. An empty node returns `(True, 0)`.
+3. Recurse into both children to get their pairs.
+4. This node is balanced when **both** children are balanced **and** their heights differ by at most
+   1.
+5. Its height is `1 + max(left_height, right_height)` regardless.
+6. The answer is the first element of the root's pair.
+
+The alternative encoding uses a sentinel: return the height, or `-1` to mean "already broken", and
+propagate the `-1` upwards. Shorter, and the pair says what it means — either is fine, but say which
+you are doing.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def isBalanced(self, root: Optional[TreeNode]) -> bool:
+        # O(n^2) time, O(h) space — height recomputed at every node
+        def height(node: Optional[TreeNode]) -> int:
+            if not node:
+                return 0
+            return 1 + max(height(node.left), height(node.right))
+
+        if not root:
+            return True
+
+        if abs(height(root.left) - height(root.right)) > 1:
+            return False
+
+        return self.isBalanced(root.left) and self.isBalanced(root.right)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def isBalanced(self, root: Optional[TreeNode]) -> bool:
+        # O(n) time, O(h) space
+        def check(node: Optional[TreeNode]) -> tuple[bool, int]:
+            if not node:
+                return True, 0
+
+            left_ok, left_height = check(node.left)
+            right_ok, right_height = check(node.right)
+
+            balanced = left_ok and right_ok and abs(left_height - right_height) <= 1
+            return balanced, 1 + max(left_height, right_height)
+
+        return check(root)[0]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Both children must be balanced too.** Checking only `abs(left_height - right_height) <= 1` at
+  each node and forgetting `left_ok and right_ok` reports `true` for the second example, where the
+  root is fine and the damage is one level down.
+- **Return the height even when the answer is already `false`.** The parent still needs a number; a
+  version that returns early with no height breaks the arithmetic above it. The `-1` sentinel encodes
+  the same thing deliberately.
+- The `O(n²)` version is not wrong, just slow — and it is the honest first answer. Say it, name the
+  repeated work, then fix it. That is the whole method.
+- The empty tree returns `true`. Starting from "a leaf is balanced" instead needs an extra case for
+  the empty tree and gains nothing.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Use `-1` as a sentinel instead of a pair."* — Return the height, or `-1` once anything below is
+  unbalanced, and check for `-1` before using a child's value. Fewer allocations, one more thing to
+  remember.
+- *"Balance it."* — Given a *sorted array*, LC 108 builds a balanced BST by taking the middle element
+  as the root recursively. Rebalancing an arbitrary tree in place is a different, much larger problem.
+- *"What does a self-balancing tree do differently?"* — AVL trees store the height on the node and
+  rotate on insert, so this check never has to be run. Worth naming: the data structure pays the cost
+  once instead of the query paying it every time.
+
+</FollowUps>

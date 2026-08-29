@@ -1,0 +1,147 @@
+---
+id: "7.2"
+slug: maximum-depth-of-binary-tree
+title: Maximum Depth of Binary Tree
+leetcode: 104
+url: https://leetcode.com/problems/maximum-depth-of-binary-tree/
+difficulty: Easy
+premium: false
+category: trees
+patterns: [tree-dfs]
+prerequisites: ["Recursion with a return value", "Deciding what a node reports upwards"]
+targetComplexity: { time: "O(n)", space: "O(h)" }
+status: complete
+---
+
+<Statement>
+
+Given the `root` of a binary tree, return its **maximum depth** — the number of nodes along the
+longest path from the root down to the farthest leaf.
+
+<Examples>
+  <Example input={`root = [3, 9, 20, null, null, 15, 7]`} output="3">
+    The longest path is 3 → 20 → 15, three nodes deep.
+  </Example>
+  <Example input={`root = [1, null, 2]`} output="2">
+    A tree leaning entirely one way is still two nodes deep.
+  </Example>
+  <Example input={`root = []`} output="0">
+    An empty tree has depth 0 — the smallest case, and the one every solution has to handle.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- The tree holds between `0` and `10^4` nodes
+- `-100 <= Node.val <= 100`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The depth of a tree is one more than the deeper of its two subtrees. The definition is already
+  recursive; the code just writes it down.
+- This is the template for the whole category: **decide what a single node reports upwards**. Here it
+  is a number, and the parent combines the two numbers it gets back.
+- The empty tree reporting `0` is what makes every other case work without a special case for leaves.
+
+</Signals>
+
+<BruteForce>
+
+Every solution visits every node, so `O(n)` is the floor and there is no slower-but-simpler version
+worth inventing.
+
+The alternative that is genuinely different is **breadth-first**: sweep level by level with a queue
+and count the sweeps. Same `O(n)` time, and its space is the widest level rather than the deepest
+path — which is better on a deep skinny tree and worse on a wide bushy one. That trade is the thing
+to be able to state.
+
+</BruteForce>
+
+<Insight>
+
+A node's depth is one plus the deeper of the two depths its children report.
+
+</Insight>
+
+<Approach>
+
+1. If the node is `None`, report `0`.
+2. Otherwise ask both children for their depth.
+3. Report `1 + max(left, right)`.
+
+That is the entire algorithm, and it is worth dwelling on because the next several problems are the
+same three lines with a different thing being reported: a boolean, a sum, a count. Once "what does a
+node report upwards?" is the question you ask, this category stops being fifteen problems.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def maxDepth(self, root: Optional[TreeNode]) -> int:
+        # O(n) time, O(width) space — level by level with a queue
+        from collections import deque
+
+        if not root:
+            return 0
+
+        queue = deque([root])
+        depth = 0
+
+        while queue:
+            depth += 1
+            for _ in range(len(queue)):      # exactly one level per round
+                node = queue.popleft()
+                if node.left:
+                    queue.append(node.left)
+                if node.right:
+                    queue.append(node.right)
+
+        return depth
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def maxDepth(self, root: Optional[TreeNode]) -> int:
+        # O(n) time, O(h) space for the recursion stack
+        if not root:
+            return 0
+        return 1 + max(self.maxDepth(root.left), self.maxDepth(root.right))
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Depth counts nodes here, not edges.** A single node has depth 1, and an empty tree has depth 0.
+  The next problem, Diameter, counts *edges* — mixing the two conventions is the most common way to
+  be off by one across this category.
+- `max`, not `min` or `+`. Obvious written down, and genuinely easy to slip when the same shape is
+  being reused for a different quantity three problems later.
+- Space is `O(h)`, and `h` is `O(n)` on a degenerate tree. With `10^4` nodes in a straight line,
+  Python's default recursion limit of 1000 is exceeded — which is exactly why the iterative version
+  is worth knowing rather than being a curiosity.
+- The BFS version must consume **exactly one level per round**, which is what `for _ in range(len(queue))`
+  does. Popping one node per round counts nodes, not levels.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Minimum depth instead."* — LC 111, and it is **not** symmetric: a node with one child must not
+  report 1, because that child's branch has not reached a leaf. The asymmetry is the whole problem.
+- *"Do it without recursion."* — The BFS version above, or DFS with an explicit stack of
+  `(node, depth)` pairs.
+- *"What if the tree is 10^5 deep?"* — Recursion blows the stack. Either raise the limit, or use the
+  iterative version — and knowing which one your language forces on you is part of the answer.
+
+</FollowUps>
