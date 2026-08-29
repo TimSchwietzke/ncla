@@ -1,0 +1,161 @@
+---
+id: "14.9"
+slug: edit-distance
+title: Edit Distance
+leetcode: 72
+url: https://leetcode.com/problems/edit-distance/
+difficulty: Medium
+premium: false
+category: dynamic-programming-2d
+patterns: [dp-2d]
+prerequisites: ["Longest Common Subsequence", "Three choices instead of two"]
+targetComplexity: { time: "O(m * n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Return the minimum number of operations to turn `word1` into `word2`. The permitted operations are
+**insert**, **delete** and **replace** a character.
+
+<Examples>
+  <Example input={`word1 = "horse"
+word2 = "ros"`} output="3">
+    `horse → rorse` (replace h), `→ rose` (delete r), `→ ros` (delete e).
+  </Example>
+  <Example input={`word1 = "intention"
+word2 = "execution"`} output="5">
+    Five operations, and no arrangement does it in four.
+  </Example>
+  <Example input={`word1 = ""
+word2 = "abc"`} output="3">
+    Three inserts. An empty input is legal.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `0 <= word1.length, word2.length <= 500`
+- Lowercase English letters
+- Either word may be **empty**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Two strings, two indices — the Longest Common Subsequence table again, now with **three** choices per
+  cell instead of two.
+- If the characters match, no operation is needed and both indices advance for free. That is the only
+  case that costs nothing.
+- If they differ, the three operations map to three moves in the table: **replace** advances both,
+  **delete** advances `word1`, **insert** advances `word2`. Taking the cheapest is the recurrence.
+
+</Signals>
+
+<BruteForce>
+
+Recurse on `(i, j)`, trying all three operations at every mismatch.
+
+**O(3^(m+n)) time.** Correct and it names the operations explicitly, which is worth doing before
+writing the table. The bottleneck is that `(i, j)` recurs constantly and each occurrence re-explores an
+identical subproblem.
+
+</BruteForce>
+
+<Insight>
+
+Replace advances both indices, delete advances the first, insert advances the second — so all three are one step in the table.
+
+</Insight>
+
+<Approach>
+
+1. Table of `(m+1) x (n+1)`: `dp[i][j]` is the cost to turn `word1[i:]` into `word2[j:]`.
+2. `dp[m][j] = n - j` — only inserts remain.
+3. `dp[i][n] = m - i` — only deletes remain.
+4. If `word1[i] == word2[j]`, then `dp[i][j] = dp[i+1][j+1]` — free.
+5. Otherwise `dp[i][j] = 1 + min(dp[i+1][j+1], dp[i+1][j], dp[i][j+1])` — replace, delete, insert.
+6. The answer is `dp[0][0]`.
+
+The base cases in steps 2 and 3 are not zero: turning something into an empty string still costs one
+operation per character. That is the part most often got wrong, and it is why the table is filled with
+lengths rather than with zeros along the edges.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def minDistance(self, word1: str, word2: str) -> int:
+        # O(3^(m+n)) time — all three operations, nothing remembered
+        def cost(i: int, j: int) -> int:
+            if i == len(word1):
+                return len(word2) - j             # insert what remains
+            if j == len(word2):
+                return len(word1) - i             # delete what remains
+            if word1[i] == word2[j]:
+                return cost(i + 1, j + 1)         # free
+            return 1 + min(cost(i + 1, j + 1),    # replace
+                           cost(i + 1, j),        # delete from word1
+                           cost(i, j + 1))        # insert into word1
+
+        return cost(0, 0)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def minDistance(self, word1: str, word2: str) -> int:
+        # O(m * n) time, O(n) space
+        m, n = len(word1), len(word2)
+        below = list(range(n, -1, -1))            # dp[m][j] = n - j: only inserts left
+
+        for i in range(m - 1, -1, -1):
+            current = [0] * (n + 1)
+            current[n] = m - i                    # only deletes left
+
+            for j in range(n - 1, -1, -1):
+                if word1[i] == word2[j]:
+                    current[j] = below[j + 1]     # match: free
+                else:
+                    current[j] = 1 + min(below[j + 1],   # replace
+                                         below[j],       # delete
+                                         current[j + 1]) # insert
+            below = current
+
+        return below[0]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **The edges are lengths, not zeros.** `dp[i][n] = m - i` and `dp[m][j] = n - j`. Filling them with 0
+  claims that turning `"abc"` into `""` is free, and the third example catches it.
+- **Match costs nothing and consumes both.** Writing `1 + dp[i+1][j+1]` on a match adds a phantom
+  operation to every shared character.
+- The three operations must map to the three specific moves. Mixing up delete and insert gives the same
+  answer for symmetric inputs and the wrong one otherwise — `"horse"`/`"ros"` is asymmetric on purpose.
+- In the row-compressed version, `below` is row `i+1` and `current` is row `i`. `current[j+1]` is the
+  insert branch and must already be filled, which is why `j` descends.
+- Either word may be empty, and the answer is then the other's length. The seeded rows handle it with no
+  branch.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Different costs per operation."* — Replace `1 +` with the operation's cost. The structure is
+  identical, which is why this generalises to spell-checkers and diff tools.
+- *"Only insert and delete."* — LC 583: without replace, the answer is
+  `m + n - 2 * LCS(word1, word2)`. A neat demonstration that these two problems are the same table.
+- *"Return the operations."* — Record which branch won per cell and walk it back from `dp[0][0]`. That
+  is what a diff tool actually outputs.
+
+</FollowUps>

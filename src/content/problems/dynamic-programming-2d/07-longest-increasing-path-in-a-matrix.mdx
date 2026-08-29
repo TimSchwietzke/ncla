@@ -1,0 +1,161 @@
+---
+id: "14.7"
+slug: longest-increasing-path-in-a-matrix
+title: Longest Increasing Path in a Matrix
+leetcode: 329
+url: https://leetcode.com/problems/longest-increasing-path-in-a-matrix/
+difficulty: Hard
+premium: false
+category: dynamic-programming-2d
+patterns: [dp-2d, tree-dfs]
+prerequisites: ["Number of Islands", "Memoisation on a grid", "Why no visited set is needed"]
+targetComplexity: { time: "O(m * n)", space: "O(m * n)" }
+status: complete
+---
+
+<Statement>
+
+Given an `m x n` matrix, return the length of the longest **strictly increasing** path, moving
+4-directionally. Diagonal moves and wrap-around are not allowed.
+
+<Examples>
+  <Example input={`matrix = [[9,9,4],
+          [6,6,8],
+          [2,1,1]]`} output="4">
+    `1 → 2 → 6 → 9`.
+  </Example>
+  <Example input={`matrix = [[3,4,5],
+          [3,2,6],
+          [2,2,1]]`} output="4">
+    `3 → 4 → 5 → 6`. Moving diagonally is not permitted.
+  </Example>
+  <Example input={`matrix = [[1]]`} output="1">
+    A single cell is a path of length 1.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= m, n <= 200`
+- `0 <= matrix[i][j] <= 2^31 - 1`
+- **Strictly** increasing, 4-directional
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- A grid search where the answer per cell — the longest increasing path **starting here** — depends only
+  on the cell, not on how you arrived. That is memoisation, and it is what makes this DP rather than
+  plain backtracking.
+- **No visited set is needed**, and that is the elegant part: the path must strictly increase, so it can
+  never return to a cell it has left. The values themselves prevent cycles.
+- Every cell is computed once and read up to four times, so the whole thing is linear in the number of
+  cells despite looking like an exponential search.
+
+</Signals>
+
+<BruteForce>
+
+Depth-first from every cell, exploring every increasing path.
+
+**Exponential.** Correct, and it is the natural first attempt. The bottleneck is that a cell in the
+middle of a long ridge is the start of the same sub-path however you reach it, and the search
+recomputes it once per approach.
+
+</BruteForce>
+
+<Insight>
+
+The longest path from a cell depends only on that cell, and strict increase means a path can never revisit one.
+
+</Insight>
+
+<Approach>
+
+1. Keep a memo table the size of the grid, initially empty.
+2. `longest(r, c)`: if memoised, return it.
+3. Otherwise take `1 + max(longest(neighbour))` over the neighbours whose value is **strictly greater**,
+   or `1` when there are none.
+4. Store and return it.
+5. The answer is the maximum over all starting cells.
+
+Because the recursion only ever moves to strictly larger values, no cell can appear twice on one path —
+so there is nothing to mark and nothing to unmark. That is the difference from Word Search, and it is
+worth saying out loud.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def longestIncreasingPath(self, matrix: list[list[int]]) -> int:
+        # Exponential — recomputes the same sub-path from every approach
+        rows, cols = len(matrix), len(matrix[0])
+
+        def longest(r: int, c: int) -> int:
+            best = 1
+            for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                if (0 <= nr < rows and 0 <= nc < cols
+                        and matrix[nr][nc] > matrix[r][c]):
+                    best = max(best, 1 + longest(nr, nc))
+            return best
+
+        return max(longest(r, c) for r in range(rows) for c in range(cols))
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def longestIncreasingPath(self, matrix: list[list[int]]) -> int:
+        # O(m * n) time and space — each cell computed once
+        rows, cols = len(matrix), len(matrix[0])
+        memo: list[list[int]] = [[0] * cols for _ in range(rows)]
+
+        def longest(r: int, c: int) -> int:
+            if memo[r][c]:
+                return memo[r][c]
+
+            best = 1
+            for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                if (0 <= nr < rows and 0 <= nc < cols
+                        and matrix[nr][nc] > matrix[r][c]):     # strictly greater
+                    best = max(best, 1 + longest(nr, nc))
+
+            memo[r][c] = best
+            return best
+
+        return max(longest(r, c) for r in range(rows) for c in range(cols))
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **No visited set, and adding one is wrong.** Marking cells would block legitimate paths that pass
+  through a cell on a different route. The strict increase already guarantees no cycles.
+- **Strictly greater, not `>=`.** With `>=` a plateau lets the path walk back and forth forever, and the
+  recursion never terminates. The first example has a run of equal values precisely to test it.
+- **`0` as "not computed" works** because every real answer is at least 1. A separate `None` sentinel is
+  clearer if the values could legitimately be zero.
+- Recursion can be 200 × 200 = 40 000 deep on a monotone spiral, which exceeds Python's default limit.
+  Say so — the topological-order version below avoids it entirely.
+- The answer is the maximum over **all** cells, not just the smallest one. The longest path need not
+  start at the global minimum.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Do it iteratively."* — Peel the grid in topological order: repeatedly remove cells with no larger
+  neighbours, counting the rounds. Same complexity, no recursion depth.
+- *"Non-decreasing paths instead."* — Now cycles are possible on plateaus, so the memo alone breaks; you
+  need to contract equal-valued regions first. A good illustration of how much "strictly" was doing.
+- *"Return the path."* — Store the winning neighbour per cell and walk it from the best starting point.
+
+</FollowUps>

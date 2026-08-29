@@ -1,0 +1,164 @@
+---
+id: "14.11"
+slug: regular-expression-matching
+title: Regular Expression Matching
+leetcode: 10
+url: https://leetcode.com/problems/regular-expression-matching/
+difficulty: Hard
+premium: false
+category: dynamic-programming-2d
+patterns: [dp-2d]
+prerequisites: ["Longest Common Subsequence", "A star that can match zero characters"]
+targetComplexity: { time: "O(m * n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Implement matching for `.` and `*`, where `.` matches any single character and `*` matches **zero or
+more** of the **preceding** element. The match must cover the **entire** string.
+
+<Examples>
+  <Example input={`s = "aa"
+p = "a"`} output="false">
+    The pattern must cover all of `s`, not a prefix of it.
+  </Example>
+  <Example input={`s = "aa"
+p = "a*"`} output="true">
+    `a*` takes both.
+  </Example>
+  <Example input={`s = "ab"
+p = ".*"`} output="true">
+    `.*` is any run of any characters — including the empty one.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= s.length <= 20` and `1 <= p.length <= 20`
+- `s` is lowercase letters; `p` is lowercase letters, `.` and `*`
+- Every `*` has a valid preceding element
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Two indices, one into each string — the same table as everywhere in this category. What changes is
+  that a pattern character can consume **zero** input.
+- `*` is not a character, it is a **modifier on the one before it**. So the pattern must be read two
+  characters at a time whenever the next one is a star.
+- A star has two branches and both are needed: **use it zero times** — skip both pattern characters —
+  or **use it once more** — consume one character of `s` and stay on the same pattern position.
+
+</Signals>
+
+<BruteForce>
+
+Recurse on `(i, j)`, branching at every star.
+
+**Exponential.** Correct, and it is the clearest statement of the rules — worth writing first, because
+the table is just this with the results remembered. The bottleneck is that `(i, j)` recurs through many
+different star expansions.
+
+</BruteForce>
+
+<Insight>
+
+A star either matches nothing and the pattern moves on by two, or it matches one more character and the pattern stays put.
+
+</Insight>
+
+<Approach>
+
+1. `dp[i][j]` is "does `s[i:]` match `p[j:]`".
+2. `dp[m][n] = True`; an exhausted pattern matches only an exhausted string.
+3. Let `first = i < m and (p[j] == s[i] or p[j] == '.')`.
+4. If `p[j+1]` is `*`:
+   - **zero occurrences:** `dp[i][j+2]`
+   - **one more:** `first and dp[i+1][j]`
+   - `dp[i][j]` is either.
+5. Otherwise `dp[i][j] = first and dp[i+1][j+1]`.
+6. The answer is `dp[0][0]`.
+
+Step 4's first branch is the one people forget, and it is what makes `".*"` match `""` and `"a*"` match
+`"b"` when the pattern continues. Checking `p[j+1]` requires a bounds guard, since a star can never be
+the last thing checked without one.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def isMatch(self, s: str, p: str) -> bool:
+        # Exponential — both star branches, nothing remembered
+        def matches(i: int, j: int) -> bool:
+            if j == len(p):
+                return i == len(s)
+
+            first = i < len(s) and p[j] in (s[i], ".")
+
+            if j + 1 < len(p) and p[j + 1] == "*":
+                return (matches(i, j + 2)                  # star matches nothing
+                        or (first and matches(i + 1, j)))  # or one more
+
+            return first and matches(i + 1, j + 1)
+
+        return matches(0, 0)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def isMatch(self, s: str, p: str) -> bool:
+        # O(m * n) time, O(m * n) space — the same recurrence, remembered
+        m, n = len(s), len(p)
+        dp = [[False] * (n + 1) for _ in range(m + 1)]
+        dp[m][n] = True                                # both exhausted
+
+        for i in range(m, -1, -1):
+            for j in range(n - 1, -1, -1):
+                first = i < m and p[j] in (s[i], ".")
+
+                if j + 1 < n and p[j + 1] == "*":
+                    dp[i][j] = dp[i][j + 2] or (first and dp[i + 1][j])
+                else:
+                    dp[i][j] = first and dp[i + 1][j + 1]
+
+        return dp[0][0]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **A star can match zero characters.** The `dp[i][j+2]` branch is the one that gets left out, and
+  without it `"a*b"` fails to match `"b"`. It is also what makes the pattern able to outlive the string.
+- **The star modifies the character *before* it.** Reading `p[j]` as a star and looking backwards
+  inverts the whole scheme; the check is always on `p[j+1]`.
+- **`first` must be guarded by `i < m`.** Once the string is exhausted the pattern may still legally
+  consume star groups, so `i == m` is a valid state and must not index `s`.
+- The match is **anchored at both ends**. `"aa"` against `"a"` is `false`, which is what the first
+  example is for — this is not a search.
+- The `j` loop must descend and `i` must too, because `dp[i][j+2]` and `dp[i+1][j]` both have to be
+  final. Getting the direction wrong reads zeros and answers `false` almost everywhere.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Add `+` for one or more."* — `x+` is `x` followed by `x*`. Rewriting the pattern is easier than
+  adding a case.
+- *"Wildcard matching with `?` and `*` instead."* — LC 44, where `*` matches any **run of characters**
+  rather than repeats of one. Different recurrence, same table, and a greedy two-pointer solution also
+  exists there.
+- *"Why is this in 2-D DP rather than Backtracking?"* — The brute force *is* backtracking. What puts it
+  here is that `(i, j)` fully describes the state, so the results can be tabulated — which is exactly
+  the boundary between the two categories.
+
+</FollowUps>

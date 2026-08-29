@@ -1,0 +1,156 @@
+---
+id: "14.5"
+slug: target-sum
+title: Target Sum
+leetcode: 494
+url: https://leetcode.com/problems/target-sum/
+difficulty: Medium
+premium: false
+category: dynamic-programming-2d
+patterns: [dp-2d]
+prerequisites: ["Partition Equal Subset Sum", "Memoising on a pair of values"]
+targetComplexity: { time: "O(n * sum)", space: "O(sum)" }
+status: complete
+---
+
+<Statement>
+
+Put a `+` or a `-` in front of every number in `nums` and evaluate the expression. Return how many
+assignments produce `target`.
+
+<Examples>
+  <Example input={`nums = [1, 1, 1, 1, 1]
+target = 3`} output="5">
+    Four plus and one minus, and the minus can be any of the five positions.
+  </Example>
+  <Example input={`nums = [1]
+target = 1`} output="1">
+    One number, one sign that works.
+  </Example>
+  <Example input={`nums = [1]
+target = 2`} output="0">
+    Unreachable — the total is only 1.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= nums.length <= 20`
+- `0 <= nums[i] <= 1000` and `0 <= sum(nums) <= 1000`
+- `-1000 <= target <= 1000`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Every number faces a **binary choice**, which is `2^20` — about a million, so the brute force
+  genuinely passes here. That makes this a good problem for showing *why* the table is better rather
+  than being forced into it.
+- The state is `(index, running sum)`. Two numbers, so 2-D — and the running sum is bounded by 1000 in
+  each direction, which is what keeps the table small.
+- There is a neat reformulation: let `P` be the numbers given `+` and `N` those given `-`. Then
+  `P - N = target` and `P + N = total`, so `P = (target + total) / 2`. The problem becomes **Partition
+  Equal Subset Sum** counting subsets that hit `P`.
+
+</Signals>
+
+<BruteForce>
+
+Recurse over both signs at every index.
+
+**O(2^n) time.** With `n <= 20` that is a million leaves and it passes comfortably. It is a legitimate
+submission. The bottleneck is that `(index, running sum)` repeats constantly — five ones reach sum 1 by
+many routes — and each repetition re-explores the same suffix.
+
+</BruteForce>
+
+<Insight>
+
+Only the index and the running sum matter, not how that sum was reached — so count the ways to each sum instead of the paths.
+
+</Insight>
+
+<Approach>
+
+1. Keep a dictionary from **running sum → how many ways** to reach it.
+2. Start with `{0: 1}` — one way to have added nothing.
+3. For each number, build a new dictionary: every existing sum `s` with count `c` contributes `c` to
+   both `s + num` and `s - num`.
+4. The answer is the count stored at `target`.
+
+A dictionary rather than an array avoids the offset arithmetic that negative sums would otherwise
+need, and it only ever holds the sums actually reachable.
+
+The subset reformulation is the sharper answer: if `target + total` is odd or `|target| > total`, the
+answer is 0; otherwise count the subsets summing to `(target + total) / 2` with the same table as
+Partition Equal Subset Sum.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def findTargetSumWays(self, nums: list[int], target: int) -> int:
+        # O(2^n) time — both signs at every index
+        def count(i: int, total: int) -> int:
+            if i == len(nums):
+                return 1 if total == target else 0
+            return count(i + 1, total + nums[i]) + count(i + 1, total - nums[i])
+
+        return count(0, 0)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+from collections import defaultdict
+
+
+class Solution:
+    def findTargetSumWays(self, nums: list[int], target: int) -> int:
+        # O(n * sum) time, O(sum) space
+        ways: dict[int, int] = {0: 1}          # one way to have added nothing
+
+        for num in nums:
+            nxt: dict[int, int] = defaultdict(int)
+            for total, count in ways.items():
+                nxt[total + num] += count      # this number gets a +
+                nxt[total - num] += count      # or a -
+            ways = nxt
+
+        return ways.get(target, 0)
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`{0: 1}`, not `{0: 0}` or an empty map.** There is one way to have chosen no signs yet, and that
+  single seed is what every count grows from.
+- **Zeros count twice.** `nums = [0]` with `target = 0` answers **2**, because `+0` and `-0` are
+  different assignments. A solution treating them as one is wrong, and the subset reformulation has to
+  handle it by multiplying by `2^(number of zeros)`.
+- Build a **new** dictionary per number. Updating in place lets the same number be applied twice within
+  its own pass — the identical trap to Partition Equal Subset Sum's loop direction.
+- The subset reformulation needs two guards: `(target + total)` must be **even**, and `|target|` must
+  not exceed `total`. Skipping either produces a nonsensical target sum.
+- At `n <= 20` the brute force passes. Say that honestly, then give the table — the reason to prefer it
+  is that it survives a larger `n`, not that the judge demands it.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Reformulate as a subset sum."* — `P = (target + total) / 2`, then count subsets hitting `P` with the
+  Partition Equal Subset Sum table. Faster, and the zero-handling is the part that bites.
+- *"Return the assignments themselves."* — Backtracking, and the count is exponential. The same
+  "how many versus which ones" split as everywhere else.
+- *"Why is a dictionary better than an array here?"* — Sums range over `[-1000, 1000]`, so an array
+  needs an offset of 1000. The dictionary skips both the offset and the unreachable sums.
+
+</FollowUps>

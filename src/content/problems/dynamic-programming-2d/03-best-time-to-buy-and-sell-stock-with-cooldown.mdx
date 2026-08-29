@@ -1,0 +1,156 @@
+---
+id: "14.3"
+slug: best-time-to-buy-and-sell-stock-with-cooldown
+title: Best Time to Buy and Sell Stock with Cooldown
+leetcode: 309
+url: https://leetcode.com/problems/best-time-to-buy-and-sell-stock-with-cooldown/
+difficulty: Medium
+premium: false
+category: dynamic-programming-2d
+patterns: [dp-2d]
+prerequisites: ["Best Time to Buy and Sell Stock", "A state machine as a recurrence"]
+targetComplexity: { time: "O(n)", space: "O(1)" }
+status: complete
+---
+
+<Statement>
+
+Given daily `prices`, make as many transactions as you like — but after **selling** you must skip one
+day before buying again. You may hold at most one share. Return the maximum profit.
+
+<Examples>
+  <Example input={`prices = [1, 2, 3, 0, 2]`} output="3">
+    Buy at 1, sell at 2, cooldown, buy at 0, sell at 2. Two transactions, profit `1 + 2`.
+  </Example>
+  <Example input={`prices = [1]`} output="0">
+    Nothing to trade.
+  </Example>
+  <Example input={`prices = [2, 1]`} output="0">
+    A falling market — doing nothing is best, and the answer is never negative.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= prices.length <= 5000`
+- `0 <= prices[i] <= 1000`
+- After selling, **one** day must be skipped before buying again
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- The cooldown means **today's options depend on yesterday's action**, not only on the prices. A single
+  running value cannot express that — the state needs a second dimension.
+- There are three situations to be in at the end of a day: **holding** a share, **just sold** today, or
+  **free** to buy. Each has its own best profit, and each is reached from specific predecessors.
+- That makes it a small state machine with three transitions, which is the 2-D idea in disguise: the
+  second index is not a position, it is a mode.
+
+</Signals>
+
+<BruteForce>
+
+Recurse over `(day, holding, cooling)` — buy, sell, or do nothing.
+
+**O(2^n) time.** Correct, and it makes the three states obvious. The bottleneck is that the best
+profit from a given day in a given mode does not depend on how you got there, and there are only `3n`
+such combinations — far fewer than the paths reaching them.
+
+</BruteForce>
+
+<Insight>
+
+Three modes end each day — holding, just sold, free — and each is reached from exactly the modes the cooldown allows.
+
+</Insight>
+
+<Approach>
+
+1. Track three running values, the best profit ending the day in each mode:
+   - `holding` — owning a share.
+   - `sold` — sold **today**, so tomorrow is the cooldown.
+   - `free` — owning nothing and allowed to buy.
+2. Each day, compute the new values from **yesterday's**:
+   - `holding = max(holding, free - price)` — keep holding, or buy today (only from `free`).
+   - `sold = holding + price` — selling requires having held.
+   - `free = max(free, sold)` — stay free, or come out of yesterday's cooldown.
+3. The answer is `max(sold, free)` — never `holding`, since ending with an unsold share is a loss.
+
+Step 2's `free = max(free, sold)` uses **yesterday's** `sold`, which is precisely the cooldown: a sale
+today does not free you until tomorrow. Computing the three in the wrong order collapses the rule.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def maxProfit(self, prices: list[int]) -> int:
+        # O(2^n) time — every buy/sell/wait decision
+        n = len(prices)
+
+        def best(day: int, holding: bool, cooling: bool) -> int:
+            if day >= n:
+                return 0
+            wait = best(day + 1, holding, False)
+            if holding:
+                return max(wait, prices[day] + best(day + 1, False, True))   # sell
+            if cooling:
+                return wait                                                  # cannot buy
+            return max(wait, -prices[day] + best(day + 1, True, False))      # buy
+
+        return best(0, False, False)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def maxProfit(self, prices: list[int]) -> int:
+        # O(n) time, O(1) space — three running modes
+        holding = float("-inf")      # impossible before the first day
+        sold = float("-inf")
+        free = 0                     # owning nothing, free to buy
+
+        for price in prices:
+            # All three read YESTERDAY's values, which is where the cooldown lives.
+            holding, sold, free = (max(holding, free - price),
+                                   holding + price,
+                                   max(free, sold))
+
+        return int(max(sold, free))  # never end holding a share
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **All three updates read yesterday's values.** The tuple assignment guarantees it. Writing three
+  separate statements lets `free` see today's `sold`, which removes the cooldown entirely and inflates
+  the profit.
+- **`holding` and `sold` start at negative infinity**, not 0. Starting at 0 claims you can sell without
+  ever having bought, and every answer comes out too high.
+- **Never return `holding`.** Ending the run with an unsold share means money spent and not recovered.
+  `max(sold, free)` is the answer.
+- `free` starts at 0, which is what makes "do nothing" always available and keeps the answer
+  non-negative on a falling market.
+- `holding + price` needs no `max` with the old `sold`: selling today is strictly better than having
+  sold yesterday and still being in `sold`, because `sold` is only ever a one-day state.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"With a transaction fee instead of a cooldown."* — LC 714: two states rather than three, and the fee
+  is subtracted on the sale. Simpler, and the same state-machine shape.
+- *"At most k transactions."* — LC 188: the second index becomes the transaction count, so the table is
+  genuinely 2-D rather than three variables.
+- *"A cooldown of `d` days."* — `free` must read the `sold` value from `d` days ago, so the three
+  variables become a small ring buffer. The state machine is unchanged.
+
+</FollowUps>

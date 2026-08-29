@@ -1,0 +1,140 @@
+---
+id: "14.1"
+slug: unique-paths
+title: Unique Paths
+leetcode: 62
+url: https://leetcode.com/problems/unique-paths/
+difficulty: Medium
+premium: false
+category: dynamic-programming-2d
+patterns: [dp-2d]
+prerequisites: ["Climbing Stairs", "A table indexed by two coordinates"]
+targetComplexity: { time: "O(m * n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+A robot starts at the top-left of an `m x n` grid and must reach the bottom-right, moving only **down
+or right**. Return how many distinct paths exist.
+
+<Examples>
+  <Example input={`m = 3, n = 7`} output="28">
+    Two downs and six rights in some order.
+  </Example>
+  <Example input={`m = 3, n = 2`} output="3">
+    `DDR`, `DRD`, `RDD`.
+  </Example>
+  <Example input={`m = 1, n = 1`} output="1">
+    Already at the target — the empty path counts as one.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= m, n <= 100`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Climbing Stairs in two dimensions. A cell is reached from **above** or from the **left**, so its
+  count is the sum of those two — the same "the last move was one of these" reasoning.
+- The state needs **two** indices, which is what makes this 2-D. Every problem in this category is
+  about noticing that one number is not enough to describe where you are.
+- The whole first row and first column have exactly **one** path each: you can only have arrived in a
+  straight line. That is the base case, and it needs no special reasoning.
+
+</Signals>
+
+<BruteForce>
+
+Recurse: `paths(r, c) = paths(r-1, c) + paths(r, c-1)`, bottoming out at the edges.
+
+**O(2^(m+n)) time.** Correct and it states the recurrence. At `100 x 100` it is hopeless. The
+bottleneck is that a cell in the middle is reached by exponentially many paths from the start, and each
+recomputes its subtree.
+
+</BruteForce>
+
+<Insight>
+
+A cell is entered from above or from the left, so its path count is the sum of those two.
+
+</Insight>
+
+<Approach>
+
+1. Fill a table where `paths[r][c]` is the number of ways to reach that cell.
+2. The first row and first column are all `1`.
+3. `paths[r][c] = paths[r-1][c] + paths[r][c-1]`.
+4. The answer is the bottom-right cell.
+5. Only the **previous row** is ever read, so a single row of `n` values suffices — updated in place,
+   left to right, because `row[c]` still holds the value from above and `row[c-1]` already holds this
+   row's left neighbour.
+
+Step 5 is the compression worth understanding rather than memorising: the in-place update works
+precisely because the two values needed happen to be exactly what is in the array at that moment.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def uniquePaths(self, m: int, n: int) -> int:
+        # O(2^(m+n)) time — the recurrence with nothing remembered
+        def paths(r: int, c: int) -> int:
+            if r == 0 or c == 0:
+                return 1                     # only one way along an edge
+            return paths(r - 1, c) + paths(r, c - 1)
+
+        return paths(m - 1, n - 1)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def uniquePaths(self, m: int, n: int) -> int:
+        # O(m * n) time, O(n) space — one row, updated in place
+        row = [1] * n                        # the first row: one path to each cell
+
+        for _ in range(1, m):
+            for c in range(1, n):
+                row[c] += row[c - 1]         # from above (old value) + from the left
+
+        return row[-1]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **The first row and column are 1, not 0.** There is exactly one way to walk along an edge, and
+  zeroing them makes every answer 0.
+- **The in-place row update must run left to right.** `row[c]` is still the previous row's value when
+  read, and `row[c-1]` is already this row's — reversing the direction breaks both assumptions at once.
+- Start the inner loop at `c = 1`. `row[0]` is always 1 and updating it would add `row[-1]`, which in
+  Python wraps to the last element.
+- `m = 1` or `n = 1` answers 1. The loops simply do not run, which is correct — worth checking rather
+  than special-casing.
+- There is a closed form: `C(m+n-2, m-1)`, computable in `O(min(m, n))`. It is the better answer if you
+  can justify it, and worth naming even if you write the table.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"With obstacles."* — LC 63: an obstacle cell gets 0 paths, and the first row and column stop being
+  all-1 once an obstacle blocks them. Same table, more careful initialisation.
+- *"Use the combinatorial formula."* — Every path is `m-1` downs and `n-1` rights in some order, so the
+  answer is `C(m+n-2, m-1)`. Constant space, and it does not survive obstacles.
+- *"Three dimensions."* — The same recurrence with three predecessors. The state grows, the idea does
+  not.
+
+</FollowUps>

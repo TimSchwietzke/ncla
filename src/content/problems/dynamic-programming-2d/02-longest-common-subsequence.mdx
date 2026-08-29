@@ -1,0 +1,154 @@
+---
+id: "14.2"
+slug: longest-common-subsequence
+title: Longest Common Subsequence
+leetcode: 1143
+url: https://leetcode.com/problems/longest-common-subsequence/
+difficulty: Medium
+premium: false
+category: dynamic-programming-2d
+patterns: [dp-2d]
+prerequisites: ["Unique Paths", "One index per string"]
+targetComplexity: { time: "O(m * n)", space: "O(min(m, n))" }
+status: complete
+---
+
+<Statement>
+
+Given `text1` and `text2`, return the length of their **longest common subsequence** — characters
+appearing in both, in the same order, not necessarily adjacent. Return `0` if there is none.
+
+<Examples>
+  <Example input={`text1 = "abcde"
+text2 = "ace"`} output="3">
+    `"ace"` itself.
+  </Example>
+  <Example input={`text1 = "abc"
+text2 = "abc"`} output="3">
+    Identical strings.
+  </Example>
+  <Example input={`text1 = "abc"
+text2 = "def"`} output="0">
+    Nothing in common.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= text1.length, text2.length <= 1000`
+- Lowercase English letters
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- **Two strings** means two indices, and that is the whole reason this is 2-D. The state is "how far
+  into each string am I".
+- At each pair of positions the characters either match or they do not, and those are genuinely
+  different cases: a match extends the answer, a mismatch forces a choice about which string to
+  advance.
+- This is the template for the entire category. Edit Distance, Distinct Subsequences and Interleaving
+  String are all this table with a different rule in the cells.
+
+</Signals>
+
+<BruteForce>
+
+Recurse on `(i, j)`: if the characters match, take one plus the result for `(i+1, j+1)`; otherwise the
+better of advancing either index.
+
+**O(2^(m+n)) time.** Correct, and it is the recurrence stated plainly. The bottleneck is that the same
+`(i, j)` pair is reached by many different paths through the two strings, and each one re-solves it.
+
+</BruteForce>
+
+<Insight>
+
+Matching characters extend the answer by one; mismatched ones force a choice about which string to advance.
+
+</Insight>
+
+<Approach>
+
+1. Build a table of `(m+1) x (n+1)`, where `dp[i][j]` is the answer for the **suffixes** starting at
+   `i` and `j`.
+2. Everything in the last row and last column is `0` — an empty string shares nothing.
+3. If `text1[i] == text2[j]`, then `dp[i][j] = 1 + dp[i+1][j+1]`.
+4. Otherwise `dp[i][j] = max(dp[i+1][j], dp[i][j+1])`.
+5. Fill from the bottom right and read `dp[0][0]`.
+
+Only the **next row** is ever read, so two rows of `n+1` values suffice. Sizing the table one larger in
+each dimension is what makes the empty-suffix base case free instead of a boundary check in every cell.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def longestCommonSubsequence(self, text1: str, text2: str) -> int:
+        # O(2^(m+n)) time — the recurrence with nothing remembered
+        def best(i: int, j: int) -> int:
+            if i == len(text1) or j == len(text2):
+                return 0
+            if text1[i] == text2[j]:
+                return 1 + best(i + 1, j + 1)
+            return max(best(i + 1, j), best(i, j + 1))
+
+        return best(0, 0)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def longestCommonSubsequence(self, text1: str, text2: str) -> int:
+        # O(m * n) time, O(n) space — two rows are enough
+        if len(text1) < len(text2):
+            text1, text2 = text2, text1       # keep the shorter one as the row width
+
+        below = [0] * (len(text2) + 1)        # the empty suffix row
+
+        for i in range(len(text1) - 1, -1, -1):
+            current = [0] * (len(text2) + 1)
+            for j in range(len(text2) - 1, -1, -1):
+                if text1[i] == text2[j]:
+                    current[j] = 1 + below[j + 1]      # match: consume both
+                else:
+                    current[j] = max(below[j], current[j + 1])   # skip one or the other
+            below = current
+
+        return below[0]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **A match consumes both characters.** Writing `1 + dp[i+1][j]` advances only one string and quietly
+  counts the same character twice.
+- **The table is one bigger in each dimension.** The extra row and column encode "one string is
+  exhausted", which is what removes the boundary checks. Sizing it `m x n` forces an `if` in every cell.
+- Subsequence, not substring — gaps are allowed. A solution that resets on a mismatch is solving
+  Longest Common **Substring**, which is a different problem with a different recurrence.
+- The row compression needs `below` for `dp[i+1][*]` and `current` for `dp[i][*]`. Using one array and
+  updating in place mixes the two rows, which happens to work in Unique Paths and does not here.
+- Swapping so the shorter string sets the row width makes the space `O(min(m, n))`. It is one line and
+  it halves the memory in the worst case.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Return the subsequence itself."* — Walk the table back from `dp[0][0]`, taking a character whenever
+  the match branch was the one that won. The row-compressed version cannot do it, which is the cost.
+- *"Longest common **substring**."* — Contiguous, so a mismatch resets the cell to 0 and the answer is
+  the maximum over the whole table rather than a corner.
+- *"Edit Distance."* — Problem 14.9, and it is this table with three choices per cell instead of two.
+  Recognising them as the same shape is the point of their both being here.
+
+</FollowUps>

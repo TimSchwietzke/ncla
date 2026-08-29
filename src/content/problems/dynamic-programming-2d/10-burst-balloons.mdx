@@ -1,0 +1,161 @@
+---
+id: "14.10"
+slug: burst-balloons
+title: Burst Balloons
+leetcode: 312
+url: https://leetcode.com/problems/burst-balloons/
+difficulty: Hard
+premium: false
+category: dynamic-programming-2d
+patterns: [dp-2d]
+prerequisites: ["Interval DP", "Choosing the LAST action instead of the first"]
+targetComplexity: { time: "O(n^3)", space: "O(n^2)" }
+status: complete
+---
+
+<Statement>
+
+Bursting balloon `i` earns `nums[i-1] * nums[i] * nums[i+1]` coins, where an out-of-range neighbour
+counts as `1`. After it bursts, its neighbours become adjacent. Burst all the balloons and return the
+maximum coins.
+
+<Examples>
+  <Example input={`nums = [3, 1, 5, 8]`} output="167">
+    Burst 1, then 5, then 3, then 8: `3·1·5 + 3·5·8 + 1·3·8 + 1·8·1 = 15 + 120 + 24 + 8`.
+  </Example>
+  <Example input={`nums = [1, 5]`} output="10">
+    Burst 1 first for `1·1·5 = 5`, then 5 for `1·5·1 = 5`.
+  </Example>
+  <Example input={`nums = [7]`} output="7">
+    Both neighbours are the implicit 1s.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= n <= 300`
+- `0 <= nums[i] <= 100`
+- Out-of-range neighbours count as `1`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Bursting changes who is adjacent to whom, so the remaining balloons stop being a clean subarray.
+  Thinking about the **first** balloon burst leaves a problem you cannot describe with two indices.
+- Turn it around: think about the **last** balloon burst in a range. When it goes, its neighbours are
+  exactly the two boundaries of that range — which are still standing, by definition.
+- That reframing makes the state a **range** `(left, right)`, and everything inside it is independent of
+  everything outside. This is interval DP, and the last-action trick is what makes it possible.
+
+</Signals>
+
+<BruteForce>
+
+Try every balloon as the first to burst, recursing on the shortened array.
+
+**O(n!) time.** Correct and unusable past about ten balloons. The bottleneck is not just the factorial —
+it is that the subproblems have no clean description. After a few bursts the remaining balloons are an
+arbitrary subset, so nothing can be memoised.
+
+</BruteForce>
+
+<Insight>
+
+Ask which balloon bursts last in a range — its neighbours are then the range's own boundaries, which are still standing.
+
+</Insight>
+
+<Approach>
+
+1. Pad the array with a `1` at each end. Those sentinels are the implicit neighbours and remove every
+   boundary check.
+2. `dp[left][right]` is the best coins obtainable from bursting **everything strictly between** `left`
+   and `right`.
+3. For every `k` strictly between them, treat `k` as the **last** to burst in that range. It earns
+   `padded[left] * padded[k] * padded[right]`, because everything else between is already gone.
+4. Add the two independent sub-ranges: `dp[left][k] + dp[k][right]`.
+5. Take the maximum over `k`, filling by increasing range width.
+6. The answer is `dp[0][n+1]`.
+
+Step 3 is the whole problem. Choosing `k` as the *first* burst leaves two sub-ranges whose boundaries
+depend on each other; choosing it as the *last* leaves two sub-ranges that are completely independent.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def maxCoins(self, nums: list[int]) -> int:
+        # O(n!) time — every burst order, no memoisable state
+        def best(balloons: list[int]) -> int:
+            if not balloons:
+                return 0
+
+            most = 0
+            for i in range(len(balloons)):
+                left = balloons[i - 1] if i > 0 else 1
+                right = balloons[i + 1] if i + 1 < len(balloons) else 1
+                coins = left * balloons[i] * right
+                most = max(most, coins + best(balloons[:i] + balloons[i + 1:]))
+
+            return most
+
+        return best(list(nums))
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def maxCoins(self, nums: list[int]) -> int:
+        # O(n^3) time, O(n^2) space — interval DP on the LAST burst
+        padded = [1] + list(nums) + [1]          # sentinels remove the boundary cases
+        n = len(padded)
+        dp = [[0] * n for _ in range(n)]
+
+        for width in range(2, n):                # by increasing range width
+            for left in range(0, n - width):
+                right = left + width
+                for k in range(left + 1, right):
+                    # k bursts LAST, so its neighbours are the range boundaries.
+                    coins = padded[left] * padded[k] * padded[right]
+                    dp[left][right] = max(dp[left][right],
+                                          coins + dp[left][k] + dp[k][right])
+
+        return dp[0][n - 1]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **`k` bursts last, not first.** This is the entire insight. With `k` first, the two remaining pieces
+  influence each other's boundaries and the recurrence is simply false — it produces a number, and the
+  number is wrong.
+- **`dp[left][right]` excludes both endpoints.** The range is open, and the boundaries are the surviving
+  neighbours. Treating it as inclusive double-counts them.
+- **Fill by increasing width.** `dp[left][k]` and `dp[k][right]` are both narrower than `dp[left][right]`,
+  so they must already be final. Iterating by `left` and `right` directly gets the order wrong.
+- The sentinel `1`s are what make `padded[left]` and `padded[right]` always valid. Without them every
+  cell needs two boundary checks and the code roughly doubles.
+- The answer is `dp[0][n-1]` over the **padded** array — the full open range between the two sentinels.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Why `O(n^3)`?"* — `O(n²)` ranges, each scanning `O(n)` choices of `k`. At `n = 300` that is 27
+  million, which is why the constraint stops there.
+- *"Matrix Chain Multiplication."* — The same interval DP shape: split a range at every point, solve
+  both halves independently, and combine. This is the canonical example and Burst Balloons is its
+  disguise.
+- *"Return the burst order."* — Record the winning `k` per range and expand it recursively. The order
+  comes out inside-out, which is a nice confirmation that "last" was the right question.
+
+</FollowUps>

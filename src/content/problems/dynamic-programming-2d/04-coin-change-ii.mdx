@@ -1,0 +1,151 @@
+---
+id: "14.4"
+slug: coin-change-ii
+title: Coin Change II
+leetcode: 518
+url: https://leetcode.com/problems/coin-change-ii/
+difficulty: Medium
+premium: false
+category: dynamic-programming-2d
+patterns: [dp-2d]
+prerequisites: ["Coin Change", "Why the loop order decides what gets counted"]
+targetComplexity: { time: "O(amount * coins)", space: "O(amount)" }
+status: complete
+---
+
+<Statement>
+
+Given coin denominations `coins` and an `amount`, return the number of **combinations** that make up
+that amount. Coins may be reused without limit, and combinations differing only in **order** count as
+one.
+
+<Examples>
+  <Example input={`amount = 5
+coins = [1, 2, 5]`} output="4">
+    `5`, `2+2+1`, `2+1+1+1`, `1+1+1+1+1`. `1+2+2` is the same combination as `2+2+1`.
+  </Example>
+  <Example input={`amount = 3
+coins = [2]`} output="0">
+    An odd amount from a single even coin.
+  </Example>
+  <Example input={`amount = 0
+coins = [7]`} output="1">
+    Exactly one way to make nothing: take no coins.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= coins.length <= 300` and `1 <= coins[i] <= 5000`
+- `0 <= amount <= 5000`
+- Coins are unique and reusable; **order does not matter**
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Coin Change with counting instead of minimising — and that one change makes the **loop order** matter
+  enormously, which it did not before.
+- "Order does not matter" is the whole difficulty. `1+2` and `2+1` are one combination, so the
+  enumeration must fix an order and never revisit an earlier coin.
+- The true state is `(coin index, amount)` — hence 2-D — and the familiar one-array version is that
+  table with the coin dimension rolled up.
+
+</Signals>
+
+<BruteForce>
+
+Recurse on `(coin index, remaining)`: either use the current coin again, or move past it permanently.
+
+**O(2^(amount)) in the worst case.** Correct, and it makes the "never go back" rule explicit — moving
+past a coin is irreversible, which is exactly what stops permutations being counted. The bottleneck is
+the re-solving of identical `(index, remaining)` pairs.
+
+</BruteForce>
+
+<Insight>
+
+Put the coins on the outer loop — each coin is considered once, so a combination is only ever built in one order.
+
+</Insight>
+
+<Approach>
+
+1. `ways[0] = 1` — one way to make zero: take nothing.
+2. **For each coin** (outer loop):
+3. For each amount from `coin` to `amount` (inner loop):
+4. `ways[value] += ways[value - coin]`.
+5. Return `ways[amount]`.
+
+The loop order is the entire algorithm. With **coins outside**, by the time the inner loop runs for a
+coin, `ways` counts only combinations using the coins seen so far — so each combination is built in one
+fixed order and counted once. Swapping the loops counts **permutations** instead, and answers 9 rather
+than 4 on the first example.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def change(self, amount: int, coins: list[int]) -> int:
+        # O(2^amount) time — the recurrence with nothing remembered
+        def ways(i: int, remaining: int) -> int:
+            if remaining == 0:
+                return 1
+            if i >= len(coins) or remaining < 0:
+                return 0
+            return (ways(i, remaining - coins[i])      # use this coin again
+                    + ways(i + 1, remaining))          # move past it, permanently
+
+        return ways(0, amount)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def change(self, amount: int, coins: list[int]) -> int:
+        # O(amount * coins) time, O(amount) space
+        ways = [0] * (amount + 1)
+        ways[0] = 1                            # one way to make nothing
+
+        for coin in coins:                     # COINS OUTSIDE: counts combinations
+            for value in range(coin, amount + 1):
+                ways[value] += ways[value - coin]
+
+        return ways[amount]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Coins on the outer loop.** Swapping the loops counts orderings: `[1,2,5]` with amount 5 gives 9
+  instead of 4. This is the single thing this problem tests, and both loop orders look equally
+  reasonable.
+- **`ways[0] = 1`.** Zero is made in exactly one way — by taking nothing — and setting it to 0 makes
+  every count 0.
+- **Iterate the amounts upwards**, unlike Partition Equal Subset Sum. Here reuse is *wanted*, so reading
+  a value this same coin has already updated is correct. That the two problems differ by loop direction
+  is worth holding onto.
+- `amount = 0` returns 1, not 0. The loops never touch `ways[0]` and the initialisation carries it.
+- Coins can be larger than the amount. Starting the inner loop at `coin` skips them without a guard.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Count permutations instead."* — Swap the loops: amounts outside, coins inside. That is LC 377
+  Combination Sum IV, and it is the same six lines with the loops exchanged.
+- *"Fewest coins rather than how many ways."* — Coin Change, in the previous category. `min` instead of
+  `+`, and the loop order stops mattering because a minimum does not double-count.
+- *"Why does coins-outside work?"* — After processing coins `0..k`, `ways[v]` counts exactly the
+  combinations drawn from those coins. Adding coin `k+1` extends each of them in one way per usage
+  count, so no combination is reachable by two different routes.
+
+</FollowUps>

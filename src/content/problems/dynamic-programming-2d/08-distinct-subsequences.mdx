@@ -1,0 +1,152 @@
+---
+id: "14.8"
+slug: distinct-subsequences
+title: Distinct Subsequences
+leetcode: 115
+url: https://leetcode.com/problems/distinct-subsequences/
+difficulty: Hard
+premium: false
+category: dynamic-programming-2d
+patterns: [dp-2d]
+prerequisites: ["Longest Common Subsequence", "Counting rather than maximising"]
+targetComplexity: { time: "O(m * n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Given strings `s` and `t`, return the number of **distinct subsequences of `s`** that equal `t`.
+Subsequences taken from different positions count separately. The answer fits in a 32-bit integer.
+
+<Examples>
+  <Example input={`s = "rabbbit"
+t = "rabbit"`} output="3">
+    Three ways to choose which of the three `b`s to drop.
+  </Example>
+  <Example input={`s = "babgbag"
+t = "bag"`} output="5">
+    Five different position sets spell `bag`.
+  </Example>
+  <Example input={`s = "abc"
+t = "abcd"`} output="0">
+    `t` is longer than anything `s` can produce.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `1 <= s.length, t.length <= 1000`
+- English letters
+- The answer fits in a **32-bit** signed integer
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Two strings, two indices — the Longest Common Subsequence table with **counting** instead of
+  maximising.
+- When the characters match there are **two** options, and both count: use this character of `s` to
+  match, or skip it and look for the match later. They add.
+- When they do not match, only one option remains: skip the character in `s`. `t` never advances on its
+  own.
+
+</Signals>
+
+<BruteForce>
+
+Recurse on `(i, j)`: skip `s[i]`, and additionally match it against `t[j]` when they are equal.
+
+**O(2^m) time.** Correct and it states the recurrence. The bottleneck is the usual overlap: `(i, j)` is
+reached by many different choices among the earlier characters of `s`.
+
+</BruteForce>
+
+<Insight>
+
+A matching character can be used or skipped, and both are real subsequences — so the counts add.
+
+</Insight>
+
+<Approach>
+
+1. Table of `(m+1) x (n+1)`, where `dp[i][j]` counts the ways `s[i:]` produces `t[j:]`.
+2. `dp[i][n] = 1` for every `i` — an empty `t` is matched in exactly one way: take nothing.
+3. `dp[m][j] = 0` for `j < n` — an exhausted `s` cannot produce a non-empty `t`.
+4. `dp[i][j] = dp[i+1][j]`, and **additionally** `+ dp[i+1][j+1]` when `s[i] == t[j]`.
+5. The answer is `dp[0][0]`.
+
+Only the next row is read, so one row of `n+1` counts suffices — filled with `j` **ascending**, because
+`row[j+1]` must still hold the previous row's value when read.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def numDistinct(self, s: str, t: str) -> int:
+        # O(2^m) time — the recurrence with nothing remembered
+        def count(i: int, j: int) -> int:
+            if j == len(t):
+                return 1                          # matched all of t
+            if i == len(s):
+                return 0                          # ran out of s
+
+            ways = count(i + 1, j)                # skip s[i]
+            if s[i] == t[j]:
+                ways += count(i + 1, j + 1)       # or use it
+            return ways
+
+        return count(0, 0)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def numDistinct(self, s: str, t: str) -> int:
+        # O(m * n) time, O(n) space
+        n = len(t)
+        row = [0] * (n + 1)
+        row[n] = 1                                # an empty t is matched one way
+
+        for i in range(len(s) - 1, -1, -1):
+            # Ascending j: row[j + 1] still holds dp[i+1][j+1] when it is read.
+            for j in range(n):
+                if s[i] == t[j]:
+                    row[j] += row[j + 1]          # use it, on top of skipping it
+
+        return row[0]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **The skip branch is unconditional.** `dp[i][j]` always inherits `dp[i+1][j]`; the match only **adds**
+  to it. Treating the two as alternatives — an `if/else` — undercounts badly.
+- **`dp[i][n] = 1`, not 0.** An empty target is matched by taking nothing, and that single 1 is what
+  every count is built from.
+- The row-compressed version reads `row[j+1]` from the **previous** row, so `j` must ascend and `row[j]`
+  is updated in place. Descending `j` reads a value this row has already overwritten.
+- Positions matter, not characters. `"bbb"` producing `"bb"` has three answers, and any solution
+  deduplicating by string content gets 1.
+- The 32-bit guarantee is doing real work — without it the counts can grow beyond a machine integer in
+  other languages. Python is immune, which is worth naming rather than relying on.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Return the subsequences themselves."* — Exponentially many, so backtracking. Counting is
+  polynomial, listing is not — the same split as everywhere in this category.
+- *"Distinct subsequences of `s` overall, not matching a target."* — LC 940, and the recurrence is
+  different: it counts by last character to avoid double-counting duplicates.
+- *"Why is the skip branch unconditional?"* — Every subsequence either uses `s[i]` or does not. The
+  ones that do not are counted by `dp[i+1][j]` regardless of what `s[i]` happens to be.
+
+</FollowUps>

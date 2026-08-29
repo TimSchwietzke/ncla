@@ -1,0 +1,165 @@
+---
+id: "14.6"
+slug: interleaving-string
+title: Interleaving String
+leetcode: 97
+url: https://leetcode.com/problems/interleaving-string/
+difficulty: Medium
+premium: false
+category: dynamic-programming-2d
+patterns: [dp-2d]
+prerequisites: ["Longest Common Subsequence", "Why greedy fails when both sides match"]
+targetComplexity: { time: "O(m * n)", space: "O(n)" }
+status: complete
+---
+
+<Statement>
+
+Return `true` if `s3` is an **interleaving** of `s1` and `s2` — formed by taking characters from both
+in order, without reordering either.
+
+<Examples>
+  <Example input={`s1 = "aabcc"
+s2 = "dbbca"
+s3 = "aadbbcbcac"`} output="true">
+    `aa` + `dbbc` + `bc` + `a` + `c`, alternating between the two.
+  </Example>
+  <Example input={`s1 = "aabcc"
+s2 = "dbbca"
+s3 = "aadbbbaccc"`} output="false">
+    The same characters, arranged in an order neither string permits.
+  </Example>
+  <Example input={`s1 = "a"
+s2 = "b"
+s3 = "ab"`} output="true">
+    The smallest interesting case.
+  </Example>
+</Examples>
+
+<Constraints>
+
+- `0 <= s1.length, s2.length <= 100` and `0 <= s3.length <= 200`
+- Lowercase English letters
+- `s3` can only be an interleaving if `len(s1) + len(s2) == len(s3)`
+
+</Constraints>
+
+</Statement>
+
+<Signals>
+
+- Two indices — how much of `s1` and how much of `s2` has been consumed. Their **sum** gives the
+  position in `s3`, so the third index is free and the table stays 2-D.
+- When both `s1[i]` and `s2[j]` match the next character of `s3`, **both** branches must be explored.
+  Choosing greedily is the mistake this problem exists to punish.
+- The length check is a free rejection: if the lengths do not add up, no interleaving is possible and
+  nothing else needs computing.
+
+</Signals>
+
+<BruteForce>
+
+Recurse on `(i, j)`, trying to take the next character from `s1` or from `s2` whenever it matches.
+
+**O(2^(m+n)) time.** Correct, and it makes clear that both branches are needed. The bottleneck is the
+overlap: `(i, j)` is reached by many interleavings of the first `i + j` characters, and each re-solves
+the same remainder.
+
+</BruteForce>
+
+<Insight>
+
+How much of each string has been consumed is all that matters, and the position in s3 is just their sum.
+
+</Insight>
+
+<Approach>
+
+1. Reject immediately if `len(s1) + len(s2) != len(s3)`.
+2. Build a table of `(m+1) x (n+1)` booleans: `dp[i][j]` is "the suffixes from `i` and `j` interleave to
+   the suffix of `s3` from `i + j`".
+3. `dp[m][n] = True` — everything consumed.
+4. `dp[i][j]` is true when either
+   - `s1[i] == s3[i+j]` and `dp[i+1][j]`, or
+   - `s2[j] == s3[i+j]` and `dp[i][j+1]`.
+5. The answer is `dp[0][0]`.
+
+Only the next row is ever read, so one row of `n+1` booleans suffices when filled in the right
+direction.
+
+</Approach>
+
+<Solution variant="brute">
+
+```python
+class Solution:
+    def isInterleave(self, s1: str, s2: str, s3: str) -> bool:
+        # O(2^(m+n)) time — both branches, nothing remembered
+        if len(s1) + len(s2) != len(s3):
+            return False
+
+        def works(i: int, j: int) -> bool:
+            if i == len(s1) and j == len(s2):
+                return True
+            if i < len(s1) and s1[i] == s3[i + j] and works(i + 1, j):
+                return True
+            if j < len(s2) and s2[j] == s3[i + j] and works(i, j + 1):
+                return True
+            return False
+
+        return works(0, 0)
+```
+
+</Solution>
+
+<Solution variant="optimal">
+
+```python
+class Solution:
+    def isInterleave(self, s1: str, s2: str, s3: str) -> bool:
+        # O(m * n) time, O(n) space
+        m, n = len(s1), len(s2)
+        if m + n != len(s3):
+            return False                       # a free rejection
+
+        row = [False] * (n + 1)
+        row[n] = True                          # everything consumed
+
+        for i in range(m, -1, -1):
+            for j in range(n, -1, -1):
+                if i == m and j == n:
+                    continue                   # already seeded
+                from_s1 = i < m and s1[i] == s3[i + j] and row[j]          # dp[i+1][j]
+                from_s2 = j < n and s2[j] == s3[i + j] and row[j + 1]      # dp[i][j+1]
+                row[j] = from_s1 or from_s2
+
+        return row[0]
+```
+
+</Solution>
+
+<Pitfalls>
+
+- **Both branches, never a greedy choice.** When `s1[i]` and `s2[j]` are the same character, taking
+  either may lead to a dead end. The second example is built on exactly that ambiguity.
+- **The length check is not optional.** Without it the recursion can index past the end of `s3`, and a
+  mismatched total silently produces `false` for the wrong reason.
+- The position in `s3` is `i + j`, always. Carrying a third index is redundant and drifts out of sync
+  the moment a branch is undone.
+- In the row-compressed version, `row[j]` still holds `dp[i+1][j]` when read and `row[j+1]` already
+  holds `dp[i][j+1]` — that is why `j` must descend. Reversing it breaks both at once.
+- Empty strings are legal. `s1 = ""`, `s2 = ""`, `s3 = ""` is `true`, and the seeded `row[n] = True`
+  handles it with no branch.
+
+</Pitfalls>
+
+<FollowUps>
+
+- *"Three strings interleaved."* — The table gains a dimension and the position becomes `i + j + k`. The
+  reasoning does not change, the memory does.
+- *"Return the interleaving pattern."* — Record which branch won per cell and walk it back from
+  `dp[0][0]`.
+- *"Why is the space O(n) and not O(min(m, n))?"* — Swapping so the shorter string sets the row width
+  gets you that, exactly as in Longest Common Subsequence. One line, and worth doing.
+
+</FollowUps>
